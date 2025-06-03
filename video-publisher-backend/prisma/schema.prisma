@@ -1,0 +1,144 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum SocialPlatform {
+  YOUTUBE_SHORTS
+  FACEBOOK_REELS
+  INSTAGRAM_REELS
+  TIKTOK
+}
+
+enum VideoStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED_PROCESSING
+}
+
+enum PublishingJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIALLY_COMPLETED
+}
+
+enum PublishingTaskStatus {
+  PENDING
+  UPLOADING
+  PUBLISHED
+  FAILED
+  RETRYING
+}
+
+// Models
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  socialAccounts SocialAccount[]
+  videos         Video[]
+  publishingJobs PublishingJob[]
+
+  @@map("users")
+}
+
+model SocialAccount {
+  id                 String        @id @default(cuid())
+  platform           SocialPlatform
+  platformAccountId  String        // ID tài khoản trên nền tảng
+  username           String        // Tên người dùng trên nền tảng
+  accessToken        String        // Mã truy cập
+  refreshToken       String?       // Mã làm mới (optional)
+  expiresAt          DateTime?     // Thời gian hết hạn (optional)
+  scopes             String[]      // Quyền hạn được cấp
+  profilePictureUrl  String?       // Ảnh đại diện (optional)
+  isActive           Boolean       @default(true)
+  userId             String
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  // Relations
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publishingTasks PublishingTask[]
+
+  @@unique([platform, platformAccountId, userId])
+  @@map("social_accounts")
+}
+
+model Video {
+  id               String      @id @default(cuid())
+  title            String
+  description      String?     // Mô tả (optional)
+  tags             String[]    // Thẻ tag (optional)
+  originalFileName String      // Tên file gốc
+  storagePath      String      // Đường dẫn lưu trữ file (local hoặc cloud)
+  thumbnailPath    String?     // Đường dẫn thumbnail (optional)
+  duration         Int?        // Thời lượng video (giây)
+  size             Int         // Kích thước file (bytes)
+  mimeType         String      // Loại file (video/mp4, etc.)
+  status           VideoStatus @default(PENDING)
+  userId           String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relations
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publishingTasks PublishingTask[]
+
+  @@map("videos")
+}
+
+model PublishingJob {
+  id          String               @id @default(cuid())
+  title       String               // Tiêu đề campaign
+  description String?              // Mô tả campaign
+  status      PublishingJobStatus  @default(PENDING)
+  scheduledAt DateTime?            // Thời gian hẹn lịch (optional)
+  userId      String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  // Relations
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks PublishingTask[]
+
+  @@map("publishing_jobs")
+}
+
+model PublishingTask {
+  id              String               @id @default(cuid())
+  publishingJobId String
+  videoId         String
+  socialAccountId String
+  status          PublishingTaskStatus @default(PENDING)
+  platformPostId  String?              // ID bài đăng trên nền tảng (optional)
+  errorMessage    String?              // Thông báo lỗi (optional)
+  attempts        Int                  @default(0) // Số lần thử
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  // Relations
+  job           PublishingJob @relation(fields: [publishingJobId], references: [id], onDelete: Cascade)
+  video         Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@map("publishing_tasks")
+}

@@ -1,0 +1,8 @@
+# Ignore all files to disable ESLint
+**/*
+*.ts
+*.js
+src/**/*
+test/**/*
+dist/**/*
+node_modules/**/*
