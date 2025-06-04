@@ -56,6 +56,7 @@ model User {
   socialAccounts SocialAccount[]
   videos         Video[]
   publishingJobs PublishingJob[]
+  socialApps     SocialApp[]     // Apps owned by this user
 
   @@map("users")
 }
@@ -67,9 +68,17 @@ model SocialAccount {
   username           String        // Tên người dùng trên nền tảng
   accessToken        String        // Mã truy cập
   refreshToken       String?       // Mã làm mới (optional)
-  expiresAt          DateTime?     // Thời gian hết hạn (optional)
+  tokenExpiresAt     DateTime?     // Thời gian hết hạn token (optional)
   scopes             String[]      // Quyền hạn được cấp
   profilePictureUrl  String?       // Ảnh đại diện (optional)
+  pageId             String?       // Facebook Page ID (cho Instagram/Facebook Page uploads)
+  
+  // App credentials cho account này
+  appId              String?       // Facebook App ID, Google Client ID, TikTok App ID
+  appSecret          String?       // App Secret tương ứng
+  redirectUri        String?       // Redirect URI riêng cho app này
+  socialAppId        String?       // Reference to SocialApp table (alternative approach)
+  
   isActive           Boolean       @default(true)
   userId             String
   createdAt          DateTime      @default(now())
@@ -77,6 +86,7 @@ model SocialAccount {
 
   // Relations
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socialApp      SocialApp?       @relation(fields: [socialAppId], references: [id])
   publishingTasks PublishingTask[]
 
   @@unique([platform, platformAccountId, userId])
@@ -141,4 +151,25 @@ model PublishingTask {
   socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
 
   @@map("publishing_tasks")
+}
+
+// Separate table để quản lý các App configurations
+model SocialApp {
+  id           String         @id @default(cuid())
+  name         String         // Tên app (ví dụ: "Main Facebook App", "Secondary FB App")
+  platform     SocialPlatform // Platform này app hỗ trợ
+  appId        String         // Facebook App ID, Google Client ID, etc.
+  appSecret    String         // App Secret
+  redirectUri  String         // Redirect URI
+  isDefault    Boolean        @default(false) // App mặc định cho platform
+  userId       String         // Owner của app config này
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relations
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  socialAccounts SocialAccount[]
+
+  @@unique([platform, appId, userId])
+  @@map("social_apps")
 }

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { User, Lock, Bell, Monitor, Save } from 'lucide-react';
+import { User, Lock, Bell, Monitor, Save, Settings } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
+import { AppConfigManager } from '../../components/settings/AppConfigManager';
 import { useAuth } from '../../contexts/AuthContext';
 
 export function SettingsPage() {
@@ -25,7 +26,7 @@ export function SettingsPage() {
     autoRetryFailedJobs: true
   });
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences' | 'apps'>('profile');
 
   const handleProfileSave = async () => {
     try {
@@ -66,12 +67,12 @@ export function SettingsPage() {
       console.error('Failed to save preferences:', error);
     }
   };
-
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'preferences', label: 'Preferences', icon: Monitor }
+    { id: 'preferences', label: 'Preferences', icon: Monitor },
+    { id: 'apps', label: 'Apps', icon: Settings }
   ] as const;
 
   return (
@@ -277,14 +278,24 @@ export function SettingsPage() {
                     />
                     <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
-                </div>
-
-                <Button onClick={handlePreferencesSave} className="w-full">
+                </div>                <Button onClick={handlePreferencesSave} className="w-full">
                   <Save className="w-4 h-4 mr-2" />
                   Save Preferences
                 </Button>
               </div>
             </Card>
+          )}
+
+          {activeTab === 'apps' && (
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h2 className="text-lg font-medium mb-4">App Configurations</h2>
+                <p className="text-gray-600 mb-6">
+                  Manage your social media app configurations for publishing content across different platforms.
+                </p>
+                <AppConfigManager userId={user?.id || ''} />
+              </Card>
+            </div>
           )}
         </div>
       </div>

@@ -1,0 +1,721 @@
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { PrismaService } from '../common/prisma.service';
+import { ConfigService } from '@nestjs/config';
+import { SocialPlatform } from '@prisma/client';
+
+export interface AppConfig {
+  appId: string;
+  appSecret: string;
+  redirectUri: string;
+  name?: string;
+  socialAppId?: string; // ID của SocialApp record nếu có
+  source: 'social-app' | 'inline' | 'system-default'; // Nguồn config
+}
+
+export interface CreateSocialAppDto {
+  name: string;
+  platform: SocialPlatform;
+  appId: string;
+  appSecret: string;
+  redirectUri: string;
+  isDefault?: boolean;
+}
+
+export interface AppSelectionStrategy {
+  userId: string;
+  platform: SocialPlatform;
+  preferredAppId?: string;
+  socialAccountId?: string; // Để lấy app từ existing social account
+  requireCustomApp?: boolean; // Bắt buộc phải dùng user's app (không fallback system default)
+}
+
+export interface AppValidationResult {
+  isValid: boolean;
+  error?: string;
+  details?: any;
+}
+
+@Injectable()
+export class EnhancedSocialAppService {
+  private readonly logger = new Logger(EnhancedSocialAppService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {}
+
+  /**
+   * Tạo app configuration mới với validation
+   */
+  async createApp(userId: string, data: CreateSocialAppDto): Promise<any> {
+    // Validate app credentials trước khi tạo
+    const validation = await this.validateAppConfig(data.appId, data.appSecret, data.platform);
+    if (!validation.isValid) {
+      throw new BadRequestException(`Invalid app credentials: ${validation.error}`);
+    }
+
+    // Kiểm tra xem appId đã tồn tại chưa
+    const existingApp = await this.prisma.socialApp.findFirst({
+      where: {
+        userId,
+        platform: data.platform,
+        appId: data.appId,
+      },
+    });
+
+    if (existingApp) {
+      throw new BadRequestException('App with this ID already exists for this platform');
+    }
+
+    // Nếu đặt làm default, bỏ default của các app khác cùng platform
+    if (data.isDefault) {
+      await this.prisma.socialApp.updateMany({
+        where: {
+          userId,
+          platform: data.platform,
+        },
+        data: {
+          isDefault: false,
+        },
+      });
+    }
+
+    const app = await this.prisma.socialApp.create({
+      data: {
+        ...data,
+        userId,
+      },
+    });
+
+    this.logger.log(`Created new app configuration: ${app.name} (${app.platform}) for user ${userId}`);
+    
+    return app;
+  }
+
+  /**
+   * Lấy app configuration phù hợp với chiến lược linh hoạt
+   * Ưu tiên: Existing Social Account App > Preferred App > Default User App > System Default
+   */
+  async getAppConfig(strategy: AppSelectionStrategy): Promise<AppConfig> {
+    const { userId, platform, preferredAppId, socialAccountId, requireCustomApp } = strategy;
+
+    this.logger.debug(`Getting app config for strategy: ${JSON.stringify(strategy)}`);
+
+    // 1. Nếu có socialAccountId, ưu tiên app đã được sử dụng
+    if (socialAccountId) {
+      const socialAccount = await this.prisma.socialAccount.findFirst({
+        where: {
+          id: socialAccountId,
+          userId,
+          platform,
+        },
+        include: {
+          socialApp: true,
+        },
+      });
+
+      if (socialAccount?.socialApp) {
+        return {
+          appId: socialAccount.socialApp.appId,
+          appSecret: socialAccount.socialApp.appSecret,
+          redirectUri: socialAccount.socialApp.redirectUri,
+          name: socialAccount.socialApp.name,
+          socialAppId: socialAccount.socialApp.id,
+          source: 'social-app',
+        };
+      }
+
+      // Nếu social account có app credentials inline
+      if (socialAccount?.appId && socialAccount?.appSecret) {
+        return {
+          appId: socialAccount.appId,
+          appSecret: socialAccount.appSecret,
+          redirectUri: socialAccount.redirectUri || this.getDefaultRedirectUri(platform),
+          name: `Inline App for ${socialAccount.username}`,
+          source: 'inline',
+        };
+      }
+    }
+
+    // 2. Nếu có preferredAppId, tìm app cụ thể
+    if (preferredAppId) {
+      const app = await this.prisma.socialApp.findFirst({
+        where: {
+          id: preferredAppId,
+          userId,
+          platform,
+        },
+      });
+
+      if (app) {
+        return {
+          appId: app.appId,
+          appSecret: app.appSecret,
+          redirectUri: app.redirectUri,
+          name: app.name,
+          socialAppId: app.id,
+          source: 'social-app',
+        };
+      }
+    }
+
+    // 3. Tìm default app của user cho platform này
+    const defaultApp = await this.prisma.socialApp.findFirst({
+      where: {
+        userId,
+        platform,
+        isDefault: true,
+      },
+    });
+
+    if (defaultApp) {
+      return {
+        appId: defaultApp.appId,
+        appSecret: defaultApp.appSecret,
+        redirectUri: defaultApp.redirectUri,
+        name: defaultApp.name,
+        socialAppId: defaultApp.id,
+        source: 'social-app',
+      };
+    }
+
+    // 4. Lấy bất kỳ app nào của user cho platform này
+    const anyApp = await this.prisma.socialApp.findFirst({
+      where: {
+        userId,
+        platform,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    if (anyApp) {
+      return {
+        appId: anyApp.appId,
+        appSecret: anyApp.appSecret,
+        redirectUri: anyApp.redirectUri,
+        name: anyApp.name,
+        socialAppId: anyApp.id,
+        source: 'social-app',
+      };
+    }
+
+    // 5. Nếu requireCustomApp = true, không fallback về system default
+    if (requireCustomApp) {
+      throw new NotFoundException(`No custom app configuration found for platform ${platform}. Please add your own app credentials.`);
+    }
+
+    // 6. Fallback về system default configs
+    const systemConfig = this.getSystemDefaultConfig(platform);
+    if (!systemConfig.appId || !systemConfig.appSecret) {
+      throw new NotFoundException(`No app configuration available for platform ${platform}. Please add your own app credentials.`);
+    }
+
+    return systemConfig;
+  }
+
+  /**
+   * Lấy system default config từ environment variables
+   */
+  private getSystemDefaultConfig(platform: SocialPlatform): AppConfig {
+    switch (platform) {
+      case 'YOUTUBE_SHORTS':
+        return {
+          appId: this.configService.get('DEFAULT_GOOGLE_CLIENT_ID') || '',
+          appSecret: this.configService.get('DEFAULT_GOOGLE_CLIENT_SECRET') || '',
+          redirectUri: this.configService.get('DEFAULT_GOOGLE_REDIRECT_URI') || '',
+          name: 'System Default Google App',
+          source: 'system-default',
+        };
+
+      case 'FACEBOOK_REELS':
+      case 'INSTAGRAM_REELS':
+        return {
+          appId: this.configService.get('DEFAULT_FACEBOOK_APP_ID') || '',
+          appSecret: this.configService.get('DEFAULT_FACEBOOK_APP_SECRET') || '',
+          redirectUri: this.configService.get('DEFAULT_FACEBOOK_REDIRECT_URI') || '',
+          name: 'System Default Facebook App',
+          source: 'system-default',
+        };
+
+      case 'TIKTOK':
+        return {
+          appId: this.configService.get('DEFAULT_TIKTOK_CLIENT_KEY') || '',
+          appSecret: this.configService.get('DEFAULT_TIKTOK_CLIENT_SECRET') || '',
+          redirectUri: this.configService.get('DEFAULT_TIKTOK_REDIRECT_URI') || '',
+          name: 'System Default TikTok App',
+          source: 'system-default',
+        };
+
+      default:
+        throw new BadRequestException(`Unsupported platform: ${platform}`);
+    }
+  }
+
+  /**
+   * Lấy default redirect URI cho platform
+   */
+  private getDefaultRedirectUri(platform: SocialPlatform): string {
+    const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+
+    switch (platform) {
+      case 'YOUTUBE_SHORTS':
+        return `${baseUrl}/auth/google/callback`;
+      case 'FACEBOOK_REELS':
+      case 'INSTAGRAM_REELS':
+        return `${baseUrl}/auth/facebook/callback`;
+      case 'TIKTOK':
+        return `${baseUrl}/auth/tiktok/callback`;
+      default:
+        return `${baseUrl}/auth/callback`;
+    }
+  }
+
+  /**
+   * Lấy danh sách apps của user với thống kê
+   */
+  async getUserApps(userId: string, platform?: SocialPlatform) {
+    const apps = await this.prisma.socialApp.findMany({
+      where: {
+        userId,
+        ...(platform && { platform }),
+      },
+      include: {
+        _count: {
+          select: {
+            socialAccounts: true,
+          },
+        },
+      },
+      orderBy: [
+        { isDefault: 'desc' },
+        { createdAt: 'asc' },
+      ],
+    });
+
+    return apps.map(app => ({
+      ...app,
+      connectedAccountsCount: app._count.socialAccounts,
+      // Ẩn sensitive data trong response
+      appSecret: '••••••••',
+    }));
+  }
+
+  /**
+   * Kiểm tra app có khả dụng không
+   */
+  async validateAppConfig(appId: string, appSecret: string, platform: SocialPlatform): Promise<AppValidationResult> {
+    try {
+      switch (platform) {
+        case 'FACEBOOK_REELS':
+        case 'INSTAGRAM_REELS':
+          return await this.validateFacebookApp(appId, appSecret);
+
+        case 'YOUTUBE_SHORTS':
+          return await this.validateGoogleApp(appId, appSecret);
+
+        case 'TIKTOK':
+          return await this.validateTikTokApp(appId, appSecret);
+
+        default:
+          return {
+            isValid: false,
+            error: `Validation not implemented for platform: ${platform}`,
+          };
+      }
+    } catch (error) {
+      this.logger.warn(`App validation failed for platform ${platform}:`, error.message);
+      return {
+        isValid: false,
+        error: error.message,
+        details: error,
+      };
+    }
+  }
+
+  /**
+   * Validate Facebook app credentials
+   */
+  private async validateFacebookApp(appId: string, appSecret: string): Promise<AppValidationResult> {
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&grant_type=client_credentials`
+      );
+      
+      const data = await response.json();
+      
+      if (response.ok && data.access_token) {
+        return { isValid: true };
+      } else {
+        return {
+          isValid: false,
+          error: data.error?.message || 'Invalid Facebook app credentials',
+          details: data,
+        };
+      }
+    } catch (error) {
+      return {
+        isValid: false,
+        error: 'Failed to validate Facebook app credentials',
+        details: error,
+      };
+    }
+  }
+
+  /**
+   * Validate Google app credentials (basic check)
+   */
+  private async validateGoogleApp(clientId: string, clientSecret: string): Promise<AppValidationResult> {
+    // Google không có endpoint đơn giản để validate credentials
+    // Chỉ kiểm tra format cơ bản
+    if (!clientId.includes('.apps.googleusercontent.com')) {
+      return {
+        isValid: false,
+        error: 'Invalid Google Client ID format',
+      };
+    }
+
+    if (!clientSecret || clientSecret.length < 10) {
+      return {
+        isValid: false,
+        error: 'Invalid Google Client Secret format',
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Validate TikTok app credentials (basic check)
+   */
+  private async validateTikTokApp(clientKey: string, clientSecret: string): Promise<AppValidationResult> {
+    // TikTok validation sẽ phức tạp hơn, tạm thời basic check
+    if (!clientKey || !clientSecret) {
+      return {
+        isValid: false,
+        error: 'TikTok Client Key and Secret are required',
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Liên kết social account với app configuration
+   */
+  async linkAccountToApp(socialAccountId: string, socialAppId: string, userId: string) {
+    // Kiểm tra quyền sở hữu
+    const [socialAccount, socialApp] = await Promise.all([
+      this.prisma.socialAccount.findFirst({
+        where: { id: socialAccountId, userId },
+      }),
+      this.prisma.socialApp.findFirst({
+        where: { id: socialAppId, userId },
+      }),
+    ]);
+
+    if (!socialAccount) {
+      throw new NotFoundException('Social account not found');
+    }
+
+    if (!socialApp) {
+      throw new NotFoundException('App configuration not found');
+    }
+
+    if (socialAccount.platform !== socialApp.platform) {
+      throw new BadRequestException('Platform mismatch between account and app');
+    }
+
+    // Cập nhật social account
+    const updated = await this.prisma.socialAccount.update({
+      where: { id: socialAccountId },
+      data: {
+        socialAppId,
+        // Xóa inline app credentials nếu có
+        appId: null,
+        appSecret: null,
+        redirectUri: null,
+      },
+    });
+
+    this.logger.log(`Linked social account ${socialAccountId} to app ${socialAppId}`);
+    
+    return updated;
+  }
+
+  /**
+   * Bỏ liên kết social account khỏi app configuration
+   */
+  async unlinkAccountFromApp(socialAccountId: string, userId: string) {
+    const socialAccount = await this.prisma.socialAccount.findFirst({
+      where: { id: socialAccountId, userId },
+    });
+
+    if (!socialAccount) {
+      throw new NotFoundException('Social account not found');
+    }
+
+    return this.prisma.socialAccount.update({
+      where: { id: socialAccountId },
+      data: {
+        socialAppId: null,
+      },
+    });
+  }
+
+  /**
+   * Cập nhật app configuration
+   */
+  async updateApp(userId: string, appId: string, data: Partial<CreateSocialAppDto>) {
+    const app = await this.prisma.socialApp.findFirst({
+      where: {
+        id: appId,
+        userId,
+      },
+    });
+
+    if (!app) {
+      throw new NotFoundException('App configuration not found');
+    }
+
+    // Validate credentials nếu có thay đổi
+    if (data.appId || data.appSecret) {
+      const validation = await this.validateAppConfig(
+        data.appId || app.appId,
+        data.appSecret || app.appSecret,
+        app.platform
+      );
+      
+      if (!validation.isValid) {
+        throw new BadRequestException(`Invalid app credentials: ${validation.error}`);
+      }
+    }
+
+    // Nếu đặt làm default, bỏ default của các app khác cùng platform
+    if (data.isDefault) {
+      await this.prisma.socialApp.updateMany({
+        where: {
+          userId,
+          platform: app.platform,
+          id: { not: appId },
+        },
+        data: {
+          isDefault: false,
+        },
+      });
+    }
+
+    return this.prisma.socialApp.update({
+      where: { id: appId },
+      data,
+    });
+  }
+
+  /**
+   * Xóa app configuration
+   */
+  async deleteApp(userId: string, appId: string) {
+    const app = await this.prisma.socialApp.findFirst({
+      where: {
+        id: appId,
+        userId,
+      },
+    });
+
+    if (!app) {
+      throw new NotFoundException('App configuration not found');
+    }
+
+    // Kiểm tra xem có social accounts nào đang sử dụng app này không
+    const connectedAccounts = await this.prisma.socialAccount.count({
+      where: {
+        socialAppId: appId,
+      },
+    });
+
+    if (connectedAccounts > 0) {
+      throw new BadRequestException(
+        'Cannot delete app configuration that is being used by connected accounts. Please unlink accounts first.'
+      );
+    }
+
+    const deleted = await this.prisma.socialApp.delete({
+      where: { id: appId },
+    });
+
+    this.logger.log(`Deleted app configuration: ${deleted.name} (${deleted.platform}) for user ${userId}`);
+    
+    return deleted;
+  }
+
+  /**
+   * Nhập app configuration từ environment variables cho user
+   */
+  async importSystemDefaults(userId: string, platforms: SocialPlatform[]) {
+    const results = [];
+
+    for (const platform of platforms) {
+      try {
+        const systemConfig = this.getSystemDefaultConfig(platform);
+        
+        if (!systemConfig.appId || !systemConfig.appSecret) {
+          this.logger.warn(`No system default config for platform ${platform}`);
+          continue;
+        }
+
+        // Kiểm tra xem đã có app này chưa
+        const existingApp = await this.prisma.socialApp.findFirst({
+          where: {
+            userId,
+            platform,
+            appId: systemConfig.appId,
+          },
+        });
+
+        if (existingApp) {
+          this.logger.debug(`App already exists for platform ${platform}`);
+          continue;
+        }
+
+        const app = await this.createApp(userId, {
+          name: `Imported ${platform} App`,
+          platform,
+          appId: systemConfig.appId,
+          appSecret: systemConfig.appSecret,
+          redirectUri: systemConfig.redirectUri,
+          isDefault: true,
+        });
+
+        results.push(app);
+      } catch (error) {
+        this.logger.warn(`Failed to import ${platform} default config:`, error.message);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Lấy thống kê apps của user
+   */
+  async getUserAppStats(userId: string) {
+    const stats = await this.prisma.socialApp.groupBy({
+      by: ['platform'],
+      where: { userId },
+      _count: {
+        id: true,
+      },
+    });
+
+    const accountStats = await this.prisma.socialAccount.groupBy({
+      by: ['platform'],
+      where: { userId },
+      _count: {
+        id: true,
+      },
+    });
+
+    return {
+      totalApps: stats.reduce((sum, s) => sum + s._count.id, 0),
+      totalAccounts: accountStats.reduce((sum, s) => sum + s._count.id, 0),
+      byPlatform: Object.values(SocialPlatform).map(platform => ({
+        platform,
+        appsCount: stats.find(s => s.platform === platform)?._count.id || 0,
+        accountsCount: accountStats.find(s => s.platform === platform)?._count.id || 0,
+      })),
+    };
+  }
+
+  /**
+   * Kiểm tra health của tất cả user apps
+   */
+  async checkUserAppsHealth(userId: string) {
+    const apps = await this.prisma.socialApp.findMany({
+      where: { userId },
+    });
+
+    const results = [];
+
+    for (const app of apps) {
+      const validation = await this.validateAppConfig(app.appId, app.appSecret, app.platform);
+      results.push({
+        id: app.id,
+        name: app.name,
+        platform: app.platform,
+        isHealthy: validation.isValid,
+        error: validation.error,
+        lastChecked: new Date(),
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Kiểm tra health của một app cụ thể
+   */
+  async checkAppHealth(userId: string, appId: string) {
+    const app = await this.prisma.socialApp.findFirst({
+      where: {
+        id: appId,
+        userId,
+      },
+    });
+
+    if (!app) {
+      throw new NotFoundException('App not found');
+    }
+
+    const validation = await this.validateAppConfig(app.appId, app.appSecret, app.platform);
+    
+    return {
+      id: app.id,
+      name: app.name,
+      platform: app.platform,
+      isHealthy: validation.isValid,
+      isValid: validation.isValid,
+      error: validation.error,
+      errorMessage: validation.error,
+      lastChecked: new Date(),
+    };
+  }
+
+  /**
+   * Set app làm default cho platform
+   */
+  async setDefaultApp(userId: string, appId: string) {
+    const app = await this.prisma.socialApp.findFirst({
+      where: {
+        id: appId,
+        userId,
+      },
+    });
+
+    if (!app) {
+      throw new NotFoundException('App not found');
+    }
+
+    // Bỏ default của các app khác cùng platform
+    await this.prisma.socialApp.updateMany({
+      where: {
+        userId,
+        platform: app.platform,
+        id: { not: appId },
+      },
+      data: {
+        isDefault: false,
+      },
+    });
+
+    // Set app này làm default
+    const updatedApp = await this.prisma.socialApp.update({
+      where: { id: appId },
+      data: { isDefault: true },
+    });
+
+    this.logger.log(`Set app ${app.name} as default for ${app.platform} (User: ${userId})`);
+
+    return updatedApp;
+  }
+}

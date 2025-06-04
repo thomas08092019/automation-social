@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export function useJobStatusUpdates() {
   const queryClient = useQueryClient();
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Simulate real-time updates by refetching jobs every 5 seconds
@@ -26,11 +26,10 @@ export function useJobStatusUpdates() {
       }, 5000);
     }
   };
-
   const stopUpdates = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
-      intervalRef.current = undefined;
+      intervalRef.current = null;
     }
   };
 
@@ -39,7 +38,7 @@ export function useJobStatusUpdates() {
 
 export function useWebSocketConnection(url: string) {
   const queryClient = useQueryClient();
-  const wsRef = useRef<WebSocket>();
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     // This would be used in a real application with an actual WebSocket server

@@ -3,6 +3,7 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  name?: string; // Added missing name property
   createdAt: string;
   updatedAt: string;
 }
@@ -31,6 +32,7 @@ export interface Video {
   filename: string;
   filepath: string;
   duration?: number;
+  fileSize?: number; // Added missing fileSize property
   thumbnailUrl?: string;
   metadata?: Record<string, any>;
   userId: string;

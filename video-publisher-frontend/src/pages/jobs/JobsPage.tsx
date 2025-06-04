@@ -470,9 +470,8 @@ function CreateJobModal({ onClose }: CreateJobModalProps) {
       setIsCreating(false);
     }
   };
-
   const videos = videosData?.data || [];
-  const accounts = accountsData?.data || [];
+  const accounts = accountsData || [];
 
   const canProceed = () => {
     switch (step) {
@@ -566,9 +565,8 @@ function CreateJobModal({ onClose }: CreateJobModalProps) {
                       <div className="flex items-center justify-between">
                         <div>
                           <h4 className="font-medium">{video.title}</h4>
-                          <p className="text-sm text-gray-600">{video.filename}</p>
-                          <p className="text-xs text-gray-500">
-                            Duration: {Math.round(video.duration)}s • {(video.fileSize / (1024 * 1024)).toFixed(1)}MB
+                          <p className="text-sm text-gray-600">{video.filename}</p>                          <p className="text-xs text-gray-500">
+                            Duration: {video.duration ? Math.round(video.duration) : 0}s • {video.fileSize ? (video.fileSize / (1024 * 1024)).toFixed(1) : '0.0'}MB
                           </p>
                         </div>
                         <input
@@ -616,9 +614,8 @@ function CreateJobModal({ onClose }: CreateJobModalProps) {
                         <div className="flex items-center space-x-3">
                           <div className="text-2xl">{getPlatformIcon(account.platform)}</div>
                           <div>
-                            <h4 className="font-medium">{account.platformUsername}</h4>
-                            <p className="text-sm text-gray-600">
-                              {capitalizeFirst(account.platform)} • {capitalizeFirst(account.status)}
+                            <h4 className="font-medium">{account.platformUsername}</h4>                            <p className="text-sm text-gray-600">
+                              {capitalizeFirst(account.platform)} • {account.isActive ? 'Active' : 'Inactive'}
                             </p>
                           </div>
                         </div>

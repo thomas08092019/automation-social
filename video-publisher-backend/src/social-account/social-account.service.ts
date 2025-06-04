@@ -172,7 +172,7 @@ export class SocialAccountService {
       select: {
         accessToken: true,
         refreshToken: true,
-        expiresAt: true,
+        tokenExpiresAt: true,
       },
     });
 
@@ -181,7 +181,7 @@ export class SocialAccountService {
     }
 
     // TODO: Implement token refresh logic if expired
-    if (account.expiresAt && account.expiresAt < new Date()) {
+    if (account.tokenExpiresAt && account.tokenExpiresAt < new Date()) {
       // Token expired, need to refresh
       throw new Error('Access token expired, refresh needed');
     }

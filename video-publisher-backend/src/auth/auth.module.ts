@@ -6,11 +6,18 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { TokenManagerService } from './token-manager.service';
+import { SocialAppService } from './social-app.service';
+import { EnhancedSocialAppService } from './enhanced-social-app.service';
+import { OAuthAuthorizationService } from './oauth-authorization.service';
+import { SocialAppsController } from './social-apps.controller';
+import { PrismaModule } from '../common/prisma.module';
 
 @Module({
   imports: [
     UserModule,
     PassportModule,
+    PrismaModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
@@ -22,8 +29,21 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, JwtStrategy],
-  controllers: [AuthController],
-  exports: [AuthService],
+  providers: [
+    AuthService, 
+    JwtStrategy, 
+    TokenManagerService,
+    SocialAppService,
+    EnhancedSocialAppService,
+    OAuthAuthorizationService,
+  ],
+  controllers: [AuthController, SocialAppsController],
+  exports: [
+    AuthService, 
+    TokenManagerService,
+    SocialAppService,
+    EnhancedSocialAppService,
+    OAuthAuthorizationService,
+  ],
 })
 export class AuthModule {}
