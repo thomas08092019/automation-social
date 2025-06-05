@@ -204,12 +204,10 @@ export class EnhancedSocialAppService {
     // 5. Nếu requireCustomApp = true, không fallback về system default
     if (requireCustomApp) {
       throw new NotFoundException(`No custom app configuration found for platform ${platform}. Please add your own app credentials.`);
-    }
-
-    // 6. Fallback về system default configs
+    }    // 6. Fallback về system default configs
     const systemConfig = this.getSystemDefaultConfig(platform);
-    if (!systemConfig.appId || !systemConfig.appSecret) {
-      throw new NotFoundException(`No app configuration available for platform ${platform}. Please add your own app credentials.`);
+    if (!systemConfig.appId || !systemConfig.appSecret || this.isPlaceholderCredentials(systemConfig.appId, systemConfig.appSecret)) {
+      throw new NotFoundException(`No app configuration available for platform ${platform}. Please add your own app credentials or set up real OAuth credentials in your .env file. Current credentials appear to be placeholder values.`);
     }
 
     return systemConfig;
@@ -717,5 +715,27 @@ export class EnhancedSocialAppService {
     this.logger.log(`Set app ${app.name} as default for ${app.platform} (User: ${userId})`);
 
     return updatedApp;
+  }
+
+  /**
+   * Check if credentials are placeholder values that need to be replaced
+   */
+  private isPlaceholderCredentials(appId: string, appSecret: string): boolean {
+    const placeholderPatterns = [
+      /^your-.*-client-id/i,
+      /^your-.*-client-secret/i,
+      /^your-.*-app-id/i,
+      /^your-.*-app-secret/i,
+      /^your-.*-key/i,
+      /placeholder/i,
+      /example/i,
+      /demo/i,
+      /test.*123/i,
+    ];
+
+    const isPlaceholderAppId = placeholderPatterns.some(pattern => pattern.test(appId));
+    const isPlaceholderSecret = placeholderPatterns.some(pattern => pattern.test(appSecret));
+
+    return isPlaceholderAppId || isPlaceholderSecret;
   }
 }

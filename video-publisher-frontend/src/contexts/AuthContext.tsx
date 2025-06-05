@@ -46,13 +46,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     loadUser();
   }, []);
-
   const login = async (credentials: LoginRequest) => {
     try {
       const response: AuthResponse = await apiService.login(credentials);
       
       // Store token and user data
-      localStorage.setItem('auth_token', response.access_token);
+      localStorage.setItem('auth_token', response.accessToken);
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);
@@ -61,13 +60,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       throw error;
     }
   };
-
   const register = async (userData: RegisterRequest) => {
     try {
       const response: AuthResponse = await apiService.register(userData);
       
       // Store token and user data
-      localStorage.setItem('auth_token', response.access_token);
+      localStorage.setItem('auth_token', response.accessToken);
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);

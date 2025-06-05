@@ -9,7 +9,7 @@ export interface User {
 }
 
 export interface AuthResponse {
-  access_token: string;
+  accessToken: string;
   user: User;
 }
 
@@ -22,6 +22,14 @@ export interface RegisterRequest {
   email: string;
   username: string;
   password: string;
+}
+
+export interface SocialLoginRequest {
+  provider: string; // 'google' | 'facebook'
+  accessToken: string;
+  email: string;
+  name: string;
+  providerId: string;
 }
 
 // Video Types

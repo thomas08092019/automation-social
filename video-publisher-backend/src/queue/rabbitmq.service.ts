@@ -41,24 +41,39 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async connect() {
-    try {
-      const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
-      this.connection = await amqp.connect(rabbitmqUrl);
-      this.channel = await this.connection.createChannel();
+    const maxRetries = 5;
+    const retryDelay = 2000; // 2 seconds
 
-      this.logger.log('Connected to RabbitMQ');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
+        this.logger.log(`Attempting to connect to RabbitMQ (attempt ${attempt}/${maxRetries}): ${rabbitmqUrl}`);
+        
+        this.connection = await amqp.connect(rabbitmqUrl);
+        this.channel = await this.connection.createChannel();
 
-      // Handle connection errors
-      this.connection.on('error', (err: any) => {
-        this.logger.error('RabbitMQ connection error:', err);
-      });
+        this.logger.log('Successfully connected to RabbitMQ');
 
-      this.connection.on('close', () => {
-        this.logger.warn('RabbitMQ connection closed');
-      });
-    } catch (error) {
-      this.logger.error('Failed to connect to RabbitMQ:', error);
-      throw error;
+        // Handle connection errors
+        this.connection.on('error', (err: any) => {
+          this.logger.error('RabbitMQ connection error:', err);
+        });
+
+        this.connection.on('close', () => {
+          this.logger.warn('RabbitMQ connection closed');
+        });
+
+        return; // Success, exit retry loop
+      } catch (error) {
+        this.logger.error(`Failed to connect to RabbitMQ (attempt ${attempt}/${maxRetries}):`, error);
+        
+        if (attempt === maxRetries) {
+          throw new Error(`Failed to connect to RabbitMQ after ${maxRetries} attempts: ${error.message}`);
+        }
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
     }
   }
 
@@ -150,8 +165,18 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   async startConsumer(
     handler: (message: PublishingTaskMessage) => Promise<void>,
   ): Promise<void> {
+    // Wait for channel to be ready with retry logic
+    const maxWait = 10000; // 10 seconds
+    const checkInterval = 500; // 500ms
+    let waited = 0;
+
+    while (!this.channel && waited < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      waited += checkInterval;
+    }
+
     if (!this.channel) {
-      throw new Error('RabbitMQ channel not initialized');
+      throw new Error('RabbitMQ channel not initialized after waiting');
     }
 
     try {
@@ -240,6 +265,21 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       return this.connection !== null && this.channel !== null;
     } catch {
       return false;
+    }
+  }
+
+  isReady(): boolean {
+    return !!(this.connection && this.channel);
+  }
+
+  async waitForReady(timeoutMs: number = 10000): Promise<void> {
+    const start = Date.now();
+    while (!this.isReady() && (Date.now() - start) < timeoutMs) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (!this.isReady()) {
+      throw new Error('RabbitMQ service not ready within timeout');
     }
   }
 }

@@ -4,6 +4,7 @@ import {
   AuthResponse, 
   LoginRequest, 
   RegisterRequest,
+  SocialLoginRequest,
   Video,
   VideoUploadRequest,
   SocialAccount,
@@ -17,10 +18,9 @@ import {
 
 class ApiService {
   private api: AxiosInstance;
-
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -65,9 +65,24 @@ class ApiService {
     return response.data;
   }
 
+  async socialLogin(socialData: SocialLoginRequest): Promise<AuthResponse> {
+    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/social-login', socialData);
+    return response.data;
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const response = await this.api.post('/auth/forgot-password', { email });
+    return response.data;
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const response = await this.api.post('/auth/reset-password', { token, newPassword });
+    return response.data;
+  }
+
   async getProfile(): Promise<User> {
-    const response: AxiosResponse<ApiResponse<User>> = await this.api.get('/auth/profile');
-    return response.data.data;
+    const response: AxiosResponse<User> = await this.api.get('/users/profile');
+    return response.data;
   }
 
   // Videos
@@ -116,10 +131,28 @@ class ApiService {
     const response: AxiosResponse<ApiResponse<SocialAccount>> = await this.api.get(`/social-accounts/${id}`);
     return response.data.data;
   }
-
-  async connectSocialAccount(platform: string): Promise<{ authUrl: string }> {
-    const response: AxiosResponse<{ authUrl: string }> = await this.api.post(`/social-accounts/connect/${platform}`);
-    return response.data;
+  async connectSocialAccount(platform: string): Promise<{ authUrl: string; success: boolean; message?: string; error?: string }> {
+    const response: AxiosResponse<{ 
+      success: boolean; 
+      data?: { authUrl: string; platform: string }; 
+      message?: string; 
+      error?: string;
+    }> = await this.api.post(`/social-accounts/connect/${platform}`);
+    
+    if (response.data.success && response.data.data?.authUrl) {
+      return { 
+        authUrl: response.data.data.authUrl,
+        success: true,
+        message: response.data.message
+      };
+    } else {
+      return {
+        authUrl: '',
+        success: false,
+        message: response.data.message,
+        error: response.data.error
+      };
+    }
   }
 
   async disconnectSocialAccount(id: string): Promise<void> {

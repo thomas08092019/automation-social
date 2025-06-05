@@ -22,8 +22,18 @@ export class WorkerService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // Start consuming messages from RabbitMQ
-    await this.rabbitmq.startConsumer(this.handleTask.bind(this));
+    try {
+      // Wait for RabbitMQ to be ready
+      this.logger.log('Waiting for RabbitMQ service to be ready...');
+      await this.rabbitmq.waitForReady(15000); // Wait up to 15 seconds
+      
+      // Start consuming messages from RabbitMQ
+      await this.rabbitmq.startConsumer(this.handleTask.bind(this));
+      this.logger.log('Worker service initialized and listening for tasks');
+    } catch (error) {
+      this.logger.error('Failed to initialize worker service:', error);
+      // Don't throw error to prevent app crash, retry will happen
+    }
   }
 
   async handleTask(message: PublishingTaskMessage): Promise<void> {
