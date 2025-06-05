@@ -1,62 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import {
-  Container,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  Grid,
-  Button,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
-import {
-  Facebook as FacebookIcon,
-  Instagram as InstagramIcon,
-  YouTube as YouTubeIcon,
-  Twitter as TwitterIcon,
-  Delete as DeleteIcon,
-} from '@mui/icons-material';
+import apiService from '../../services/api';
+import { Button, Card, CardContent } from '../../components/ui';
+import { Plus, Facebook, Instagram, Youtube, Twitter } from 'lucide-react';
+import { SocialAccount } from '../../types';
 
-const SocialAccountsPage: React.FC = () => {
-  const { connectedAccounts, connectSocialAccount, disconnectSocialAccount, getConnectedAccounts } = useAuth();
+export function SocialAccountsPage() {
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [connectedAccounts, setConnectedAccounts] = useState<SocialAccount[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
-    getConnectedAccounts();
-  }, []);
+    if (user) {
+      fetchConnectedAccounts();
+    }
+  }, [user]);
 
-  const handleConnect = async (provider: string) => {
-    setSelectedProvider(provider);
-    setOpenDialog(true);
+  const fetchConnectedAccounts = async () => {
+    try {
+      const accounts = await apiService.getSocialAccounts();
+      setConnectedAccounts(accounts);
+    } catch (error) {
+      console.error('Failed to fetch social accounts:', error);
+    }
   };
 
-  const handleDisconnect = async (accountId: string) => {
-    try {
-      await disconnectSocialAccount(accountId);
-      await getConnectedAccounts();
-    } catch (error) {
-      console.error('Failed to disconnect account:', error);
-    }
+  const handleConnect = async (provider: string) => {
+    // Handle social account connection
+    console.log(`Connecting ${provider}`);
   };
 
   const getProviderIcon = (provider: string) => {
     switch (provider.toLowerCase()) {
       case 'facebook':
-        return <FacebookIcon />;
+        return <Facebook className="h-6 w-6" />;
       case 'instagram':
-        return <InstagramIcon />;
+        return <Instagram className="h-6 w-6" />;
       case 'youtube':
-        return <YouTubeIcon />;
+        return <Youtube className="h-6 w-6" />;
       case 'twitter':
-        return <TwitterIcon />;
+        return <Twitter className="h-6 w-6" />;
       default:
-        return null;
+        return <Plus className="h-6 w-6" />;
     }
   };
 
@@ -76,110 +61,85 @@ const SocialAccountsPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+    <div className="container mx-auto max-w-6xl">
+      <div className="mt-8 mb-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
           Connected Social Accounts
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
+        </h1>
+        <p className="text-gray-600">
           Manage your connected social media accounts for video publishing.
-        </Typography>
-
-        <Grid container spacing={3} sx={{ mt: 2 }}>
+        </p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mt-6">
           {['Facebook', 'Instagram', 'YouTube', 'Twitter'].map((provider) => (
-            <Grid item xs={12} sm={6} md={3} key={provider}>
+            <div key={provider}>
               <Card>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Box
-                      sx={{
-                        color: getProviderColor(provider),
-                        mr: 1,
-                      }}
-                    >
-                      {getProviderIcon(provider)}
-                    </Box>
-                    <Typography variant="h6">{provider}</Typography>
-                  </Box>
-
-                  {connectedAccounts
-                    .filter((account) => account.provider.toLowerCase() === provider.toLowerCase())
-                    .map((account) => (
-                      <Box
-                        key={account.id}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          mb: 1,
-                          p: 1,
-                          bgcolor: 'background.default',
-                          borderRadius: 1,
-                        }}
+                <CardContent className="p-6">
+                  <div className="flex items-center mb-4" style={{ color: getProviderColor(provider) }}>
+                    {getProviderIcon(provider)}
+                    <span className="ml-2 font-medium">{provider}</span>
+                  </div>
+                  
+                  {connectedAccounts.find(account => 
+                    account.platform.toLowerCase() === provider.toLowerCase()
+                  ) ? (
+                    <div className="space-y-2">
+                      <div className="bg-gray-50 p-3 rounded">
+                        <div className="flex items-center">
+                          <img
+                            src="/default-profile.png"
+                            alt="Profile"
+                            className="w-8 h-8 rounded-full mr-2"
+                          />
+                          <div>
+                            <div className="font-medium text-sm">Connected</div>
+                            <div className="text-xs text-gray-500">Active</div>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {/* Handle disconnect */}}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {account.profilePicture && (
-                            <Box
-                              component="img"
-                              src={account.profilePicture}
-                              alt={account.accountName}
-                              sx={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: '50%',
-                                mr: 1,
-                              }}
-                            />
-                          )}
-                          <Typography variant="body2">{account.accountName}</Typography>
-                        </Box>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDisconnect(account.id)}
-                          color="error"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    ))}
-
-                  <Button
-                    variant="outlined"
-                    fullWidth
-                    onClick={() => handleConnect(provider)}
-                    sx={{ mt: 2 }}
-                  >
-                    Connect {provider} Account
-                  </Button>
+                        Disconnect
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => handleConnect(provider)}
+                    >
+                      Connect {provider} Account
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
-            </Grid>
+            </div>
           ))}
-        </Grid>
-      </Box>
+        </div>
+      </div>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Connect {selectedProvider} Account</DialogTitle>
-        <DialogContent>
-          <Typography>
-            You will be redirected to {selectedProvider} to authorize access to your account.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              // Implement OAuth flow here
-              setOpenDialog(false);
-            }}
-          >
-            Continue
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+      {/* Connection Dialog */}
+      {openDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4">Connect Social Account</h2>
+            <p className="text-gray-600 mb-6">
+              Click connect to authorize access to your social media account.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <Button variant="outline" onClick={() => setOpenDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setOpenDialog(false)}>
+                Connect
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
-};
-
-export default SocialAccountsPage; 
+}

@@ -7,9 +7,8 @@ import { AppConfigManager } from '../../components/settings/AppConfigManager';
 import { useAuth } from '../../contexts/AuthContext';
 
 export function SettingsPage() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState({
-    name: user?.name || '',
+  const { user } = useAuth();  const [profile, setProfile] = useState({
+    username: user?.username || '',
     email: user?.email || '',
     currentPassword: '',
     newPassword: '',
@@ -98,14 +97,13 @@ export function SettingsPage() {
             <Card className="p-6">
               <h2 className="text-lg font-medium mb-4">Profile Information</h2>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
+                <div>                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Username
                   </label>
                   <Input
-                    value={profile.name}
-                    onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter your full name"
+                    value={profile.username}
+                    onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value }))}
+                    placeholder="Enter your username"
                   />
                 </div>
                 <div>

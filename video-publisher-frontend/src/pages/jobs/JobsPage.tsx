@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pause, RotateCcw, Calendar, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import apiService from '../../services/api';
 import { Button, Card, CardContent } from '../../components/ui';
-import { BatchJob, PublishingTask } from '../../types';
+import { PublishingJob, PublishingTask, PublishingJobStatus, PublishingTaskStatus } from '../../types';
 import { formatDate, getStatusColor, getStatusBgColor, capitalizeFirst, getPlatformIcon } from '../../utils';
 import { useJobStatusUpdates } from '../../hooks/useJobUpdates';
 
@@ -13,10 +13,9 @@ export function JobsPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const queryClient = useQueryClient();
   const { startUpdates, stopUpdates } = useJobStatusUpdates();
-
   const { data: jobsData, isLoading, error, isFetching } = useQuery({
     queryKey: ['jobs', currentPage],
-    queryFn: () => apiService.getJobs(currentPage, 10),
+    queryFn: () => apiService.getPublishingJobs(currentPage, 10),
   });
 
   useEffect(() => {
@@ -34,16 +33,15 @@ export function JobsPage() {
   const manualRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['jobs'] });
   };
-
   const cancelJobMutation = useMutation({
-    mutationFn: (jobId: string) => apiService.cancelJob(jobId),
+    mutationFn: (jobId: string) => apiService.cancelPublishingJob(jobId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
     },
   });
 
   const retryJobMutation = useMutation({
-    mutationFn: (jobId: string) => apiService.retryJob(jobId),
+    mutationFn: (jobId: string) => apiService.retryPublishingJob(jobId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
     },
@@ -150,9 +148,8 @@ export function JobsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {jobs.filter(job => job.status === 'completed').length}
+                  <p className="text-sm text-gray-600">Completed</p>                  <p className="text-2xl font-bold text-green-600">
+                    {jobs.filter((job: PublishingJob) => job.status === PublishingJobStatus.COMPLETED).length}
                   </p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600" />
@@ -166,7 +163,7 @@ export function JobsPage() {
                 <div>
                   <p className="text-sm text-gray-600">Processing</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {jobs.filter(job => job.status === 'processing').length}
+                    {jobs.filter((job: PublishingJob) => job.status === PublishingJobStatus.PROCESSING).length}
                   </p>
                 </div>
                 <Clock className="h-8 w-8 text-blue-600" />
@@ -180,7 +177,7 @@ export function JobsPage() {
                 <div>
                   <p className="text-sm text-gray-600">Failed</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {jobs.filter(job => job.status === 'failed').length}
+                    {jobs.filter((job: PublishingJob) => job.status === PublishingJobStatus.FAILED).length}
                   </p>
                 </div>
                 <XCircle className="h-8 w-8 text-red-600" />
@@ -206,7 +203,7 @@ export function JobsPage() {
       ) : (
         <>
           <div className="space-y-4">
-            {jobs.map((job) => (
+            {jobs.map((job: PublishingJob) => (
               <JobCard
                 key={job.id}
                 job={job}
@@ -261,7 +258,7 @@ export function JobsPage() {
 }
 
 interface JobCardProps {
-  job: BatchJob;
+  job: PublishingJob;
   onCancel: () => void;
   onRetry: () => void;
   isCancelling: boolean;
@@ -271,11 +268,12 @@ interface JobCardProps {
 function JobCard({ job, onCancel, onRetry, isCancelling, isRetrying }: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
   
-  const canCancel = ['pending', 'processing'].includes(job.status);
-  const canRetry = job.status === 'failed';
+  const canCancel = ['pending', 'processing'].includes(job.status);  const canRetry = job.status === PublishingJobStatus.FAILED;
 
-  const progressPercentage = job.totalTasks > 0 
-    ? Math.round((job.completedTasks / job.totalTasks) * 100) 
+  const totalTasks = job.tasks.length;
+  const completedTasks = job.tasks.filter(task => task.status === PublishingTaskStatus.PUBLISHED).length;
+  const progressPercentage = totalTasks > 0
+    ? Math.round((completedTasks / totalTasks) * 100)
     : 0;
 
   return (
@@ -295,10 +293,9 @@ function JobCard({ job, onCancel, onRetry, isCancelling, isRetrying }: JobCardPr
             )}
             
             <div className="flex items-center space-x-6 text-sm text-gray-500">
-              <span>Created: {formatDate(job.createdAt)}</span>
-              <span>Tasks: {job.completedTasks}/{job.totalTasks}</span>
-              {job.failedTasks > 0 && (
-                <span className="text-red-600">Failed: {job.failedTasks}</span>
+              <span>Created: {formatDate(job.createdAt)}</span>              <span>Tasks: {completedTasks}/{totalTasks}</span>
+              {job.tasks.filter(task => task.status === PublishingTaskStatus.FAILED).length > 0 && (
+                <span className="text-red-600">Failed: {job.tasks.filter(task => task.status === PublishingTaskStatus.FAILED).length}</span>
               )}
             </div>
           </div>
@@ -362,8 +359,7 @@ function JobCard({ job, onCancel, onRetry, isCancelling, isRetrying }: JobCardPr
         {expanded && job.tasks && job.tasks.length > 0 && (
           <div className="border-t pt-4">
             <h4 className="font-medium text-gray-900 mb-3">Tasks</h4>
-            <div className="space-y-2">
-              {job.tasks.map((task) => (
+            <div className="space-y-2">              {job.tasks.map((task: PublishingTask) => (
                 <TaskRow key={task.id} task={task} />
               ))}
             </div>
@@ -380,15 +376,14 @@ interface TaskRowProps {
 
 function TaskRow({ task }: TaskRowProps) {
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-      <div className="flex items-center space-x-3">
-        <div className="text-lg">{getPlatformIcon(task.platform)}</div>
+    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">      <div className="flex items-center space-x-3">
+        <div className="text-lg">{getPlatformIcon(task.socialAccount?.platform || 'YOUTUBE')}</div>
         <div>
           <p className="font-medium text-gray-900">
             {task.video?.title || 'Video'}
           </p>
           <p className="text-sm text-gray-500">
-            {capitalizeFirst(task.platform)} • {task.socialAccount?.platformUsername}
+            {capitalizeFirst(task.socialAccount?.platform || '')} • {task.socialAccount?.accountName}
           </p>
         </div>
       </div>
@@ -398,15 +393,15 @@ function TaskRow({ task }: TaskRowProps) {
           {capitalizeFirst(task.status)}
         </span>
         
-        {task.status === 'completed' && (
+        {task.status === PublishingTaskStatus.PUBLISHED && (
           <CheckCircle className="h-5 w-5 text-green-500" />
         )}
         
-        {task.status === 'failed' && (
+        {task.status === PublishingTaskStatus.FAILED && (
           <XCircle className="h-5 w-5 text-red-500" />
         )}
         
-        {task.status === 'processing' && (
+        {task.status === PublishingTaskStatus.UPLOADING && (
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
         )}
       </div>
@@ -562,11 +557,11 @@ function CreateJobModal({ onClose }: CreateJobModalProps) {
                         );
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex items-center justify-between">                        <div>
                           <h4 className="font-medium">{video.title}</h4>
-                          <p className="text-sm text-gray-600">{video.filename}</p>                          <p className="text-xs text-gray-500">
-                            Duration: {video.duration ? Math.round(video.duration) : 0}s • {video.fileSize ? (video.fileSize / (1024 * 1024)).toFixed(1) : '0.0'}MB
+                          <p className="text-sm text-gray-600">{video.filePath}</p>
+                          <p className="text-xs text-gray-500">
+                            Duration: {video.duration ? Math.round(video.duration) : 0}s
                           </p>
                         </div>
                         <input
@@ -612,9 +607,9 @@ function CreateJobModal({ onClose }: CreateJobModalProps) {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="text-2xl">{getPlatformIcon(account.platform)}</div>
-                          <div>
-                            <h4 className="font-medium">{account.platformUsername}</h4>                            <p className="text-sm text-gray-600">
+                          <div className="text-2xl">{getPlatformIcon(account.platform)}</div>                          <div>
+                            <h4 className="font-medium">{account.accountName}</h4>
+                            <p className="text-sm text-gray-600">
                               {capitalizeFirst(account.platform)} • {account.isActive ? 'Active' : 'Inactive'}
                             </p>
                           </div>
@@ -752,10 +747,9 @@ function CreateJobModal({ onClose }: CreateJobModalProps) {
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Social Accounts ({selectedAccounts.length})</h4>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    {accounts.filter(a => selectedAccounts.includes(a.id)).map(account => (
-                      <div key={account.id} className="text-sm py-1 flex items-center">
+                    {accounts.filter(a => selectedAccounts.includes(a.id)).map(account => (                      <div key={account.id} className="text-sm py-1 flex items-center">
                         <span className="mr-2">{getPlatformIcon(account.platform)}</span>
-                        {account.platformUsername} ({capitalizeFirst(account.platform)})
+                        {account.accountName} ({capitalizeFirst(account.platform)})
                       </div>
                     ))}
                   </div>

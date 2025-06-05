@@ -146,10 +146,9 @@ function VideoCard({ video, onDelete, isDeleting }: VideoCardProps) {
     <Card className="group hover:shadow-md transition-shadow">
       <div className="relative">
         {/* Video Thumbnail */}
-        <div className="aspect-video bg-gray-100 rounded-t-lg flex items-center justify-center">
-          {video.thumbnailUrl ? (
+        <div className="aspect-video bg-gray-100 rounded-t-lg flex items-center justify-center">          {video.thumbnailPath ? (
             <img
-              src={video.thumbnailUrl}
+              src={video.thumbnailPath}
               alt={video.title}
               className="w-full h-full object-cover rounded-t-lg"
             />
@@ -202,13 +201,12 @@ function VideoCard({ video, onDelete, isDeleting }: VideoCardProps) {
       <CardContent className="p-4">
         <h3 className="font-medium text-gray-900 mb-1">
           {truncateText(video.title, 50)}
-        </h3>
-        <p className="text-sm text-gray-500 mb-2">
-          {truncateText(video.description, 80)}
+        </h3>        <p className="text-sm text-gray-500 mb-2">
+          {truncateText(video.description || 'No description', 80)}
         </p>
         <div className="flex justify-between items-center text-xs text-gray-400">
           <span>{formatDate(video.createdAt)}</span>
-          <span>{video.filename}</span>
+          <span>{video.filePath.split('/').pop() || 'Unknown file'}</span>
         </div>
       </CardContent>
     </Card>
