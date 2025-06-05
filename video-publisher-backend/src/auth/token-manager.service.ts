@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { EnhancedSocialAppService } from './enhanced-social-app.service';
+import { SocialPlatform } from '@prisma/client';
 import axios from 'axios';
 
 export interface TokenRefreshResult {
@@ -34,7 +35,7 @@ export class TokenManagerService {
       }
 
       // Check if token is expired or will expire soon (within 5 minutes)
-      const expiresAt = socialAccount.tokenExpiresAt;
+      const expiresAt = socialAccount.expiresAt;
       const now = new Date();
       const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
 
@@ -62,14 +63,14 @@ export class TokenManagerService {
       let refreshResult: TokenRefreshResult;
 
       switch (socialAccount.platform) {
-        case 'facebook':
-        case 'instagram':
+        case SocialPlatform.FACEBOOK:
+        case SocialPlatform.INSTAGRAM:
           refreshResult = await this.refreshFacebookToken(socialAccount);
           break;
-        case 'youtube':
+        case SocialPlatform.YOUTUBE:
           refreshResult = await this.refreshGoogleToken(socialAccount);
           break;
-        case 'tiktok':
+        case SocialPlatform.TIKTOK:
           refreshResult = await this.refreshTikTokToken(socialAccount);
           break;
         default:
@@ -93,10 +94,11 @@ export class TokenManagerService {
       };
     }
   }
+
   private async refreshFacebookToken(socialAccount: any): Promise<TokenRefreshResult> {
     try {
       // Get app configuration for Facebook
-      const platform = socialAccount.platform === 'instagram' ? 'INSTAGRAM_REELS' : 'FACEBOOK_REELS';
+      const platform = socialAccount.platform === SocialPlatform.INSTAGRAM ? SocialPlatform.INSTAGRAM : SocialPlatform.FACEBOOK;
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
         userId: socialAccount.userId,
         platform,
@@ -125,6 +127,7 @@ export class TokenManagerService {
       };
     }
   }
+
   private async refreshGoogleToken(socialAccount: any): Promise<TokenRefreshResult> {
     try {
       if (!socialAccount.refreshToken) {
@@ -137,7 +140,7 @@ export class TokenManagerService {
       // Get app configuration for YouTube
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
         userId: socialAccount.userId,
-        platform: 'YOUTUBE_SHORTS',
+        platform: SocialPlatform.YOUTUBE,
         socialAccountId: socialAccount.id,
       });
 
@@ -162,6 +165,7 @@ export class TokenManagerService {
       };
     }
   }
+
   private async refreshTikTokToken(socialAccount: any): Promise<TokenRefreshResult> {
     try {
       if (!socialAccount.refreshToken) {
@@ -174,7 +178,7 @@ export class TokenManagerService {
       // Get app configuration for TikTok
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
         userId: socialAccount.userId,
-        platform: 'TIKTOK',
+        platform: SocialPlatform.TIKTOK,
         socialAccountId: socialAccount.id,
       });
 
@@ -213,15 +217,12 @@ export class TokenManagerService {
   private async updateTokens(socialAccountId: string, tokens: TokenRefreshResult): Promise<void> {
     const expiresAt = tokens.expiresIn 
       ? new Date(Date.now() + tokens.expiresIn * 1000)
-      : null;
-
-    await this.prisma.socialAccount.update({
+      : null;    await this.prisma.socialAccount.update({
       where: { id: socialAccountId },
       data: {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        tokenExpiresAt: expiresAt,
-        updatedAt: new Date(),
+        expiresAt: expiresAt,
       },
     });
   }
@@ -289,12 +290,13 @@ export class TokenManagerService {
   /**
    * Get TikTok Creator/Business Account Token
    * This handles both Creator and Business account token flows
-   */  async getTikTokCreatorToken(refreshToken: string, userId: string): Promise<TokenRefreshResult> {
+   */
+  async getTikTokCreatorToken(refreshToken: string, userId: string): Promise<TokenRefreshResult> {
     try {
       // Get the app configuration for TikTok from the enhanced app service
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
         userId,
-        platform: 'TIKTOK',
+        platform: SocialPlatform.TIKTOK,
       });
 
       const response = await axios.post('https://open-api.tiktok.com/oauth/refresh_token/', {

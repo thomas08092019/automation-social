@@ -105,14 +105,12 @@ export class OAuthAuthorizationService {
       access_type: 'offline', // For refresh tokens
       prompt: 'consent', // Force consent screen
       ...(state && { state }),
-    });
-
-    switch (platform) {
-      case SocialPlatform.YOUTUBE_SHORTS:
+    });    switch (platform) {
+      case SocialPlatform.YOUTUBE:
         return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-      case SocialPlatform.FACEBOOK_REELS:
-      case SocialPlatform.INSTAGRAM_REELS:
+      case SocialPlatform.FACEBOOK:
+      case SocialPlatform.INSTAGRAM:
         return `https://www.facebook.com/v18.0/dialog/oauth?${params.toString()}`;
 
       case SocialPlatform.TIKTOK:
@@ -263,13 +261,12 @@ export class OAuthAuthorizationService {
   /**
    * Get platform-specific token endpoint
    */
-  private getTokenEndpoint(platform: SocialPlatform): string {
-    switch (platform) {
-      case SocialPlatform.YOUTUBE_SHORTS:
+  private getTokenEndpoint(platform: SocialPlatform): string {    switch (platform) {
+      case SocialPlatform.YOUTUBE:
         return 'https://oauth2.googleapis.com/token';
 
-      case SocialPlatform.FACEBOOK_REELS:
-      case SocialPlatform.INSTAGRAM_REELS:
+      case SocialPlatform.FACEBOOK:
+      case SocialPlatform.INSTAGRAM:
         return 'https://graph.facebook.com/v18.0/oauth/access_token';
 
       case SocialPlatform.TIKTOK:
@@ -303,7 +300,6 @@ export class OAuthAuthorizationService {
         return new URLSearchParams(baseParams);
     }
   }
-
   /**
    * Build refresh token parameters
    */
@@ -316,8 +312,8 @@ export class OAuthAuthorizationService {
     };
 
     switch (platform) {
-      case SocialPlatform.FACEBOOK_REELS:
-      case SocialPlatform.INSTAGRAM_REELS:
+      case SocialPlatform.FACEBOOK:
+      case SocialPlatform.INSTAGRAM:
         return new URLSearchParams({
           grant_type: 'fb_exchange_token',
           client_id: appConfig.appId,
@@ -332,17 +328,16 @@ export class OAuthAuthorizationService {
 
   /**
    * Get default scopes for platform
-   */
-  private getDefaultScopes(platform: SocialPlatform): string[] {
+   */  private getDefaultScopes(platform: SocialPlatform): string[] {
     switch (platform) {
-      case SocialPlatform.YOUTUBE_SHORTS:
+      case SocialPlatform.YOUTUBE:
         return [
           'https://www.googleapis.com/auth/youtube.upload',
           'https://www.googleapis.com/auth/youtube',
           'https://www.googleapis.com/auth/youtube.readonly',
         ];
 
-      case SocialPlatform.FACEBOOK_REELS:
+      case SocialPlatform.FACEBOOK:
         return [
           'pages_manage_posts',
           'pages_read_engagement',
@@ -350,7 +345,7 @@ export class OAuthAuthorizationService {
           'publish_video',
         ];
 
-      case SocialPlatform.INSTAGRAM_REELS:
+      case SocialPlatform.INSTAGRAM:
         return [
           'instagram_basic',
           'instagram_content_publish',

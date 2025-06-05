@@ -131,6 +131,7 @@ class ApiService {
     const response: AxiosResponse<ApiResponse<SocialAccount>> = await this.api.get(`/social-accounts/${id}`);
     return response.data.data;
   }
+
   async connectSocialAccount(platform: string): Promise<{ authUrl: string; success: boolean; message?: string; error?: string }> {
     const response: AxiosResponse<{ 
       success: boolean; 

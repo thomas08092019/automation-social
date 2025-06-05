@@ -47,9 +47,8 @@ export class TiktokUploadService extends BasePlatformUploadService {
       this.logger.log(`Starting TikTok upload for video ${context.video.id}`);
 
       // Validate video against TikTok requirements
-      await VideoValidator.validateVideo(platform, context.video.storagePath, {
+      await VideoValidator.validateVideo(platform, context.video.filePath, {
         duration: context.video.duration || undefined,
-        size: context.video.size,
       });
 
       // Check rate limits
@@ -116,7 +115,7 @@ export class TiktokUploadService extends BasePlatformUploadService {
       this.logger.log('Step 1: Initializing TikTok upload...');
       // Step 1: Initialize upload
       const uploadInitResponse = await this.initializeTikTokUpload(
-        context.socialAccount.platformAccountId,
+        context.socialAccount.accountId,
         tokenResult.accessToken,
       );
 
@@ -128,7 +127,7 @@ export class TiktokUploadService extends BasePlatformUploadService {
       // Step 2: Upload video
       const videoUploadResponse = await this.uploadVideoToTikTok(
         uploadInitResponse.uploadUrl!,
-        context.video.storagePath,
+        context.video.filePath,
         uploadInitResponse.uploadHeaders!,
       );
 
@@ -142,12 +141,12 @@ export class TiktokUploadService extends BasePlatformUploadService {
       const description = context.customDescription || context.video.description || '';
 
       const postResponse = await this.createTikTokPost(
-        context.socialAccount.platformAccountId,
+        context.socialAccount.accountId,
         uploadInitResponse.videoId!,
         title,
         description,
         tokenResult.accessToken,
-        publishingJob?.scheduledAt,
+        publishingJob?.scheduleTime,
       );
 
       if (!postResponse.success) {

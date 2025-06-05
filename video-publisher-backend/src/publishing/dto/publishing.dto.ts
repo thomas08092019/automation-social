@@ -85,7 +85,6 @@ export class PublishingTaskResponseDto {
   video: {
     id: string;
     title: string;
-    originalFileName: string;
   };
   socialAccount: {
     id: string;

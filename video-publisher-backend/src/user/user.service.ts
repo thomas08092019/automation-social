@@ -86,28 +86,15 @@ export class UserService {
     resetToken: string,
     expiryDate: Date,
   ): Promise<void> {
-    // For this demo, we'll store the reset token in the user record
-    // In a production app, you might want a separate table for reset tokens
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        // Note: You'll need to add these fields to your Prisma schema
-        // resetToken: resetToken,
-        // resetTokenExpiry: expiryDate,
-      },
-    });
-
-    // For now, we'll just log it since we haven't added the fields to the schema
-    console.log(
-      `Reset token saved for user ${userId}: ${resetToken} (expires: ${expiryDate})`,
-    );
+    // Note: Password reset functionality requires additional schema fields
+    // Add resetToken and resetTokenExpiry fields to User model when implementing
+    throw new Error('Password reset functionality not implemented - requires schema update');
   }
 
   async findByPasswordResetToken(token: string): Promise<User | null> {
-    // In production, you would query by resetToken and check expiry
-    // For now, we'll return null as a placeholder
-    console.log(`Looking for user with reset token: ${token}`);
-    return null; // Placeholder - implement when schema is updated
+    // Note: Password reset functionality requires additional schema fields
+    // Add resetToken and resetTokenExpiry fields to User model when implementing
+    throw new Error('Password reset functionality not implemented - requires schema update');
   }
 
   async updatePassword(userId: string, newPassword: string): Promise<void> {
@@ -119,16 +106,8 @@ export class UserService {
   }
 
   async clearPasswordResetToken(userId: string): Promise<void> {
-    // Clear the reset token fields
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        // Note: You'll need to add these fields to your Prisma schema
-        // resetToken: null,
-        // resetTokenExpiry: null,
-      },
-    });
-
-    console.log(`Reset token cleared for user ${userId}`);
+    // Note: Password reset functionality requires additional schema fields
+    // Add resetToken and resetTokenExpiry fields to User model when implementing
+    throw new Error('Password reset functionality not implemented - requires schema update');
   }
 }

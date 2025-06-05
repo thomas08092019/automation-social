@@ -55,9 +55,8 @@ export class FacebookReelsUploadService extends BasePlatformUploadService {
       this.logger.debug(`Using app config: ${appConfig.name} (${appConfig.source})`);
 
       // Validate video against Facebook requirements
-      await VideoValidator.validateVideo(platform, context.video.storagePath, {
+      await VideoValidator.validateVideo(platform, context.video.filePath, {
         duration: context.video.duration || undefined,
-        size: context.video.size,
       });
 
       // Check rate limits
@@ -107,7 +106,7 @@ export class FacebookReelsUploadService extends BasePlatformUploadService {
       const tokenResult = await this.tokenManager.getValidTokenForPlatform(
         context.socialAccount.id, 
         'facebook', 
-        context.socialAccount.pageId // Facebook Page ID
+        context.socialAccount.accountId // Facebook Page/Account ID
       );
       
       if (!tokenResult.success) {
@@ -115,7 +114,7 @@ export class FacebookReelsUploadService extends BasePlatformUploadService {
       }
 
       const pageAccessToken = tokenResult.token;
-      const pageId = context.socialAccount.platformAccountId;
+      const pageId = context.socialAccount.accountId;
 
       // Get publishing job for scheduled publishing
       const publishingJob = await this.prisma.publishingJob.findFirst({
@@ -151,15 +150,15 @@ export class FacebookReelsUploadService extends BasePlatformUploadService {
       };
 
       // Handle scheduled publishing
-      if (publishingJob?.scheduledAt && publishingJob.scheduledAt > new Date()) {
+      if (publishingJob?.scheduleTime && publishingJob.scheduleTime > new Date()) {
         params.published = false;
         params.status = 'SCHEDULED';
-        params.scheduled_publish_time = Math.floor(publishingJob.scheduledAt.getTime() / 1000);
-        this.logger.log(`Scheduling Facebook Reel for: ${publishingJob.scheduledAt.toISOString()}`);
+        params.scheduled_publish_time = Math.floor(publishingJob.scheduleTime.getTime() / 1000);
+        this.logger.log(`Scheduling Facebook Reel for: ${publishingJob.scheduleTime.toISOString()}`);
       }
 
       // Create video stream
-      const videoStream = fs.createReadStream(context.video.storagePath);
+      const videoStream = fs.createReadStream(context.video.filePath);
 
       // Upload video to Facebook Page
       const videoResponse = await page.createVideo([], {

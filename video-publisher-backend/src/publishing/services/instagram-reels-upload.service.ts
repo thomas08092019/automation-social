@@ -42,12 +42,9 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
     const platform = 'instagram';
     
     try {
-      this.logger.log(`Starting Instagram Reels upload for video ${context.video.id}`);
-
-      // Validate video against Instagram requirements
-      await VideoValidator.validateVideo(platform, context.video.storagePath, {
+      this.logger.log(`Starting Instagram Reels upload for video ${context.video.id}`);      // Validate video against Instagram requirements
+      await VideoValidator.validateVideo(platform, context.video.filePath, {
         duration: context.video.duration || undefined,
-        size: context.video.size,
       });
 
       // Check rate limits
@@ -88,12 +85,11 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
     }
   }
   private async performUpload(context: UploadContext): Promise<UploadResult> {
-    try {
-      // Get Instagram-specific token and business account ID
+    try {      // Get Instagram-specific token and business account ID
       const tokenResult = await this.tokenManager.getValidTokenForPlatform(
         context.socialAccount.id, 
         'instagram', 
-        context.socialAccount.pageId // Facebook Page ID linked to Instagram
+        context.socialAccount.accountId // Facebook Page/Account ID linked to Instagram
       );
       
       if (!tokenResult.success) {
@@ -110,10 +106,9 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
       // Step 1: Initialize Upload Session
       this.logger.log(`Initializing upload session for Instagram user ${instagramUserId}`);
       const { uploadUrl, uploadId } = await this.initializeUploadSession(instagramUserId, accessToken);
-      
-      // Step 2: Upload Video File
+        // Step 2: Upload Video File
       this.logger.log(`Uploading video file to ${uploadUrl}`);
-      const { videoId } = await this.uploadVideoFile(uploadUrl, context.video.storagePath);
+      const { videoId } = await this.uploadVideoFile(uploadUrl, context.video.filePath);
         // Step 3: Create Media Container
       this.logger.log(`Creating media container for video ${videoId}`);
       const { containerId } = await this.createMediaContainer(

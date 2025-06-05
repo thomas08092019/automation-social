@@ -35,20 +35,18 @@ export class SocialAppService {
 
       if (!socialAccount) {
         return null;
-      }
-
-      // 1. Check if account has direct app credentials
-      if (socialAccount.appId && socialAccount.appSecret) {
+      }      // 1. Check if account references a SocialApp (priority since schema has socialApp relation)
+      if (socialAccount.socialApp) {
         return {
-          name: 'Direct Config',
-          platform: socialAccount.platform,
-          appId: socialAccount.appId,
-          appSecret: socialAccount.appSecret,
-          redirectUri: socialAccount.redirectUri || this.getDefaultRedirectUri(socialAccount.platform),
+          id: socialAccount.socialApp.id,
+          name: socialAccount.socialApp.name,
+          platform: socialAccount.socialApp.platform,
+          appId: socialAccount.socialApp.appId,
+          appSecret: socialAccount.socialApp.appSecret,
+          redirectUri: socialAccount.socialApp.redirectUri,
+          isDefault: socialAccount.socialApp.isDefault,
         };
       }
-
-      // 2. Check if account references a SocialApp
       if (socialAccount.socialApp) {
         return {
           id: socialAccount.socialApp.id,
@@ -211,48 +209,13 @@ export class SocialAppService {
       where: { id: appId },
     });
   }
-
   /**
-   * Get system default configuration from environment variables
+   * Get system default configuration (no longer supported)
    */
   private getSystemDefaultConfig(platform: SocialPlatform): SocialAppConfig | null {
-    const platformKey = platform.toLowerCase().replace('_', '');
-
-    switch (platform) {
-      case 'FACEBOOK_REELS':
-      case 'INSTAGRAM_REELS':
-        return {
-          name: 'System Default Facebook App',
-          platform,
-          appId: this.configService.get('DEFAULT_FACEBOOK_APP_ID') || '',
-          appSecret: this.configService.get('DEFAULT_FACEBOOK_APP_SECRET') || '',
-          redirectUri: this.configService.get('DEFAULT_FACEBOOK_REDIRECT_URI') || '',
-          isDefault: true,
-        };
-
-      case 'YOUTUBE_SHORTS':
-        return {
-          name: 'System Default Google App',
-          platform,
-          appId: this.configService.get('DEFAULT_GOOGLE_CLIENT_ID') || '',
-          appSecret: this.configService.get('DEFAULT_GOOGLE_CLIENT_SECRET') || '',
-          redirectUri: this.configService.get('DEFAULT_GOOGLE_REDIRECT_URI') || '',
-          isDefault: true,
-        };
-
-      case 'TIKTOK':
-        return {
-          name: 'System Default TikTok App',
-          platform,
-          appId: this.configService.get('DEFAULT_TIKTOK_CLIENT_KEY') || '',
-          appSecret: this.configService.get('DEFAULT_TIKTOK_CLIENT_SECRET') || '',
-          redirectUri: this.configService.get('DEFAULT_TIKTOK_REDIRECT_URI') || '',
-          isDefault: true,
-        };
-
-      default:
-        return null;
-    }
+    // System default configs are no longer supported
+    // Users must configure their own app credentials
+    return null;
   }
 
   /**
@@ -262,12 +225,11 @@ export class SocialAppService {
     const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
 
     switch (platform) {
-      case 'FACEBOOK_REELS':
-      case 'INSTAGRAM_REELS':
+      case SocialPlatform.FACEBOOK:
+      case SocialPlatform.INSTAGRAM:
         return `${baseUrl}/auth/facebook/callback`;
-      case 'YOUTUBE_SHORTS':
-        return `${baseUrl}/auth/google/callback`;
-      case 'TIKTOK':
+      case SocialPlatform.YOUTUBE:        return `${baseUrl}/auth/google/callback`;
+      case SocialPlatform.TIKTOK:
         return `${baseUrl}/auth/tiktok/callback`;
       default:
         return `${baseUrl}/auth/callback`;

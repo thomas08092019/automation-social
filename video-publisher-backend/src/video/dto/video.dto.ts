@@ -34,12 +34,9 @@ export class VideoResponseDto {
   id: string;
   title: string;
   description?: string;
-  tags: string[];
-  originalFileName: string;
+  filePath: string;
   thumbnailPath?: string;
   duration?: number;
-  size: number;
-  mimeType: string;
   status: VideoStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -48,9 +45,7 @@ export class VideoResponseDto {
 export class VideoUploadResponseDto {
   id: string;
   title: string;
-  originalFileName: string;
-  size: number;
-  mimeType: string;
+  filePath: string;
   status: VideoStatus;
   message: string;
 }

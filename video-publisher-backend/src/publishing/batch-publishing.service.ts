@@ -3,7 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PublishingTaskStatus } from '@prisma/client';
+import { PublishingTaskStatus, PublishingJobStatus } from '@prisma/client';
 import { PrismaService } from '../common';
 import { VideoService } from '../video/video.service';
 import { SocialAccountService } from '../social-account/social-account.service';
@@ -54,9 +54,9 @@ export class BatchPublishingService {
 
       const job = await this.prisma.publishingJob.create({
         data: {
-          title: jobTitle,
+          name: jobTitle,
           description: `Batch publishing job for video: ${video.title}`,
-          scheduledAt: createDto.scheduledAt
+          scheduleTime: createDto.scheduledAt
             ? new Date(createDto.scheduledAt)
             : null,
           userId,
@@ -65,7 +65,6 @@ export class BatchPublishingService {
               videoId: jobItem.videoId,
               socialAccountId: target.socialAccountId,
               status: PublishingTaskStatus.PENDING,
-              attempts: 0,
             })),
           },
         },
@@ -76,14 +75,13 @@ export class BatchPublishingService {
                 select: {
                   id: true,
                   title: true,
-                  originalFileName: true,
                 },
               },
               socialAccount: {
                 select: {
                   id: true,
                   platform: true,
-                  username: true,
+                  accountName: true,
                 },
               },
             },
@@ -105,22 +103,26 @@ export class BatchPublishingService {
 
       results.push({
         id: job.id,
-        title: job.title,
+        title: job.name,
         description: job.description,
-        status: job.status,
-        scheduledAt: job.scheduledAt,
+        status: job.status as PublishingJobStatus,
+        scheduledAt: job.scheduleTime,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
         tasks: job.tasks.map((task) => ({
           id: task.id,
-          status: task.status,
-          platformPostId: task.platformPostId,
-          errorMessage: task.errorMessage,
-          attempts: task.attempts,
+          status: task.status as PublishingTaskStatus,
+          platformPostId: null, // Not available in current schema
+          errorMessage: task.error,
+          attempts: 0, // Not available in current schema
           createdAt: task.createdAt,
           updatedAt: task.updatedAt,
           video: task.video,
-          socialAccount: task.socialAccount,
+          socialAccount: {
+            id: task.socialAccount.id,
+            platform: task.socialAccount.platform,
+            username: task.socialAccount.accountName,
+          },
         })),
       });
     }

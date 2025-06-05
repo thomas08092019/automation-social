@@ -1,6 +1,7 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, Param, Res } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, Param, Res, UseGuards, Delete, Request } from '@nestjs/common';
 import { AuthService, AuthResponse } from './auth.service';
 import { CreateUserDto, LoginDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto } from '../user/dto/user.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -118,5 +119,30 @@ export class AuthController {
     } else {
       res.status(400).json({ error: 'Unsupported OAuth provider' });
     }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('connect-social')
+  async connectSocialAccount(
+    @Request() req,
+    @Body('provider') provider: string,
+    @Body('token') token: string,
+  ) {
+    return this.authService.connectSocialAccount(req.user.id, provider, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('disconnect-social/:accountId')
+  async disconnectSocialAccount(
+    @Request() req,
+    @Param('accountId') accountId: string,
+  ) {
+    return this.authService.disconnectSocialAccount(req.user.id, accountId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('connected-accounts')
+  async getConnectedAccounts(@Request() req) {
+    return this.authService.getConnectedAccounts(req.user.id);
   }
 }

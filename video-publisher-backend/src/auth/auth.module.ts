@@ -5,6 +5,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
+import { OAuthService } from '../services/oauth.service';
+import { EmailService } from '../services/email.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { TokenManagerService } from './token-manager.service';
 import { SocialAppService } from './social-app.service';
@@ -36,6 +38,8 @@ import { PrismaModule } from '../common/prisma.module';
     SocialAppService,
     EnhancedSocialAppService,
     OAuthAuthorizationService,
+    OAuthService,
+    EmailService,
   ],
   controllers: [AuthController, SocialAppsController],
   exports: [
@@ -44,6 +48,8 @@ import { PrismaModule } from '../common/prisma.module';
     SocialAppService,
     EnhancedSocialAppService,
     OAuthAuthorizationService,
+    OAuthService,
+    EmailService,
   ],
 })
 export class AuthModule {}

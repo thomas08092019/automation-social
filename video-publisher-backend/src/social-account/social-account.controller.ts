@@ -47,9 +47,9 @@ export class SocialAccountController {
   ) {
     // Map frontend platform names to backend enum values
     const platformMapping: Record<string, SocialPlatform> = {
-      'youtube': SocialPlatform.YOUTUBE_SHORTS,
-      'facebook': SocialPlatform.FACEBOOK_REELS,
-      'instagram': SocialPlatform.INSTAGRAM_REELS,
+      'youtube': SocialPlatform.YOUTUBE,
+      'facebook': SocialPlatform.FACEBOOK,
+      'instagram': SocialPlatform.INSTAGRAM,
       'tiktok': SocialPlatform.TIKTOK,
     };
 

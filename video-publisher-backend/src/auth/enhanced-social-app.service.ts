@@ -123,18 +123,15 @@ export class EnhancedSocialAppService {
           socialAppId: socialAccount.socialApp.id,
           source: 'social-app',
         };
-      }
-
-      // Nếu social account có app credentials inline
-      if (socialAccount?.appId && socialAccount?.appSecret) {
-        return {
-          appId: socialAccount.appId,
-          appSecret: socialAccount.appSecret,
-          redirectUri: socialAccount.redirectUri || this.getDefaultRedirectUri(platform),
-          name: `Inline App for ${socialAccount.username}`,
-          source: 'inline',
-        };
-      }
+      }      // Nếu social account có app credentials inline (không sử dụng vì không có trong schema)
+      // Thay vào đó, sử dụng socialApp luôn
+      return {
+        appId: socialAccount.socialApp.appId,
+        appSecret: socialAccount.socialApp.appSecret,
+        redirectUri: socialAccount.socialApp.redirectUri,
+        name: `App for ${socialAccount.accountName}`,
+        source: 'social-app',
+      };
     }
 
     // 2. Nếu có preferredAppId, tìm app cụ thể
@@ -215,55 +212,23 @@ export class EnhancedSocialAppService {
 
   /**
    * Lấy system default config từ environment variables
-   */
-  private getSystemDefaultConfig(platform: SocialPlatform): AppConfig {
-    switch (platform) {
-      case 'YOUTUBE_SHORTS':
-        return {
-          appId: this.configService.get('DEFAULT_GOOGLE_CLIENT_ID') || '',
-          appSecret: this.configService.get('DEFAULT_GOOGLE_CLIENT_SECRET') || '',
-          redirectUri: this.configService.get('DEFAULT_GOOGLE_REDIRECT_URI') || '',
-          name: 'System Default Google App',
-          source: 'system-default',
-        };
-
-      case 'FACEBOOK_REELS':
-      case 'INSTAGRAM_REELS':
-        return {
-          appId: this.configService.get('DEFAULT_FACEBOOK_APP_ID') || '',
-          appSecret: this.configService.get('DEFAULT_FACEBOOK_APP_SECRET') || '',
-          redirectUri: this.configService.get('DEFAULT_FACEBOOK_REDIRECT_URI') || '',
-          name: 'System Default Facebook App',
-          source: 'system-default',
-        };
-
-      case 'TIKTOK':
-        return {
-          appId: this.configService.get('DEFAULT_TIKTOK_CLIENT_KEY') || '',
-          appSecret: this.configService.get('DEFAULT_TIKTOK_CLIENT_SECRET') || '',
-          redirectUri: this.configService.get('DEFAULT_TIKTOK_REDIRECT_URI') || '',
-          name: 'System Default TikTok App',
-          source: 'system-default',
-        };
-
-      default:
-        throw new BadRequestException(`Unsupported platform: ${platform}`);
-    }
+   */  private getSystemDefaultConfig(platform: SocialPlatform): AppConfig {
+    // System default configs are no longer supported
+    // Users must configure their own app credentials
+    throw new BadRequestException(`No app configuration found for platform ${platform}. Please configure your app credentials through the UI.`);
   }
 
   /**
    * Lấy default redirect URI cho platform
    */
   private getDefaultRedirectUri(platform: SocialPlatform): string {
-    const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
-
-    switch (platform) {
-      case 'YOUTUBE_SHORTS':
+    const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');    switch (platform) {
+      case SocialPlatform.YOUTUBE:
         return `${baseUrl}/auth/google/callback`;
-      case 'FACEBOOK_REELS':
-      case 'INSTAGRAM_REELS':
+      case SocialPlatform.FACEBOOK:
+      case SocialPlatform.INSTAGRAM:
         return `${baseUrl}/auth/facebook/callback`;
-      case 'TIKTOK':
+      case SocialPlatform.TIKTOK:
         return `${baseUrl}/auth/tiktok/callback`;
       default:
         return `${baseUrl}/auth/callback`;
@@ -304,16 +269,15 @@ export class EnhancedSocialAppService {
    * Kiểm tra app có khả dụng không
    */
   async validateAppConfig(appId: string, appSecret: string, platform: SocialPlatform): Promise<AppValidationResult> {
-    try {
-      switch (platform) {
-        case 'FACEBOOK_REELS':
-        case 'INSTAGRAM_REELS':
+    try {      switch (platform) {
+        case SocialPlatform.FACEBOOK:
+        case SocialPlatform.INSTAGRAM:
           return await this.validateFacebookApp(appId, appSecret);
 
-        case 'YOUTUBE_SHORTS':
+        case SocialPlatform.YOUTUBE:
           return await this.validateGoogleApp(appId, appSecret);
 
-        case 'TIKTOK':
+        case SocialPlatform.TIKTOK:
           return await this.validateTikTokApp(appId, appSecret);
 
         default:
@@ -423,17 +387,11 @@ export class EnhancedSocialAppService {
 
     if (socialAccount.platform !== socialApp.platform) {
       throw new BadRequestException('Platform mismatch between account and app');
-    }
-
-    // Cập nhật social account
+    }    // Cập nhật social account
     const updated = await this.prisma.socialAccount.update({
       where: { id: socialAccountId },
       data: {
         socialAppId,
-        // Xóa inline app credentials nếu có
-        appId: null,
-        appSecret: null,
-        redirectUri: null,
       },
     });
 

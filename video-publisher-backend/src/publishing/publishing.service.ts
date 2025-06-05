@@ -37,9 +37,9 @@ export class PublishingService {
     // Create publishing job with tasks
     const job = await this.prisma.publishingJob.create({
       data: {
-        title: createDto.title,
+        name: createDto.title,
         description: createDto.description,
-        scheduledAt: createDto.scheduledAt
+        scheduleTime: createDto.scheduledAt
           ? new Date(createDto.scheduledAt)
           : null,
         userId,
@@ -57,14 +57,13 @@ export class PublishingService {
               select: {
                 id: true,
                 title: true,
-                originalFileName: true,
               },
             },
             socialAccount: {
               select: {
                 id: true,
                 platform: true,
-                username: true,
+                accountName: true,
                 accessToken: true,
               },
             },
@@ -104,9 +103,9 @@ export class PublishingService {
 
       const job = await this.prisma.publishingJob.create({
         data: {
-          title: jobTitle,
+          name: jobTitle,
           description: `Batch publishing job for video: ${video.title}`,
-          scheduledAt: createDto.scheduledAt
+          scheduleTime: createDto.scheduledAt
             ? new Date(createDto.scheduledAt)
             : null,
           userId,
@@ -126,14 +125,13 @@ export class PublishingService {
                 select: {
                   id: true,
                   title: true,
-                  originalFileName: true,
                 },
               },
               socialAccount: {
                 select: {
                   id: true,
                   platform: true,
-                  username: true,
+                  accountName: true,
                   accessToken: true,
                 },
               },
@@ -154,22 +152,26 @@ export class PublishingService {
 
       results.push({
         id: job.id,
-        title: job.title,
+        title: job.name,
         description: job.description,
-        status: job.status,
-        scheduledAt: job.scheduledAt,
+        status: job.status as PublishingJobStatus,
+        scheduledAt: job.scheduleTime,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
         tasks: job.tasks.map((task) => ({
           id: task.id,
-          status: task.status,
-          platformPostId: task.platformPostId,
-          errorMessage: task.errorMessage,
-          attempts: task.attempts,
+          status: task.status as PublishingTaskStatus,
+          platformPostId: null, // Not available in current schema
+          errorMessage: task.error,
+          attempts: 0, // Not available in current schema
           createdAt: task.createdAt,
           updatedAt: task.updatedAt,
           video: task.video,
-          socialAccount: task.socialAccount,
+          socialAccount: {
+            id: task.socialAccount.id,
+            platform: task.socialAccount.platform,
+            username: task.socialAccount.accountName,
+          },
         })),
       });
     }
@@ -193,10 +195,10 @@ export class PublishingService {
 
     return jobs.map((job) => ({
       id: job.id,
-      title: job.title,
+      title: job.name,
       description: job.description,
-      status: job.status,
-      scheduledAt: job.scheduledAt,
+      status: job.status as PublishingJobStatus,
+      scheduledAt: job.scheduleTime,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       totalTasks: job._count.tasks,
@@ -225,14 +227,13 @@ export class PublishingService {
               select: {
                 id: true,
                 title: true,
-                originalFileName: true,
               },
             },
             socialAccount: {
               select: {
                 id: true,
                 platform: true,
-                username: true,
+                accountName: true,
                 accessToken: true,
               },
             },
@@ -319,12 +320,12 @@ export class PublishingService {
     // Reset failed tasks to pending
     await this.prisma.publishingTask.updateMany({
       where: {
-        publishingJobId: jobId,
+        jobId: jobId,
         status: PublishingTaskStatus.FAILED,
       },
       data: {
         status: PublishingTaskStatus.PENDING,
-        errorMessage: null,
+        error: null,
       },
     });
 
@@ -352,9 +353,8 @@ export class PublishingService {
       where: { id: taskId },
       data: {
         status,
-        platformPostId,
-        errorMessage,
-        attempts: { increment: 1 },
+        error: errorMessage,
+        // Note: platformPostId and attempts fields don't exist in current schema
       },
     });
 
@@ -420,25 +420,25 @@ export class PublishingService {
   private mapToJobResponse(job: any): PublishingJobResponseDto {
     return {
       id: job.id,
-      title: job.title,
+      title: job.name,
       description: job.description,
-      status: job.status,
-      scheduledAt: job.scheduledAt,
+      status: job.status as PublishingJobStatus,
+      scheduledAt: job.scheduleTime,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       tasks: job.tasks.map((task: any) => ({
         id: task.id,
-        status: task.status,
-        platformPostId: task.platformPostId,
-        errorMessage: task.errorMessage,
-        attempts: task.attempts,
+        status: task.status as PublishingTaskStatus,
+        platformPostId: null, // Not available in current schema
+        errorMessage: task.error,
+        attempts: 0, // Not available in current schema
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
         video: task.video,
         socialAccount: {
           id: task.socialAccount.id,
           platform: task.socialAccount.platform,
-          username: task.socialAccount.username,
+          username: task.socialAccount.accountName,
         },
       })),
     };

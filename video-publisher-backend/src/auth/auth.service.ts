@@ -2,7 +2,10 @@ import { Injectable, UnauthorizedException, BadRequestException, NotFoundExcepti
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { LoginDto, CreateUserDto, UserResponseDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto } from '../user/dto/user.dto';
+import { OAuthService } from '../services/oauth.service';
+import { EmailService } from '../services/email.service';
 import * as crypto from 'crypto';
+import { PrismaService } from '../common/prisma.service';
 
 export interface JwtPayload {
   userId: string;
@@ -19,6 +22,9 @@ export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
+    private oauthService: OAuthService,
+    private emailService: EmailService,
+    private prisma: PrismaService,
   ) {}
 
   async register(createUserDto: CreateUserDto): Promise<AuthResponse> {
@@ -71,21 +77,24 @@ export class AuthService {
     const { provider, accessToken, email, name, providerId } = socialLoginDto;
 
     try {
-      // Verify the social token with the provider (simplified for now)
-      const isValidToken = await this.verifySocialToken(provider, accessToken);
-      if (!isValidToken) {
-        throw new UnauthorizedException('Invalid social token');
+      let userData;
+      if (provider === 'google') {
+        userData = await this.oauthService.verifyGoogleToken(accessToken);
+      } else if (provider === 'facebook') {
+        userData = await this.oauthService.verifyFacebookToken(accessToken);
+      } else {
+        throw new UnauthorizedException('Unsupported social provider');
       }
 
       // Check if user already exists
-      let user = await this.userService.findByEmail(email);
+      let user: UserResponseDto = await this.userService.findByEmail(userData.email);
       
       if (!user) {
         // Create new user for social login
         const createUserDto: CreateUserDto = {
-          email,
-          username: name || email.split('@')[0],
-          password: crypto.randomBytes(32).toString('hex'), // Random password for social users
+          email: userData.email,
+          username: userData.name || userData.email.split('@')[0],
+          password: crypto.randomBytes(32).toString('hex'),
         };
         user = await this.userService.create(createUserDto);
       }
@@ -119,13 +128,11 @@ export class AuthService {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
-    // Save reset token to user (you'll need to add these fields to user model)
+    // Save reset token to user
     await this.userService.savePasswordResetToken(user.id, resetToken, resetTokenExpiry);
 
-    // In a real application, you would send an email here
-    // For now, we'll just log it (in production, use a proper email service)
-    console.log(`Password reset token for ${email}: ${resetToken}`);
-    console.log(`Reset URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`);
+    // Send reset email
+    await this.emailService.sendPasswordResetEmail(email, resetToken);
 
     return { message: 'If an account with that email exists, a password reset link has been sent.' };
   }
@@ -156,25 +163,41 @@ export class AuthService {
     return this.jwtService.sign(payload);
   }
 
-  private async verifySocialToken(provider: string, accessToken: string): Promise<boolean> {
-    // In a real application, you would verify the token with the social provider's API
-    // For Google: verify with Google's tokeninfo endpoint
-    // For Facebook: verify with Facebook's debug_token endpoint
-    // For this demo, we'll just return true
-    
+  async connectSocialAccount(userId: string, provider: string, token: string) {
     try {
-      if (provider === 'google') {
-        // Example: const response = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${accessToken}`);
-        // Verify the response contains valid user data
-        return true; // Simplified for demo
-      } else if (provider === 'facebook') {
-        // Example: const response = await fetch(`https://graph.facebook.com/me?access_token=${accessToken}`);
-        // Verify the response contains valid user data
-        return true; // Simplified for demo
-      }
-      return false;
+      // For now, return a simple response since OAuth service needs to be properly configured
+      return {
+        message: 'Social account connection feature needs OAuth configuration',
+        provider,
+        userId
+      };
     } catch (error) {
-      return false;
+      throw new BadRequestException('Failed to connect social account');
     }
+  }
+
+  async disconnectSocialAccount(userId: string, accountId: string) {
+    const account = await this.prisma.socialAccount.findFirst({
+      where: {
+        id: accountId,
+        userId,
+      },
+    });
+
+    if (!account) {
+      throw new BadRequestException('Social account not found');
+    }
+
+    await this.prisma.socialAccount.delete({
+      where: { id: accountId },
+    });
+
+    return { message: 'Social account disconnected successfully' };
+  }
+
+  async getConnectedAccounts(userId: string) {
+    return this.prisma.socialAccount.findMany({
+      where: { userId },
+    });
   }
 }

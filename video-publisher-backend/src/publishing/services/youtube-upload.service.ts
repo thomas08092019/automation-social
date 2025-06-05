@@ -46,9 +46,8 @@ export class YoutubeUploadService extends BasePlatformUploadService {
       this.logger.log(`Starting YouTube Shorts upload for video ${context.video.id}`);
 
       // Validate video against YouTube requirements
-      await VideoValidator.validateVideo(platform, context.video.storagePath, {
+      await VideoValidator.validateVideo(platform, context.video.filePath, {
         duration: context.video.duration || undefined,
-        size: context.video.size,
       });
 
       // Check rate limits
@@ -125,7 +124,7 @@ export class YoutubeUploadService extends BasePlatformUploadService {
         snippet: {
           title: title.substring(0, 100), // YouTube title limit
           description: finalDescription,
-          tags: context.video.tags?.length ? [...context.video.tags, 'Shorts'] : ['Shorts'],
+          tags: ['Shorts'], // Tags field not available in Video model, use default
           categoryId: '22', // People & Blogs
         },
         status: {
@@ -134,14 +133,14 @@ export class YoutubeUploadService extends BasePlatformUploadService {
       };
 
       // Handle scheduled publishing
-      if (publishingJob?.scheduledAt && publishingJob.scheduledAt > new Date()) {
+      if (publishingJob?.scheduleTime && publishingJob.scheduleTime > new Date()) {
         videoResource.status.privacyStatus = 'private';
-        videoResource.status.publishAt = publishingJob.scheduledAt.toISOString();
-        this.logger.log(`Scheduled publish time set: ${publishingJob.scheduledAt.toISOString()}`);
+        videoResource.status.publishAt = publishingJob.scheduleTime.toISOString();
+        this.logger.log(`Scheduled publish time set: ${publishingJob.scheduleTime.toISOString()}`);
       }
 
       // Create video stream
-      const videoStream = fs.createReadStream(context.video.storagePath);
+      const videoStream = fs.createReadStream(context.video.filePath);
 
       // Upload video
       this.logger.log(`Uploading video to YouTube...`);
@@ -192,7 +191,7 @@ export class YoutubeUploadService extends BasePlatformUploadService {
     // Get app configuration for YouTube/Google
     const appConfig = await this.enhancedSocialAppService.getAppConfig({
       userId,
-      platform: 'YOUTUBE_SHORTS',
+      platform: 'YOUTUBE', // Use correct enum value
     });
 
     const oauth2Client = new google.auth.OAuth2(

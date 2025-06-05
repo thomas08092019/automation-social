@@ -38,43 +38,17 @@ export function useJobStatusUpdates() {
 
 export function useWebSocketConnection(url: string) {
   const queryClient = useQueryClient();
-  const wsRef = useRef<WebSocket | null>(null);
-
   useEffect(() => {
-    // This would be used in a real application with an actual WebSocket server
-    // For now, we'll just simulate the connection
-    console.log(`Would connect to WebSocket at: ${url}`);
-    
-    // Simulate connection
-    const connect = () => {
-      // wsRef.current = new WebSocket(url);
-      
-      // wsRef.current.onopen = () => {
-      //   console.log('WebSocket connected');
-      // };
-      
-      // wsRef.current.onmessage = (event) => {
-      //   const data = JSON.parse(event.data);
-      //   if (data.type === 'job_status_update') {
-      //     queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      //   }
-      // };
-      
-      // wsRef.current.onclose = () => {
-      //   console.log('WebSocket disconnected');
-      //   // Attempt to reconnect after 3 seconds
-      //   setTimeout(connect, 3000);
-      // };
-    };
-
-    // connect();
-
+    // WebSocket functionality will be implemented when real-time updates are needed
+    // For now, using polling-based updates
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      // Cleanup when implemented
     };
   }, [url, queryClient]);
 
-  return wsRef.current;
+  return {
+    isConnected: false,
+    disconnect: () => {},
+    reconnect: () => {},
+  };
 }

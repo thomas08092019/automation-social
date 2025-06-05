@@ -65,7 +65,6 @@ export class WorkerService implements OnModuleInit {
         where: { id: publishingTaskId },
         data: {
           status: PublishingTaskStatus.UPLOADING,
-          attempts: task.attempts + 1,
         },
       });
 
@@ -90,7 +89,6 @@ export class WorkerService implements OnModuleInit {
           where: { id: publishingTaskId },
           data: {
             status: PublishingTaskStatus.PUBLISHED,
-            platformPostId: result.platformPostId,
             updatedAt: new Date(),
           },
         });
@@ -101,33 +99,29 @@ export class WorkerService implements OnModuleInit {
         await this.handleTaskFailure(
           task.id,
           result.errorMessage,
-          task.attempts + 1,
+          0, // No attempts tracking in schema
         );
       }
 
       // Update job status if all tasks are completed
-      await this.updateJobStatus(task.publishingJobId);
+      await this.updateJobStatus(task.jobId);
     } catch (error) {
       this.logger.error(`Error processing task ${publishingTaskId}:`, error);
-      // Get current task to get attempt count
-      const currentTask = await this.prisma.publishingTask.findUnique({
-        where: { id: publishingTaskId },
-      });
       await this.handleTaskFailure(
         publishingTaskId,
         error.message,
-        currentTask?.attempts || 0,
+        0, // No attempts tracking in schema
       );
     }
   }
 
   private getUploadService(platform: string) {
     switch (platform) {
-      case 'YOUTUBE_SHORTS':
+      case 'YOUTUBE':
         return this.youtubeUpload;
-      case 'FACEBOOK_REELS':
+      case 'FACEBOOK':
         return this.facebookReelsUpload;
-      case 'INSTAGRAM_REELS':
+      case 'INSTAGRAM':
         return this.instagramReelsUpload;
       case 'TIKTOK':
         return this.tiktokUpload;
@@ -138,7 +132,7 @@ export class WorkerService implements OnModuleInit {
 
   private async handleTaskFailure(
     taskId: string,
-    errorMessage: string,
+    error: string,
     attempts: number,
   ): Promise<void> {
     const maxRetries = 3;
@@ -149,8 +143,7 @@ export class WorkerService implements OnModuleInit {
         where: { id: taskId },
         data: {
           status: PublishingTaskStatus.RETRYING,
-          errorMessage,
-          attempts,
+          error,
           updatedAt: new Date(),
         },
       });
@@ -172,14 +165,13 @@ export class WorkerService implements OnModuleInit {
         where: { id: taskId },
         data: {
           status: PublishingTaskStatus.FAILED,
-          errorMessage,
-          attempts,
+          error,
           updatedAt: new Date(),
         },
       });
 
       this.logger.error(
-        `Task ${taskId} failed after ${maxRetries} attempts: ${errorMessage}`,
+        `Task ${taskId} failed after ${maxRetries} attempts: ${error}`,
       );
     }
   }
@@ -187,7 +179,7 @@ export class WorkerService implements OnModuleInit {
   private async updateJobStatus(jobId: string): Promise<void> {
     // Get all tasks for this job
     const tasks = await this.prisma.publishingTask.findMany({
-      where: { publishingJobId: jobId },
+      where: { jobId: jobId },
     });
 
     const totalTasks = tasks.length;

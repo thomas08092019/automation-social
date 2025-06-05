@@ -58,49 +58,47 @@ export class VideoService {
       data: {
         title: createDto.title,
         description: createDto.description,
-        tags: createDto.tags || [],
-        originalFileName: file.originalname,
-        storagePath: filePath,
-        size: file.size,
-        mimeType: file.mimetype,
+        filePath: filePath, // Use correct field name
         status: VideoStatus.PENDING,
         userId,
       },
       select: {
         id: true,
         title: true,
-        originalFileName: true,
-        size: true,
-        mimeType: true,
+        filePath: true,
         status: true,
       },
     });
 
     return {
       ...video,
+      status: video.status as VideoStatus,
       message: 'Video uploaded successfully and is being processed',
     };
   }
 
   async findAllByUser(userId: string): Promise<VideoResponseDto[]> {
-    return this.prisma.video.findMany({
+    const videos = await this.prisma.video.findMany({
       where: { userId },
       select: {
         id: true,
         title: true,
         description: true,
-        tags: true,
-        originalFileName: true,
+        filePath: true,
         thumbnailPath: true,
         duration: true,
-        size: true,
-        mimeType: true,
         status: true,
         createdAt: true,
         updatedAt: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Map to response DTO
+    return videos.map(video => ({
+      ...video,
+      status: video.status as VideoStatus,
+    }));
   }
 
   async findById(userId: string, videoId: string): Promise<VideoResponseDto> {
@@ -113,12 +111,9 @@ export class VideoService {
         id: true,
         title: true,
         description: true,
-        tags: true,
-        originalFileName: true,
+        filePath: true,
         thumbnailPath: true,
         duration: true,
-        size: true,
-        mimeType: true,
         status: true,
         createdAt: true,
         updatedAt: true,
@@ -129,7 +124,11 @@ export class VideoService {
       throw new NotFoundException('Video not found');
     }
 
-    return video;
+    // Map to response DTO
+    return {
+      ...video,
+      status: video.status as VideoStatus,
+    };
   }
 
   async update(
@@ -147,19 +146,21 @@ export class VideoService {
         id: true,
         title: true,
         description: true,
-        tags: true,
-        originalFileName: true,
+        filePath: true,
         thumbnailPath: true,
         duration: true,
-        size: true,
-        mimeType: true,
         status: true,
+        userId: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
-    return video;
+    // Map to response DTO
+    return {
+      ...video,
+      status: video.status as VideoStatus,
+    };
   }
 
   async delete(userId: string, videoId: string): Promise<void> {
@@ -170,7 +171,7 @@ export class VideoService {
         userId,
       },
       select: {
-        storagePath: true,
+        filePath: true,
         thumbnailPath: true,
       },
     });
@@ -181,8 +182,8 @@ export class VideoService {
 
     // Delete physical files
     try {
-      if (fs.existsSync(video.storagePath)) {
-        fs.unlinkSync(video.storagePath);
+      if (fs.existsSync(video.filePath)) {
+        fs.unlinkSync(video.filePath);
       }
       if (video.thumbnailPath && fs.existsSync(video.thumbnailPath)) {
         fs.unlinkSync(video.thumbnailPath);
@@ -211,7 +212,7 @@ export class VideoService {
         userId,
       },
       select: {
-        storagePath: true,
+        filePath: true,
       },
     });
 
@@ -219,6 +220,6 @@ export class VideoService {
       throw new NotFoundException('Video not found');
     }
 
-    return video.storagePath;
+    return video.filePath;
   }
 }

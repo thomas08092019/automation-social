@@ -27,42 +27,30 @@ export function SettingsPage() {
   });
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences' | 'apps'>('profile');
-
   const handleProfileSave = async () => {
     try {
-      // TODO: Implement profile update API call
-      console.log('Saving profile:', profile);
-      // Show success message
+      // Profile update functionality not implemented yet
+      throw new Error('Profile update API not implemented');
     } catch (error) {
       console.error('Failed to update profile:', error);
     }
   };
-
   const handlePasswordChange = async () => {
     try {
       if (profile.newPassword !== profile.confirmPassword) {
         alert('Passwords do not match');
         return;
       }
-      // TODO: Implement password change API call
-      console.log('Changing password');
-      // Show success message and clear form
-      setProfile(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }));
+      // Password change functionality not implemented yet
+      throw new Error('Password change API not implemented');
     } catch (error) {
       console.error('Failed to change password:', error);
     }
   };
-
   const handlePreferencesSave = async () => {
     try {
-      // TODO: Implement preferences save API call
-      console.log('Saving preferences:', preferences);
-      // Show success message
+      // Preferences save functionality not implemented yet
+      throw new Error('Preferences save API not implemented');
     } catch (error) {
       console.error('Failed to save preferences:', error);
     }
