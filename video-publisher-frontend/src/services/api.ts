@@ -108,9 +108,8 @@ class ApiService {
     const response = await this.api.post('/auth/reset-password', data);
     return response.data;
   }
-
   async getProfile(): Promise<User> {
-    const response: AxiosResponse<User> = await this.api.get('/auth/profile');
+    const response: AxiosResponse<User> = await this.api.get('/auth/me');
     return response.data;
   }
 

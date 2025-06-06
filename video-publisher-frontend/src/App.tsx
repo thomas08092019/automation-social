@@ -4,25 +4,24 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignUpPage } from './pages/auth/SignUpPage';
-import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
+import { SocialAccountsPage } from './pages/social/SocialAccountsPage';
 import { VideosPage } from './pages/videos/VideosPage';
-import { SocialAccountsPage } from './pages/social-accounts/SocialAccountsPage';
-import { JobsPage } from './pages/jobs/JobsPage';
+import { JobsPage } from './pages/upload/JobsPage';
+import { PromptsPage } from './pages/prompts/PromptsPage';
+import { TrendsPage } from './pages/trends/TrendsPage';
+import { TtsPage } from './pages/tts/TtsPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
-import { TestingPage } from './pages/testing/TestingPage';
+import { Loading } from './components/ui/Loading';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
-
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-blue-50 to-cyan-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600 mx-auto mb-4"></div>
-          <div className="text-gray-600 font-medium text-lg">Loading...</div>
-        </div>
+      <div className="loading-page">
+        <Loading size="large" />
       </div>
     );
   }
@@ -39,11 +38,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-blue-50 to-cyan-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600 mx-auto mb-4"></div>
-          <div className="text-gray-600 font-medium text-lg">Loading...</div>
-        </div>
+      <div className="loading-page">
+        <Loading size="large" />
       </div>
     );
   }
@@ -73,21 +69,32 @@ function AppRoutes() {
             <SignUpPage />
           </PublicRoute>
         } 
-      /><Route 
-        path="/reset-password" 
-        element={<ResetPasswordPage />} 
       />
       <Route 
         path="/auth/callback" 
         element={<OAuthCallbackPage />} 
-      />
-
-      {/* Protected routes */}
+      />      {/* Protected routes */}
       <Route 
         path="/dashboard" 
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/profile" 
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/social-accounts" 
+        element={
+          <ProtectedRoute>
+            <SocialAccountsPage />
           </ProtectedRoute>
         } 
       />
@@ -98,12 +105,35 @@ function AppRoutes() {
             <VideosPage />
           </ProtectedRoute>
         } 
-      />
-      <Route 
-        path="/social-accounts" 
+      />      <Route 
+        path="/upload" 
         element={
           <ProtectedRoute>
-            <SocialAccountsPage />
+            <JobsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/prompts" 
+        element={
+          <ProtectedRoute>
+            <PromptsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/trends" 
+        element={
+          <ProtectedRoute>
+            <TrendsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/tts" 
+        element={
+          <ProtectedRoute>
+            <TtsPage />
           </ProtectedRoute>
         } 
       />
@@ -120,14 +150,6 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <SettingsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/testing" 
-        element={
-          <ProtectedRoute>
-            <TestingPage />
           </ProtectedRoute>
         } 
       />

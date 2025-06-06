@@ -179,8 +179,13 @@
 
 /* OAuth Callback Page Styles */
 .oauth-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 2rem 0;
+  padding: 3rem 2rem;
+  min-height: 200px;
 }
 
 .loading-spinner {

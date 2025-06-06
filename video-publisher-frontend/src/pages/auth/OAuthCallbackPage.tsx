@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { Loading } from '../../components/ui/Loading';
 
 export function OAuthCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -103,13 +104,9 @@ export function OAuthCallbackPage() {
             {status === 'error' && 'Authentication Failed'}
           </h1>
         </div>
-        
-        {status === 'processing' && (
+          {status === 'processing' && (
           <div className="oauth-status">
-            <div className="loading-spinner">
-              <div className="spinner"></div>
-            </div>
-            <p className="status-message">Completing your login...</p>
+            <Loading type="spinner" text="Completing your login..." subtitle="Please wait while we process your authentication..." />
           </div>
         )}
         

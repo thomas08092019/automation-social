@@ -182,6 +182,14 @@ export class AuthService {
     return this.userService.findById(payload.userId);
   }
 
+  async getMe(userId: string): Promise<UserResponseDto> {
+    const user = await this.userService.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
   private generateAccessToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload);
   }

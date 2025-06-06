@@ -36,6 +36,12 @@ export class AuthController {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getMe(@Request() req) {
+    return this.authService.getMe(req.user.id);
+  }
+
   @Get('oauth/callback')
   async handleOAuthCallback(
     @Query('code') code: string,
