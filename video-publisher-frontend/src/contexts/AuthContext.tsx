@@ -96,10 +96,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
       throw error;
     }
   };
-
   const logout = () => {
+    // Clear authentication data
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
+    
+    // Reset theme to light mode and clear theme-related localStorage
+    localStorage.removeItem('theme');
+    localStorage.removeItem('customStartColor');
+    localStorage.removeItem('customEndColor');
+    localStorage.removeItem('selectedPreset');
+    
+    // Reset dark mode in DOM
+    document.body.classList.remove('dark');
+    
+    // Reset CSS custom properties to default values
+    document.documentElement.style.setProperty('--primary-start', '#667eea');
+    document.documentElement.style.setProperty('--primary-end', '#764ba2');
+    document.documentElement.style.setProperty('--primary-gradient', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+    
+    // Remove dynamic theme styles
+    const dynamicStyle = document.getElementById('dynamic-theme-style');
+    if (dynamicStyle) {
+      dynamicStyle.remove();
+    }
+    
+    // Clear state
     setUser(null);
     setConnectedAccounts([]);
   };

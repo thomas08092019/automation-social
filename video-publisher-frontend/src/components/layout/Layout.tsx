@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { API_BASE_URL } from '../../config';
 import '../../styles/layout.css';
 
 interface LayoutProps {
@@ -75,14 +76,34 @@ export function Layout({ children }: LayoutProps) {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();  // Load theme from localStorage on mount
+  const navigate = useNavigate();  const { user, logout } = useAuth();
+  // Load theme from localStorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
       setDarkMode(true);
-      document.body.classList.add('dark');
     }
+  }, []);
+
+  // Reset theme when user logs out
+  useEffect(() => {
+    if (!user) {
+      // User has logged out, reset theme to light mode
+      setDarkMode(false);
+    }
+  }, [user]);
+
+  // Apply dark mode class to body when darkMode state changes
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // Load saved colors and apply theme
+  useEffect(() => {
     
     // Load saved colors and apply theme
     const savedStartColor = localStorage.getItem('customStartColor');
@@ -185,18 +206,13 @@ export function Layout({ children }: LayoutProps) {
     } else {
       setSidebarCollapsed(!sidebarCollapsed);
     }
-  };
-
-  // Toggle theme
+  };  // Toggle theme
   const toggleTheme = () => {
-    setDarkMode(!darkMode);
-    if (!darkMode) {
-      document.body.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    
+    // Save theme preference to localStorage
+    localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
   };
 
   // Navigate to page (SPA navigation)
@@ -214,18 +230,53 @@ export function Layout({ children }: LayoutProps) {
     const currentItem = navigationItems.find(item => item.href === currentPath);
     return currentItem?.name || 'Dashboard';
   };
-
   // Handle logout
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
       await logout();
+      navigate('/login');
     }
-  };
-
-  // Get user avatar initial
+  };// Get user avatar initial
   const getUserInitial = () => {
     return user?.email?.charAt(0).toUpperCase() || 'U';
-  };  return (
+  };
+
+  // Get display name for greeting
+  const getDisplayName = () => {
+    return user?.username || user?.email || 'User';
+  };
+  // Get user avatar display (profile picture or initial)
+  const getUserAvatar = () => {
+    if (user?.profilePicture) {
+      // Convert relative URLs to full URLs
+      const avatarUrl = user.profilePicture.startsWith('/api/') 
+        ? `${API_BASE_URL}${user.profilePicture}`
+        : user.profilePicture;
+        
+      return (
+        <img 
+          src={avatarUrl} 
+          alt="Profile" 
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            borderRadius: '50%'
+          }}
+          onError={(e) => {
+            console.error('Failed to load avatar:', avatarUrl);
+            // If image fails to load, show initial instead
+            e.currentTarget.style.display = 'none';
+            const parent = e.currentTarget.parentElement;
+            if (parent) {
+              parent.textContent = getUserInitial();
+            }
+          }}
+        />
+      );
+    }
+    return getUserInitial();
+  };return (
     <>
       {/* Mobile Overlay */}
       {mobileMenuOpen && (
@@ -251,16 +302,16 @@ export function Layout({ children }: LayoutProps) {
         </div>        {/* User Profile */}
         <div className="user-profile">
           <div className="user-avatar" id="userAvatar">
-            {getUserInitial()}
+            {getUserAvatar()}
           </div>
           <div className="user-info">
             <div className="user-greeting">Good day!</div>
             <div 
               className="user-email" 
               id="userEmail"
-              title={user?.email || 'user@example.com'}
+              title={getDisplayName()}
             >
-              {user?.email || 'user@example.com'}
+              {getDisplayName()}
             </div>
           </div>
         </div>{/* Navigation */}

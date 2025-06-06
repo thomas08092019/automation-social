@@ -1,9 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as path from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Enable validation pipes globally (but allow query params for OAuth)
   app.useGlobalPipes(
@@ -13,6 +15,11 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Serve static files from uploads directory
+  app.useStaticAssets(path.join(__dirname, '..', 'uploads'), {
+    prefix: '/api/uploads/',
+  });
 
   // Enable CORS
   app.enableCors({

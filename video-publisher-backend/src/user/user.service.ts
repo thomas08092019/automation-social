@@ -25,9 +25,7 @@ export class UserService {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create user
+    const hashedPassword = await bcrypt.hash(password, 12);    // Create user
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -38,6 +36,7 @@ export class UserService {
         id: true,
         email: true,
         username: true,
+        profilePicture: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -51,7 +50,6 @@ export class UserService {
       where: { email },
     });
   }
-
   async findById(id: string): Promise<UserResponseDto> {
     if (!id) {
       throw new Error('No id provided to findById');
@@ -62,6 +60,7 @@ export class UserService {
         id: true,
         email: true,
         username: true,
+        profilePicture: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -80,23 +79,30 @@ export class UserService {
   ): Promise<boolean> {
     return bcrypt.compare(plainPassword, hashedPassword);
   }
-
   async savePasswordResetToken(
     userId: string,
     resetToken: string,
     expiryDate: Date,
   ): Promise<void> {
-    // Note: Password reset functionality requires additional schema fields
-    // Add resetToken and resetTokenExpiry fields to User model when implementing
-    throw new Error('Password reset functionality not implemented - requires schema update');
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        resetToken,
+        resetTokenExpiry: expiryDate,
+      },
+    });
   }
 
   async findByPasswordResetToken(token: string): Promise<User | null> {
-    // Note: Password reset functionality requires additional schema fields
-    // Add resetToken and resetTokenExpiry fields to User model when implementing
-    throw new Error('Password reset functionality not implemented - requires schema update');
+    return this.prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          gt: new Date(), // Token must not be expired
+        },
+      },
+    });
   }
-
   async updatePassword(userId: string, newPassword: string): Promise<void> {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await this.prisma.user.update({
@@ -105,9 +111,29 @@ export class UserService {
     });
   }
 
+  async updateProfile(userId: string, updates: Partial<{ username: string; profilePicture: string }>): Promise<UserResponseDto> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: updates,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        profilePicture: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return user;
+  }
   async clearPasswordResetToken(userId: string): Promise<void> {
-    // Note: Password reset functionality requires additional schema fields
-    // Add resetToken and resetTokenExpiry fields to User model when implementing
-    throw new Error('Password reset functionality not implemented - requires schema update');
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
   }
 }

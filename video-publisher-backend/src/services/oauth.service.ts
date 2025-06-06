@@ -31,11 +31,10 @@ export class OAuthService {
       throw new UnauthorizedException('Invalid Google token');
     }
   }
-
   async verifyFacebookToken(token: string): Promise<any> {
     try {
       const response = await axios.get(
-        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${token}`
+        `https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token=${token}`
       );
       
       if (!response.data || !response.data.id) {

@@ -24,6 +24,7 @@ export class UserResponseDto {
   id: string;
   email: string;
   username?: string;
+  profilePicture?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +44,10 @@ export class SocialLoginDto {
 
   @IsString()
   providerId: string;
+
+  // Profile picture from OAuth provider
+  profilePicture?: string;
+  
   // Optional YouTube data - now supports multiple channels
   youtubeChannels?: any[];
   youtubeAccessToken?: string;
@@ -61,6 +66,15 @@ export class ForgotPasswordDto {
 export class ResetPasswordDto {
   @IsString()
   token: string;
+
+  @IsString()
+  @MinLength(6)
+  newPassword: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  currentPassword: string;
 
   @IsString()
   @MinLength(6)

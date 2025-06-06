@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignUpPage } from './pages/auth/SignUpPage';
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
@@ -61,19 +62,21 @@ function AppRoutes() {
             <LoginPage />
           </PublicRoute>
         } 
-      />
-      <Route 
+      />      <Route 
         path="/signup" 
         element={
           <PublicRoute>
             <SignUpPage />
           </PublicRoute>
         } 
+      />      <Route 
+        path="/reset-password" 
+        element={<ResetPasswordPage />} 
       />
       <Route 
         path="/auth/callback" 
         element={<OAuthCallbackPage />} 
-      />      {/* Protected routes */}
+      />{/* Protected routes */}
       <Route 
         path="/dashboard" 
         element={

@@ -1,6 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Get, Param, Res, UseGuards, Delete, Request, Query } from '@nestjs/common';
 import { AuthService, AuthResponse } from './auth.service';
-import { CreateUserDto, LoginDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto } from '../user/dto/user.dto';
+import { CreateUserDto, LoginDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from '../user/dto/user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -29,17 +29,22 @@ export class AuthController {
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
-
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<AuthResponse> {
     return this.authService.resetPassword(resetPasswordDto);
   }
-
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getMe(@Request() req) {
     return this.authService.getMe(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto): Promise<{ message: string }> {
+    return this.authService.changePassword(req.user.id, changePasswordDto);
   }
 
   @Get('oauth/callback')
@@ -126,14 +131,17 @@ export class AuthController {
           throw new Error(`Google token exchange failed: ${tokens.error_description || tokens.error}`);
         }
         
-        accessToken = tokens.access_token;
-
-        // Get user info
+        accessToken = tokens.access_token;        // Get user info
         const userResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
         userInfo = await userResponse.json();
         
         if (userInfo.error) {
           throw new Error(`Failed to get Google user info: ${userInfo.error.message}`);
+        }
+
+        // Extract profile picture from Google response
+        if (userInfo.picture) {
+          userInfo.profilePicture = userInfo.picture;
         }
 
         // Check for YouTube channels (fetch all channels, not just first one)
@@ -172,19 +180,20 @@ export class AuthController {
           throw new Error(`Facebook token exchange failed: ${tokens.error.message || tokens.error}`);
         }
         
-        accessToken = tokens.access_token;
-
-        // Get user info
-        const userResponse = await fetch(`https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`);
+        accessToken = tokens.access_token;        // Get user info with high-quality picture
+        const userResponse = await fetch(`https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token=${accessToken}`);
         userInfo = await userResponse.json();
         
         if (userInfo.error) {
           throw new Error(`Failed to get Facebook user info: ${userInfo.error.message}`);
         }
 
-        // Check for Facebook pages
+        // Extract profile picture from Facebook response
+        if (userInfo.picture && userInfo.picture.data && userInfo.picture.data.url) {
+          userInfo.profilePicture = userInfo.picture.data.url;
+        }        // Check for Facebook pages with high-quality pictures
         try {
-          const pagesResponse = await fetch(`https://graph.facebook.com/me/accounts?fields=id,name,access_token,category,picture,fan_count,about,description&limit=100&access_token=${accessToken}`);
+          const pagesResponse = await fetch(`https://graph.facebook.com/me/accounts?fields=id,name,access_token,category,picture.width(400).height(400),fan_count,about,description&limit=100&access_token=${accessToken}`);
           const pagesData = await pagesResponse.json();
           
           if (pagesData.data && pagesData.data.length > 0) {
@@ -195,15 +204,14 @@ export class AuthController {
         } catch (facebookError) {
           // Failed to fetch Facebook pages, continue without them
         }
-      }
-
-      // Login or register user
+      }      // Login or register user
       const socialLoginData = {
         provider,
         accessToken,
         email: userInfo.email,
         name: userInfo.name || userInfo.given_name || 'User',
         providerId: userInfo.id,
+        profilePicture: userInfo.profilePicture,
         youtubeChannels: userInfo.youtubeChannels,
         youtubeAccessToken: userInfo.youtubeAccessToken,
         youtubeRefreshToken: userInfo.youtubeRefreshToken,

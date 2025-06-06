@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,10 +20,12 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { login, socialLogin, setAuthenticatedUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const {
     register,
@@ -32,6 +34,13 @@ export function LoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
+
+  // Check for reset success message
+  useEffect(() => {
+    if (searchParams.get('resetSuccess') === 'true') {
+      setSuccessMessage('Password reset successful! You can now log in with your new password.');
+    }
+  }, [searchParams]);
 
   // Email validation function
   const validateEmail = (email: string) => {
@@ -278,7 +287,12 @@ export function LoginPage() {
               >
                 Forgot password?
               </button>
-            </div>
+            </div>            {/* Success Message */}
+            {successMessage && (
+              <div className="success-message" style={{display: 'block', marginBottom: '20px', color: '#27ae60', fontSize: '14px', textAlign: 'center'}}>
+                {successMessage}
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (
@@ -350,14 +364,18 @@ export function LoginPage() {
 function ForgotPasswordForm({ onSubmit, onBack }: { onSubmit: (email: string) => void; onBack: () => void }) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     
     setIsLoading(true);
-    await onSubmit(email);
-    setIsLoading(false);
+    try {
+      await onSubmit(email);
+    } catch (error) {
+      console.error('Failed to send reset email:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

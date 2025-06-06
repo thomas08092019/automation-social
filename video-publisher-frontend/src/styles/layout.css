@@ -1,5 +1,34 @@
 /* Layout styles - Extracted from webdesign.html for Layout component */
 
+:root {
+    /* Light theme variables */
+    --bg-color: #f5f6fa;
+    --card-bg: #ffffff;
+    --text-color: #2d3748;
+    --text-secondary: #718096;
+    --border-color: #e2e8f0;
+    --input-bg: #ffffff;
+    --disabled-bg: #f7fafc;
+    --hover-bg: #f7fafc;
+    
+    /* Primary colors */
+    --primary-start: #4a90e2;
+    --primary-end: #7b68ee;
+    --primary-gradient: linear-gradient(135deg, #4a90e2 0%, #7b68ee 100%);
+}
+
+body.dark {
+    /* Dark theme variables */
+    --bg-color: #1a1d29;
+    --card-bg: #242938;
+    --text-color: #f7fafc;
+    --text-secondary: #cbd5e0;
+    --border-color: #68d391;
+    --input-bg: #4a5568;
+    --disabled-bg: #374151;
+    --hover-bg: #374151;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -8,14 +37,15 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #f5f6fa;
+    background: var(--bg-color);
+    color: var(--text-color);
     transition: all 0.3s ease;
 }
 
 /* Dark theme */
 body.dark {
-    background: #1a1d29;
-    color: #e2e8f0;
+    background: var(--bg-color);
+    color: var(--text-color);
 }
 
 /* Sidebar Styles */
@@ -25,7 +55,7 @@ body.dark {
     top: 0;
     width: 280px;
     height: 100vh;
-    background: white;
+    background: var(--card-bg);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
                 box-shadow 0.3s ease;
@@ -36,7 +66,6 @@ body.dark {
 }
 
 body.dark .sidebar {
-    background: #2d3748;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
@@ -47,7 +76,7 @@ body.dark .sidebar {
 /* Sidebar Header */
 .sidebar-header {
     padding: 20px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -273,6 +302,9 @@ body.dark .user-email {
     justify-content: center;
     padding: 12px;
     gap: 0;
+    text-align: center;
+    display: flex;
+    align-items: center;
 }
 
 .nav-link:hover {
@@ -305,6 +337,13 @@ body.dark .nav-link:hover {
     height: 20px;
     flex-shrink: 0;
     margin-right: 12px;
+    transition: margin 0.3s ease;
+}
+
+.sidebar.collapsed .nav-icon {
+    margin-right: 0;
+    margin-left: 0;
+    margin: 0 auto;
 }
 
 .nav-text {

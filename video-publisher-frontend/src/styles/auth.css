@@ -295,7 +295,107 @@
   margin-bottom: 2rem;
 }
 
-/* Responsive design */
+/* Modal styles for auth components */
+.auth-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.auth-modal-content {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  padding: 40px;
+  position: relative;
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 5px;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.auth-modal-close:hover {
+  color: #667eea;
+}
+
+/* Forgot password form specific styles */
+.forgot-password-form {
+  width: 100%;
+}
+
+.forgot-password-form .login-header {
+  margin-bottom: 25px;
+}
+
+.forgot-password-form .login-header h1 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.forgot-password-form .login-header p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.forgot-password-form .form-group {
+  margin-bottom: 25px;
+}
+
+.forgot-password-form .login-btn {
+  margin-bottom: 15px;
+}
+
+.forgot-password-form .login-btn:last-child {
+  margin-bottom: 0;
+}
+
+/* Loading state improvements */
+.login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.login-btn:disabled:hover {
+  transform: none !important;
+}
+
+/* Responsive design for modals */
+@media (max-width: 768px) {
+  .auth-modal-content {
+    padding: 30px 20px;
+    margin: 10px;
+  }
+  
+  .forgot-password-form .login-header h1 {
+    font-size: 24px;
+  }
+}
+
 @media (max-width: 768px) {
   .auth-container {
     flex-direction: column;

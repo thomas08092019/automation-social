@@ -7,6 +7,7 @@ import {
   SocialLoginRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
+  ChangePasswordRequest,
   Video,
   VideoUploadRequest,
   CreateVideoDto,
@@ -103,19 +104,35 @@ class ApiService {
     const response = await this.api.post('/auth/forgot-password', data);
     return response.data;
   }
-
-  async resetPassword(data: ResetPasswordRequest): Promise<{ message: string }> {
-    const response = await this.api.post('/auth/reset-password', data);
+  async resetPassword(data: ResetPasswordRequest): Promise<AuthResponse> {
+    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/reset-password', data);
     return response.data;
   }
+
+  async changePassword(data: ChangePasswordRequest): Promise<{ message: string }> {
+    const response = await this.api.post('/auth/change-password', data);
+    return response.data;
+  }
+
   async getProfile(): Promise<User> {
     const response: AxiosResponse<User> = await this.api.get('/auth/me');
     return response.data;
   }
-
   // User endpoints - /users/*
   async updateProfile(updates: Partial<User>): Promise<User> {
     const response: AxiosResponse<User> = await this.api.patch('/users/profile', updates);
+    return response.data;
+  }
+
+  async uploadAvatar(file: File): Promise<{ profilePicture: string; message: string }> {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await this.api.post('/users/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 

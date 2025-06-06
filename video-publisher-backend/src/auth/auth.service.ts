@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
-import { LoginDto, CreateUserDto, UserResponseDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto } from '../user/dto/user.dto';
+import { LoginDto, CreateUserDto, UserResponseDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from '../user/dto/user.dto';
 import { OAuthService } from '../services/oauth.service';
 import { EmailService } from '../services/email.service';
 import * as crypto from 'crypto';
@@ -72,7 +72,7 @@ export class AuthService {
       accessToken,
     };
   }  async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
-    const { provider, accessToken, email, name, providerId, youtubeChannels, youtubeAccessToken, youtubeRefreshToken, facebookPages, facebookAccessToken } = socialLoginDto;
+    const { provider, accessToken, email, name, providerId, profilePicture, youtubeChannels, youtubeAccessToken, youtubeRefreshToken, facebookPages, facebookAccessToken } = socialLoginDto;
 
     try {
       // Use the data already provided from OAuth callback instead of verifying token again
@@ -84,9 +84,7 @@ export class AuthService {
 
       if (!userData.email) {
         throw new UnauthorizedException('Email is required for social login');
-      }
-
-      // Check if user already exists
+      }      // Check if user already exists
       let user: UserResponseDto = await this.userService.findByEmail(userData.email);
       
       if (!user) {
@@ -97,7 +95,12 @@ export class AuthService {
           password: crypto.randomBytes(32).toString('hex'),
         };
         user = await this.userService.create(createUserDto);
-      }      // If user has YouTube channels, automatically create social accounts for each channel
+      }
+
+      // Update user profile picture if available from OAuth provider
+      if (profilePicture && (!user.profilePicture || user.profilePicture !== profilePicture)) {
+        user = await this.userService.updateProfile(user.id, { profilePicture });
+      }// If user has YouTube channels, automatically create social accounts for each channel
       if (youtubeChannels && youtubeChannels.length > 0 && youtubeAccessToken) {
         for (let i = 0; i < youtubeChannels.length; i++) {
           const channel = youtubeChannels[i];
@@ -159,8 +162,7 @@ export class AuthService {
 
     return { message: 'If an account with that email exists, a password reset link has been sent.' };
   }
-
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<AuthResponse> {
     const { token, newPassword } = resetPasswordDto;
 
     // Find user by reset token and check if it's still valid
@@ -175,7 +177,48 @@ export class AuthService {
     // Clear the reset token
     await this.userService.clearPasswordResetToken(user.id);
 
-    return { message: 'Password has been reset successfully' };
+    // Generate access token for auto-login
+    const accessToken = this.generateAccessToken({
+      userId: user.id,
+      email: user.email,
+    });
+
+    // Get updated user data without password
+    const updatedUser = await this.userService.findById(user.id);
+
+    return {
+      user: updatedUser,
+      accessToken,
+    };
+  }
+
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<{ message: string }> {
+    const { currentPassword, newPassword } = changePasswordDto;
+
+    // Find user and verify current password
+    const user = await this.userService.findByEmail(await this.getUserEmail(userId));
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Validate current password
+    const isPasswordValid = await this.userService.validatePassword(
+      currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    // Update password
+    await this.userService.updatePassword(userId, newPassword);
+
+    return { message: 'Password changed successfully' };
+  }
+
+  private async getUserEmail(userId: string): Promise<string> {
+    const user = await this.userService.findById(userId);
+    return user.email;
   }
 
   async validateUser(payload: JwtPayload): Promise<UserResponseDto> {
@@ -250,20 +293,20 @@ export class AuthService {
             refreshToken,
           },
         });
-      }
-
-      // Find or create a YouTube social app
+      }      // Find or create a system default YouTube social app
       let youtubeApp = await this.prisma.socialApp.findFirst({
         where: {
           platform: 'YOUTUBE',
           userId,
+          isDefault: true,
         },
       });
 
-      if (!youtubeApp) {        youtubeApp = await this.prisma.socialApp.create({
+      if (!youtubeApp) {
+        youtubeApp = await this.prisma.socialApp.create({
           data: {
             platform: 'YOUTUBE',
-            name: 'YouTube OAuth App',
+            name: 'System Default YouTube App',
             appId: process.env.GOOGLE_CLIENT_ID || '',
             appSecret: process.env.GOOGLE_CLIENT_SECRET || '',
             userId,
@@ -319,13 +362,12 @@ export class AuthService {
             accessToken,
           },
         });
-      }
-
-      // Find or create a Facebook social app
+      }      // Find or create a system default Facebook social app
       let facebookApp = await this.prisma.socialApp.findFirst({
         where: {
           platform: 'FACEBOOK',
           userId,
+          isDefault: true,
         },
       });
 
@@ -333,7 +375,7 @@ export class AuthService {
         facebookApp = await this.prisma.socialApp.create({
           data: {
             platform: 'FACEBOOK',
-            name: 'Facebook OAuth App',
+            name: 'System Default Facebook App',
             appId: process.env.FACEBOOK_APP_ID || '',
             appSecret: process.env.FACEBOOK_APP_SECRET || '',
             userId,
