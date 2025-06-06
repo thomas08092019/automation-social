@@ -11,6 +11,7 @@ interface AuthContextType {
   logout: () => void;
   refreshProfile: () => Promise<void>;
   socialLogin: (provider: string, accessToken: string, email: string, username: string, providerId: string) => Promise<void>;
+  setAuthenticatedUser: (user: User, token: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
   connectedAccounts: SocialAccount[];
@@ -27,20 +28,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [connectedAccounts, setConnectedAccounts] = useState<SocialAccount[]>([]);
+  const [isOAuthLogin, setIsOAuthLogin] = useState(false);
 
   const isAuthenticated = !!user;
-
   // Load user from localStorage on mount
-  useEffect(() => {
-    const loadUser = async () => {
+  useEffect(() => {    const loadUser = async () => {
       try {
         const token = localStorage.getItem('access_token');
         const savedUser = localStorage.getItem('user');
 
         if (token && savedUser) {
-          setUser(JSON.parse(savedUser));
-          // Validate token by fetching fresh profile
-          await refreshProfile();
+          const parsedUser = JSON.parse(savedUser);
+          setUser(parsedUser);
+          
+          // Only validate token if it's not an OAuth login to avoid race conditions
+          if (!isOAuthLogin) {
+            try {
+              await refreshProfile();
+            } catch (error) {
+              console.error('Failed to refresh profile:', error);
+              // If token validation fails, keep the user data but don't throw
+              // This handles the case where OAuth just completed
+            }
+          }
+          
           await refreshConnectedAccounts();
         }
       } catch (error) {
@@ -52,7 +63,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     loadUser();
-  }, []);
+  }, [isOAuthLogin]);
 
   const login = async (credentials: LoginRequest) => {
     try {
@@ -102,15 +113,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Failed to refresh profile:', error);
       throw error;
     }
-  };
-
-  const socialLogin = async (provider: string, accessToken: string, email: string, username: string, providerId: string) => {
+  };  const socialLogin = async (provider: string, accessToken: string, email: string, username: string, providerId: string) => {
     try {
       const response: AuthResponse = await apiService.socialLogin({
         provider,
         accessToken,
         email,
-        username,
+        username: username || email.split('@')[0], // Fallback to email prefix if no username
         providerId,
       });
       
@@ -124,6 +133,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Social login failed:', error);
       throw error;
     }
+  };  const setAuthenticatedUser = async (user: User, token: string) => {
+    // Store token and user data
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    
+    // Mark this as OAuth login to prevent useEffect from interfering
+    setIsOAuthLogin(true);
+    
+    // Update state
+    setUser(user);
+    
+    // Wait a moment to ensure state is updated
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Reset OAuth flag after a short delay
+    setTimeout(() => {
+      setIsOAuthLogin(false);
+    }, 1000);
+    
+    // Refresh connected accounts in the background (don't await to avoid blocking navigation)
+    refreshConnectedAccounts().catch(error => {
+      console.error('Failed to refresh connected accounts:', error);
+    });
   };
 
   const forgotPassword = async (email: string) => {
@@ -145,7 +177,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Don't throw error here as it's a background operation
     }
   };
-
   const value: AuthContextType = {
     user,
     isLoading,
@@ -155,6 +186,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     refreshProfile,
     socialLogin,
+    setAuthenticatedUser,
     forgotPassword,
     resetPassword,
     connectedAccounts,

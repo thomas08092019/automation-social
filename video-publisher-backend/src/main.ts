@@ -5,11 +5,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable validation pipes globally
+  // Enable validation pipes globally (but allow query params for OAuth)
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // Changed to false to allow OAuth query params
       transform: true,
     }),
   );
@@ -18,8 +18,6 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:4200',
     ],
     credentials: true,
   });

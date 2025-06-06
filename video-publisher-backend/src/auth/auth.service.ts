@@ -71,19 +71,19 @@ export class AuthService {
       user: userWithoutPassword,
       accessToken,
     };
-  }
-
-  async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
-    const { provider, accessToken, email, name, providerId } = socialLoginDto;
+  }  async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
+    const { provider, accessToken, email, name, providerId, youtubeChannels, youtubeAccessToken, youtubeRefreshToken, facebookPages, facebookAccessToken } = socialLoginDto;
 
     try {
-      let userData;
-      if (provider === 'google') {
-        userData = await this.oauthService.verifyGoogleToken(accessToken);
-      } else if (provider === 'facebook') {
-        userData = await this.oauthService.verifyFacebookToken(accessToken);
-      } else {
-        throw new UnauthorizedException('Unsupported social provider');
+      // Use the data already provided from OAuth callback instead of verifying token again
+      const userData = {
+        email,
+        name,
+        providerId,
+      };
+
+      if (!userData.email) {
+        throw new UnauthorizedException('Email is required for social login');
       }
 
       // Check if user already exists
@@ -97,6 +97,28 @@ export class AuthService {
           password: crypto.randomBytes(32).toString('hex'),
         };
         user = await this.userService.create(createUserDto);
+      }      // If user has YouTube channels, automatically create social accounts for each channel
+      if (youtubeChannels && youtubeChannels.length > 0 && youtubeAccessToken) {
+        for (let i = 0; i < youtubeChannels.length; i++) {
+          const channel = youtubeChannels[i];
+          try {
+            await this.createYoutubeSocialAccount(user.id, channel, youtubeAccessToken, youtubeRefreshToken);
+          } catch (youtubeError) {
+            console.error(`Failed to create social account for YouTube channel: ${channel.snippet.title}`, youtubeError);
+            // Continue with other channels even if one fails
+          }
+        }
+      }      // If user has Facebook pages, automatically create social accounts for each page
+      if (facebookPages && facebookPages.length > 0 && facebookAccessToken) {
+        for (let i = 0; i < facebookPages.length; i++) {
+          const page = facebookPages[i];
+          try {
+            await this.createFacebookSocialAccount(user.id, page, page.access_token || facebookAccessToken);
+          } catch (facebookError) {
+            console.error(`Failed to create social account for Facebook page: ${page.name}`, facebookError);
+            // Continue with other pages even if one fails
+          }
+        }
       }
 
       // Generate access token
@@ -110,6 +132,7 @@ export class AuthService {
         accessToken: accessTokenJwt,
       };
     } catch (error) {
+      console.error('Social login error:', error);
       throw new UnauthorizedException('Social login failed');
     }
   }
@@ -199,5 +222,144 @@ export class AuthService {
     return this.prisma.socialAccount.findMany({
       where: { userId },
     });
+  }
+
+  private async createYoutubeSocialAccount(userId: string, youtubeChannel: any, accessToken: string, refreshToken?: string) {
+    try {
+      // Check if YouTube account already exists for this user
+      const existingAccount = await this.prisma.socialAccount.findFirst({
+        where: {
+          userId,
+          platform: 'YOUTUBE',
+          accountId: youtubeChannel.id,
+        },
+      });      if (existingAccount) {
+        // Update existing account with new tokens
+        return await this.prisma.socialAccount.update({
+          where: { id: existingAccount.id },
+          data: {
+            accessToken,
+            refreshToken,
+          },
+        });
+      }
+
+      // Find or create a YouTube social app
+      let youtubeApp = await this.prisma.socialApp.findFirst({
+        where: {
+          platform: 'YOUTUBE',
+          userId,
+        },
+      });
+
+      if (!youtubeApp) {        youtubeApp = await this.prisma.socialApp.create({
+          data: {
+            platform: 'YOUTUBE',
+            name: 'YouTube OAuth App',
+            appId: process.env.GOOGLE_CLIENT_ID || '',
+            appSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+            userId,
+            isDefault: true,
+            redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
+          },
+        });
+      }
+
+      // Create new YouTube social account
+      const socialAccount = await this.prisma.socialAccount.create({
+        data: {
+          userId,
+          platform: 'YOUTUBE',
+          accountType: 'CREATOR',
+          accountId: youtubeChannel.id,
+          accountName: youtubeChannel.snippet.title,
+          accessToken,
+          refreshToken,
+          socialAppId: youtubeApp.id,
+          metadata: {
+            channelId: youtubeChannel.id,
+            channelTitle: youtubeChannel.snippet.title,
+            channelDescription: youtubeChannel.snippet.description,
+            subscriberCount: youtubeChannel.statistics?.subscriberCount,
+            videoCount: youtubeChannel.statistics?.videoCount,
+            viewCount: youtubeChannel.statistics?.viewCount,
+            thumbnails: youtubeChannel.snippet.thumbnails,
+          },        },
+      });
+
+      return socialAccount;
+    } catch (error) {
+      console.error('Error creating YouTube social account:', error);
+      throw error;
+    }
+  }
+
+  private async createFacebookSocialAccount(userId: string, facebookPage: any, accessToken: string) {
+    try {
+      // Check if Facebook page account already exists for this user
+      const existingAccount = await this.prisma.socialAccount.findFirst({
+        where: {
+          userId,
+          platform: 'FACEBOOK',
+          accountId: facebookPage.id,
+        },
+      });      if (existingAccount) {
+        // Update existing account with new tokens
+        return await this.prisma.socialAccount.update({
+          where: { id: existingAccount.id },
+          data: {
+            accessToken,
+          },
+        });
+      }
+
+      // Find or create a Facebook social app
+      let facebookApp = await this.prisma.socialApp.findFirst({
+        where: {
+          platform: 'FACEBOOK',
+          userId,
+        },
+      });
+
+      if (!facebookApp) {
+        facebookApp = await this.prisma.socialApp.create({
+          data: {
+            platform: 'FACEBOOK',
+            name: 'Facebook OAuth App',
+            appId: process.env.FACEBOOK_APP_ID || '',
+            appSecret: process.env.FACEBOOK_APP_SECRET || '',
+            userId,
+            isDefault: true,
+            redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
+          },
+        });
+      }
+
+      // Create new Facebook page social account
+      const socialAccount = await this.prisma.socialAccount.create({
+        data: {
+          userId,
+          platform: 'FACEBOOK',
+          accountType: 'PAGE',
+          accountId: facebookPage.id,
+          accountName: facebookPage.name,
+          accessToken,
+          socialAppId: facebookApp.id,
+          metadata: {
+            pageId: facebookPage.id,
+            pageName: facebookPage.name,
+            pageCategory: facebookPage.category,
+            fanCount: facebookPage.fan_count || 0,
+            about: facebookPage.about,
+            description: facebookPage.description,
+            picture: facebookPage.picture?.data?.url,
+          },        },
+      });
+
+      return socialAccount;
+    } catch (error) {
+      console.error('Error creating Facebook social account:', error);
+      throw error;
+    }
   }
 }

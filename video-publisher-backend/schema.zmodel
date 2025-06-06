@@ -84,6 +84,7 @@ model SocialAccount {
   expiresAt       DateTime?
   profilePicture  String?
   isActive        Boolean          @default(true)
+  metadata        Json?            // For storing platform-specific data like YouTube channel info
   
   // Relations
   user            User             @relation(fields: [userId], references: [id])

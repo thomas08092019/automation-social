@@ -241,6 +241,7 @@ export interface DashboardStats {
 export interface OAuthAuthorizationUrl {
   authorizationUrl: string;
   state: string;
+  platform: SocialPlatform;
 }
 
 export interface OAuthCallbackDto {

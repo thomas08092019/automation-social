@@ -43,6 +43,14 @@ export class SocialLoginDto {
 
   @IsString()
   providerId: string;
+  // Optional YouTube data - now supports multiple channels
+  youtubeChannels?: any[];
+  youtubeAccessToken?: string;
+  youtubeRefreshToken?: string;
+
+  // Optional Facebook data - now supports multiple pages
+  facebookPages?: any[];
+  facebookAccessToken?: string;
 }
 
 export class ForgotPasswordDto {

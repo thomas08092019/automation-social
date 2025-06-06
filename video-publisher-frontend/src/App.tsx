@@ -5,6 +5,7 @@ import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
+import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { VideosPage } from './pages/videos/VideosPage';
 import { SocialAccountsPage } from './pages/social-accounts/SocialAccountsPage';
@@ -73,10 +74,13 @@ function AppRoutes() {
             <RegisterPage />
           </PublicRoute>
         } 
-      />
-      <Route 
+      />      <Route 
         path="/reset-password" 
         element={<ResetPasswordPage />} 
+      />
+      <Route 
+        path="/auth/callback" 
+        element={<OAuthCallbackPage />} 
       />
 
       {/* Protected routes */}

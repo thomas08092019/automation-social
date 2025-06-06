@@ -14,21 +14,22 @@ export function SocialAccountsPage() {
     queryKey: ['social-accounts'],
     queryFn: () => apiService.getSocialAccounts(),
   });  const connectMutation = useMutation({
-    mutationFn: (platform: string) => {
-      // For now, we'll create a temporary object structure
-      // This should be replaced with proper OAuth flow using getAuthorizationUrl
-      const connectData = {
-        platform: platform as any, // Type assertion for now
-        socialAppId: 'default', // This should come from social apps
-        authorizationCode: 'temp', // This should come from OAuth callback
-        redirectUri: window.location.origin + '/auth/callback'
-      };
-      return apiService.connectSocialAccount(connectData);
+    mutationFn: async (platform: string) => {
+      try {
+        const authData = await apiService.getSocialAccountAuthUrl(platform as any, 'default');
+        
+        return { authUrl: authData.authorizationUrl, state: authData.state };
+      } catch (error: any) {
+        if (error.response?.status === 404 || error.message?.includes('No app configuration')) {
+          throw new Error(`OAuth app configuration not found for ${platform}. Please configure your OAuth app in Settings first.`);
+        }
+        throw error;
+      }
     },
     onSuccess: (data: any) => {
-      if (data.success && data.data?.authUrl) {
+      if (data.authUrl) {
         // Open OAuth popup
-        const popup = window.open(data.data.authUrl, '_blank', 'width=600,height=600,scrollbars=yes,resizable=yes');
+        const popup = window.open(data.authUrl, '_blank', 'width=600,height=600,scrollbars=yes,resizable=yes');
         
         if (!popup) {
           alert('Popup blocked! Please allow popups for this site and try again.');
@@ -36,7 +37,7 @@ export function SocialAccountsPage() {
           return;
         }
 
-        // Monitor popup for closure or completion
+        // Monitor popup for completion
         const checkClosed = setInterval(() => {
           if (popup.closed) {
             clearInterval(checkClosed);
@@ -45,28 +46,33 @@ export function SocialAccountsPage() {
             queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
           }
         }, 1000);
-      } else {
-        // Handle error case
-        if (data.error === 'OAUTH_CREDENTIALS_NOT_CONFIGURED') {
-          alert(`OAuth Configuration Missing\n\n${data.message}\n\nPlease check your environment configuration and set up real OAuth credentials.`);
-        } else {
-          alert(`Failed to connect: ${data.message || 'Unknown error'}`);
-        }
-        setConnectingPlatform(null);
+
+        // Listen for OAuth completion message
+        const messageHandler = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          
+          if (event.data.type === 'oauth-success') {
+            popup.close();
+            clearInterval(checkClosed);
+            setConnectingPlatform(null);
+            queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
+            window.removeEventListener('message', messageHandler);
+          } else if (event.data.type === 'oauth-error') {
+            popup.close();
+            clearInterval(checkClosed);
+            setConnectingPlatform(null);
+            alert(`OAuth failed: ${event.data.error}`);
+            window.removeEventListener('message', messageHandler);
+          }
+        };
+
+        window.addEventListener('message', messageHandler);
       }
     },
     onError: (error: any) => {
-      console.error('Failed to connect account:', error);
-      
-      // Check if this is an OAuth credentials configuration error
-      if (error.response?.data?.error === 'OAUTH_CREDENTIALS_NOT_CONFIGURED') {
-        alert(`OAuth Configuration Missing\n\n${error.response.data.message}\n\nPlease check your environment configuration and set up real OAuth credentials.`);
-      } else {
-        alert(`Failed to connect ${connectingPlatform || 'account'}: ${error.response?.data?.message || error.message}`);
-      }
-      
       setConnectingPlatform(null);
-    },
+      alert(`Connection failed: ${error.message}`);
+    }
   });
 
   const disconnectMutation = useMutation({
