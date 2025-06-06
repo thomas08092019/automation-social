@@ -4,34 +4,44 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoginRequest, SocialPlatform } from '../../types';
+import { RegisterRequest, SocialPlatform } from '../../types';
 import { apiService } from '../../services/api';
 import '../../styles/base.css';
 import '../../styles/auth.css';
 
-const loginSchema = z.object({
+const signupSchema = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  username: z.string().min(3, 'Username must be at least 3 characters long')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
+type SignupFormData = z.infer<typeof signupSchema>;
 
-export function LoginPage() {
+export function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const { login, socialLogin, setAuthenticatedUser } = useAuth();
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<{strength: string, feedback: string} | null>(null);
+  const { register: registerUser, socialLogin, setAuthenticatedUser } = useAuth();
   const navigate = useNavigate();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    watch,
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
   });
+
+  const watchPassword = watch("password");
 
   // Email validation function
   const validateEmail = (email: string) => {
@@ -39,24 +49,71 @@ export function LoginPage() {
     return emailRegex.test(email);
   };
 
-  const onSubmit = async (data: LoginFormData) => {
+  // Username validation function
+  const validateUsername = (username: string) => {
+    return username.length >= 3 && /^[a-zA-Z0-9_]+$/.test(username);
+  };
+
+  // Password strength checker
+  const checkPasswordStrength = (password: string) => {
+    if (!password) return null;
+    
+    let strength = 0;
+    let feedback = '';
+    
+    if (password.length >= 8) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    
+    switch (strength) {
+      case 0:
+      case 1:
+      case 2:
+        feedback = 'Weak password';
+        return { strength: 'weak', feedback };
+      case 3:
+      case 4:
+        feedback = 'Medium password';
+        return { strength: 'medium', feedback };
+      case 5:
+        feedback = 'Strong password';
+        return { strength: 'strong', feedback };
+      default:
+        return null;
+    }
+  };
+
+  React.useEffect(() => {
+    if (watchPassword) {
+      const result = checkPasswordStrength(watchPassword);
+      setPasswordStrength(result);
+    } else {
+      setPasswordStrength(null);
+    }
+  }, [watchPassword]);
+
+  const onSubmit = async (data: SignupFormData) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const loginData: LoginRequest = {
+      const registerData: RegisterRequest = {
         email: data.email,
+        username: data.username,
         password: data.password,
       };
 
-      await login(loginData);
+      await registerUser(registerData);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     try {
       setSocialLoading(provider);
@@ -66,7 +123,11 @@ export function LoginPage() {
       const platformMap: Record<string, SocialPlatform> = {
         'google': SocialPlatform.YOUTUBE,
         'facebook': SocialPlatform.FACEBOOK,
-      };      const platform = platformMap[provider];      // Get OAuth authorization URL from backend
+      };
+
+      const platform = platformMap[provider];
+
+      // Get OAuth authorization URL from backend
       try {
         const authData = await apiService.getAuthorizationUrl(platform);
         
@@ -76,14 +137,17 @@ export function LoginPage() {
           `${provider}-oauth`, 
           'width=600,height=600,scrollbars=yes,resizable=yes'
         );
-          if (!popup) {
+
+        if (!popup) {
           throw new Error('Popup blocked! Please allow popups for this site and try again.');
         }
 
         // Initialize cleanup variables
         let checkClosed: NodeJS.Timeout;
         let authCheckInterval: NodeJS.Timeout;
-        let timeoutId: NodeJS.Timeout;        // Listen for OAuth completion message from popup
+        let timeoutId: NodeJS.Timeout;
+
+        // Listen for OAuth completion message from popup
         const messageHandler = async (event: MessageEvent) => {
           if (event.origin !== window.location.origin) return;
           
@@ -107,11 +171,10 @@ export function LoginPage() {
             setSocialLoading(null);
             setError(`OAuth failed: ${event.data.error}`);
           }
-        };// Cleanup function to handle all cleanup operations
+        };
+
+        // Cleanup function to handle all cleanup operations
         const cleanup = () => {
-          // Don't try to close popup due to COOP policy - let it close naturally
-          // The popup will redirect to dashboard or close itself
-          
           if (checkClosed) {
             clearInterval(checkClosed);
           }
@@ -124,24 +187,23 @@ export function LoginPage() {
           window.removeEventListener('message', messageHandler);
         };
 
-        window.addEventListener('message', messageHandler);        // Monitor popup - avoid popup.closed due to COOP policy
-        // We'll rely primarily on localStorage monitoring and message passing
+        window.addEventListener('message', messageHandler);
+
+        // Monitor popup
         let popupCheckCount = 0;
         checkClosed = setInterval(() => {
           popupCheckCount++;
-          // After 30 seconds, if no success, the user might have closed the popup
-          // This is a fallback - the main success detection is via localStorage and messages
-          if (popupCheckCount > 30) {          // Don't call cleanup here as it might interfere with ongoing auth
-            // Just continue monitoring
+          if (popupCheckCount > 30) {
+            // Continue monitoring
           }
-          // After 2 minutes, assume something went wrong
           if (popupCheckCount > 120) {
             cleanup();
             setSocialLoading(null);
             setError('OAuth process seems to have stalled. Please try again.');
           }
-        }, 1000);        // Alternative method: Check localStorage for auth token periodically
-        // This handles cases where COOP prevents message passing
+        }, 1000);
+
+        // Alternative method: Check localStorage for auth token periodically
         authCheckInterval = setInterval(() => {
           const token = localStorage.getItem('access_token');
           const user = localStorage.getItem('user');
@@ -151,50 +213,28 @@ export function LoginPage() {
             setSocialLoading(null);
             navigate('/dashboard');
           }
-        }, 1000);// Timeout after 5 minutes
+        }, 1000);
+
+        // Timeout after 5 minutes
         timeoutId = setTimeout(() => {
           cleanup();
           setSocialLoading(null);
-          setError('OAuth login timeout. Please try again.');
+          setError('OAuth signup timeout. Please try again.');
         }, 300000);
         
       } catch (apiError: any) {
-        // Handle specific API errors
         if (apiError.response?.status === 404 || apiError.message?.includes('No app configuration')) {
-          setError(`${provider} login not available. OAuth app configuration is required. Please contact your administrator.`);
+          setError(`${provider} signup not available. OAuth app configuration is required. Please contact your administrator.`);
         } else {
           throw apiError;
         }
       }
     } catch (err: any) {
-      setError(`${provider} login failed: ${err.message}`);
+      setError(`${provider} signup failed: ${err.message}`);
       setSocialLoading(null);
     }
   };
 
-  const handleForgotPassword = async (email: string) => {
-    try {
-      await apiService.forgotPassword({ email });
-      alert('If an account with that email exists, a password reset link has been sent.');
-      setShowForgotPassword(false);
-    } catch (err: any) {
-      setError('Failed to send password reset email. Please try again.');
-    }
-  };
-  if (showForgotPassword) {
-    return (
-      <div className="auth-container">
-        <div className="login-container gradient-primary">
-          <div className="login-form">
-            <ForgotPasswordForm 
-              onSubmit={handleForgotPassword} 
-              onBack={() => setShowForgotPassword(false)} 
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
   return (
     <div className="auth-container">
       {/* Left Side - Brand Section */}
@@ -203,12 +243,13 @@ export function LoginPage() {
           <h1 className="gradient-text-primary">Automation</h1>
           <h2 className="gradient-text-secondary">Social</h2>
         </div>
-      </div>      {/* Right Side - Login Form */}
+      </div>
+
+      {/* Right Side - Signup Form */}
       <div className="login-container gradient-primary">
-        <div className="login-form">
-          {/* Header */}
-          <div className="login-header">
-            <h1>Login</h1>
+        <div className="login-form signup-form">          {/* Header */}
+          <div className="login-header signup-header">
+            <h1>Create your account</h1>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -224,12 +265,32 @@ export function LoginPage() {
                   id="email"
                   type="email"
                   className="form-input"
-                  placeholder="Type your email"
+                  placeholder="Enter your email"
                   {...register('email')}
                 />
               </div>
               {errors.email && (
                 <div className="error-message">{errors.email.message}</div>
+              )}
+            </div>
+
+            {/* Username Field */}
+            <div className={`form-group ${errors.username ? 'error' : ''}`}>
+              <label htmlFor="username">Username</label>
+              <div className="input-wrapper">
+                <svg className="input-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
+                </svg>
+                <input
+                  id="username"
+                  type="text"
+                  className="form-input"
+                  placeholder="Choose a username"
+                  {...register('username')}
+                />
+              </div>
+              {errors.username && (
+                <div className="error-message">{errors.username.message}</div>
               )}
             </div>
 
@@ -244,7 +305,7 @@ export function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className="form-input"
-                  placeholder="Type your password"
+                  placeholder="Create a password"
                   {...register('password')}
                 />
                 <button
@@ -265,19 +326,51 @@ export function LoginPage() {
                   )}
                 </button>
               </div>
+              {passwordStrength && (
+                <div className={`password-strength strength-${passwordStrength.strength}`}>
+                  {passwordStrength.feedback}
+                </div>
+              )}
               {errors.password && (
                 <div className="error-message">{errors.password.message}</div>
               )}
             </div>
 
-            {/* Forgot Password */}
-            <div className="forgot-password">
-              <button
-                type="button"
-                onClick={() => setShowForgotPassword(true)}
-              >
-                Forgot password?
-              </button>
+            {/* Confirm Password Field */}
+            <div className={`form-group ${errors.confirmPassword ? 'error' : ''}`}>
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <div className="input-wrapper">
+                <svg className="input-icon" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path>
+                </svg>
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  className="form-input"
+                  placeholder="Confirm your password"
+                  {...register('confirmPassword')}
+                />
+                <button
+                  type="button"
+                  className="toggle-icon"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? (
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd"></path>
+                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"></path>
+                    </svg>
+                  ) : (
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"></path>
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <div className="error-message">{errors.confirmPassword.message}</div>
+              )}
             </div>
 
             {/* Error Message */}
@@ -287,13 +380,13 @@ export function LoginPage() {
               </div>
             )}
 
-            {/* Login Button */}
+            {/* Signup Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="btn-primary login-btn"
+              className="btn-primary login-btn signup-btn"
             >
-              {isLoading ? 'Logging in...' : 'LOGIN'}
+              {isLoading ? 'Creating Account...' : 'CREATE ACCOUNT'}
             </button>
           </form>
 
@@ -335,10 +428,10 @@ export function LoginPage() {
             </button>
           </div>
 
-          {/* Signup Link */}
-          <div className="signup-link">
-            Have not account yet?<br />
-            <Link to="/signup">SIGN UP</Link>
+          {/* Login Link */}
+          <div className="signup-link login-link">
+            Already have an account?<br />
+            <Link to="/login">SIGN IN</Link>
           </div>
         </div>
       </div>
@@ -346,64 +439,4 @@ export function LoginPage() {
   );
 }
 
-// Forgot Password Component
-function ForgotPasswordForm({ onSubmit, onBack }: { onSubmit: (email: string) => void; onBack: () => void }) {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    
-    setIsLoading(true);
-    await onSubmit(email);
-    setIsLoading(false);
-  };
-
-  return (
-    <>
-      <div className="login-header">
-        <h1>Forgot Password?</h1>
-        <p>Enter your email address and we'll send you a link to reset your password.</p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="reset-email">Email Address</label>
-          <div className="input-wrapper">
-            <svg className="input-icon" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-            </svg>
-            <input
-              id="reset-email"
-              type="email"
-              className="form-input"
-              placeholder="Enter your email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading || !email}
-          className="btn-primary login-btn"
-        >
-          {isLoading ? 'Sending...' : 'Send Reset Link'}
-        </button>
-
-        <button
-          type="button"
-          onClick={onBack}
-          className="btn-primary login-btn"
-          style={{ background: 'rgba(255, 255, 255, 0.2)', marginTop: '10px' }}
-        >
-          ← Back to Sign In
-        </button>
-      </form>
-    </>
-  );
-}
+export default SignUpPage;

@@ -93,37 +93,60 @@ export function OAuthCallbackPage() {
       }
     };    handleCallback();
   }, [searchParams, navigate]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full text-center">
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1 className="auth-title">
+            {status === 'processing' && 'Processing Login...'}
+            {status === 'success' && 'Login Successful!'}
+            {status === 'error' && 'Authentication Failed'}
+          </h1>
+        </div>
+        
         {status === 'processing' && (
-          <div>
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Processing OAuth...</h2>
-            <p className="text-gray-600">Please wait while we complete your authentication.</p>
+          <div className="oauth-status">
+            <div className="loading-spinner">
+              <div className="spinner"></div>
+            </div>
+            <p className="status-message">Completing your login...</p>
           </div>
         )}
         
         {status === 'success' && (
-          <div>
-            <div className="text-green-500 text-6xl mb-4">✓</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Successful!</h2>
-            <p className="text-gray-600">You will be redirected shortly.</p>
+          <div className="oauth-status">
+            <div className="success-icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="12" fill="#10b981"/>
+                <path d="m9 12 2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <p className="status-message">Successfully logged in! Redirecting you to the dashboard...</p>
           </div>
         )}
         
         {status === 'error' && (
-          <div>
-            <div className="text-red-500 text-6xl mb-4">✗</div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Authentication Failed</h2>
-            <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => window.close()}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-            >
-              Close Window
-            </button>
+          <div className="oauth-status">
+            <div className="error-icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="12" fill="#ef4444"/>
+                <path d="m15 9-6 6m0-6 6 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <p className="status-message">
+              {error === 'OAuth error: access_denied' 
+                ? 'Login was cancelled. You can try again or use a different method.'
+                : `Authentication failed: ${error}`
+              }
+            </p>
+            <div className="oauth-actions">
+              <button onClick={() => navigate('/login')} className="btn btn-primary">
+                Return to Login
+              </button>
+              <button onClick={() => navigate('/signup')} className="btn btn-secondary">
+                Create Account
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterPage } from './pages/auth/RegisterPage';
+import { SignUpPage } from './pages/auth/SignUpPage';
 import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
 import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
@@ -59,8 +59,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route 
-        path="/login" 
+      <Route        path="/login" 
         element={
           <PublicRoute>
             <LoginPage />
@@ -68,13 +67,13 @@ function AppRoutes() {
         } 
       />
       <Route 
-        path="/register" 
+        path="/signup" 
         element={
           <PublicRoute>
-            <RegisterPage />
+            <SignUpPage />
           </PublicRoute>
         } 
-      />      <Route 
+      /><Route 
         path="/reset-password" 
         element={<ResetPasswordPage />} 
       />

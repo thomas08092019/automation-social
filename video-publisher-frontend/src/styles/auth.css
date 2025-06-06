@@ -1,0 +1,316 @@
+/* Auth page specific styles */
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+}
+
+/* Brand section */
+.brand-section {
+  flex: 1;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.brand-text {
+  text-align: center;
+}
+
+.brand-text h1 {
+  font-size: 4.5rem;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -2px;
+}
+
+.brand-text h2 {
+  font-size: 4.5rem;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -2px;
+}
+
+/* Login container */
+.login-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.login-form {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  max-width: 100%;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-header h1 {
+  font-size: 32px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+/* Forgot password */
+.forgot-password {
+  text-align: right;
+  margin-top: 10px;
+  margin-bottom: 30px;
+}
+
+.forgot-password a {
+  color: #999;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.forgot-password a:hover {
+  color: #667eea;
+}
+
+/* Login button */
+.login-btn {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+
+/* Signup link */
+.signup-link {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.signup-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.signup-link a:hover {
+  text-decoration: underline;
+}
+
+/* Signup specific styles */
+.signup-form {
+  width: 420px;
+  max-width: 100%;
+}
+
+.signup-header h1 {
+  font-size: 32px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.signup-header p {
+  color: #666;
+  font-size: 14px;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.signup-header a,
+.signin-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.signup-header a:hover,
+.signin-link a:hover {
+  text-decoration: underline;
+}
+
+.signup-btn {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  margin-bottom: 30px;
+}
+
+/* Login link on signup page */
+.login-link {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.login-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
+}
+
+/* Icon sizes */
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-sm {
+  width: 16px;
+  height: 16px;
+}
+
+/* OAuth Callback Page Styles */
+.oauth-status {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.loading-spinner {
+  margin-bottom: 1.5rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.success-icon, .error-icon {
+  margin: 0 auto 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.status-message {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.oauth-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.oauth-actions .btn {
+  min-width: 120px;
+}
+
+.btn.btn-secondary {
+  background: transparent;
+  color: #6366f1;
+  border: 2px solid #6366f1;
+}
+
+.btn.btn-secondary:hover {
+  background: #6366f1;
+  color: white;
+}
+
+/* Auth Title Styles */
+.auth-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  position: relative;
+  animation: titleGlow 2s ease-in-out infinite alternate;
+}
+
+.auth-title::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  border-radius: 2px;
+  opacity: 0.6;
+  animation: underlineGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes titleGlow {
+  0% {
+    filter: drop-shadow(0 0 10px rgba(102, 126, 234, 0.3));
+  }
+  100% {
+    filter: drop-shadow(0 0 20px rgba(118, 75, 162, 0.4));
+  }
+}
+
+@keyframes underlineGlow {
+  0% {
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(118, 75, 162, 0.4);
+  }
+}
+
+.auth-header {
+  margin-bottom: 2rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .auth-container {
+    flex-direction: column;
+  }
+  
+  .brand-section {
+    min-height: 40vh;
+    padding: 20px;
+  }
+  
+  .brand-text h1,
+  .brand-text h2 {
+    font-size: 2.5rem;
+  }
+  
+  .login-container {
+    padding: 20px;
+  }
+  
+  .login-form {
+    padding: 30px 20px;
+  }
+}

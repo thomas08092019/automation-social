@@ -1,0 +1,393 @@
+/* Base styles for common components */
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Common gradients */
+.gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+}
+
+.gradient-text-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-secondary {
+  background: linear-gradient(135deg, #f093fb 0%, #764ba2 50%, #667eea 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Common button styles */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  border: none;
+  border-radius: 50px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+/* Login button specific styles */
+.login-btn {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 30px;
+}
+
+/* Common container styles */
+.container-split {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+.container-split > * {
+  flex: 1;
+}
+
+/* Common form styles */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #666;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-bottom: 2px solid #e0e0e0;
+  background: transparent;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.form-input:focus {
+  border-bottom-color: #667eea;
+}
+
+.form-input::placeholder {
+  color: #aaa;
+}
+
+/* Input wrapper for icons */
+.input-wrapper {
+  position: relative;
+  padding-left: 25px;
+  padding-right: 25px;
+}
+
+.input-wrapper .form-input {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+/* Icon styles */
+.input-icon {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+  width: 16px;
+  height: 16px;
+}
+
+.toggle-icon {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #aaa;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.toggle-icon:hover {
+  color: #667eea;
+}
+
+/* Error states */
+.error-message {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-top: 5px;
+  display: none;
+}
+
+.form-group.error .form-input {
+  border-bottom-color: #e74c3c;
+}
+
+.form-group.error .error-message {
+  display: block;
+}
+
+/* Password strength indicator */
+.password-strength {
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.password-strength.strength-weak,
+.strength-weak {
+  color: #e74c3c;
+}
+
+.password-strength.strength-medium,
+.strength-medium {
+  color: #f39c12;
+}
+
+.password-strength.strength-strong,
+.strength-strong {
+  color: #27ae60;
+}
+
+/* Social buttons */
+.social-login {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.social-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.social-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.social-btn:focus {
+  outline: none;
+}
+
+.social-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.social-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.facebook-btn {
+  background-color: #1877F2;
+  color: white;
+}
+
+.facebook-btn:hover:not(:disabled) {
+  background-color: #166FE5;
+}
+
+.facebook-btn:active:not(:disabled) {
+  background-color: #1864D9;
+}
+
+.google-btn {
+  background-color: white;
+  color: #333;
+  border: 2px solid #e0e0e0;
+}
+
+.google-btn:hover:not(:disabled) {
+  background-color: #f8f9fa;
+  border-color: #dadce0;
+}
+
+.google-btn:active:not(:disabled) {
+  background-color: #f1f3f4;
+}
+
+.social-btn .icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Additional fixes for social buttons */
+.social-btn svg {
+  pointer-events: none;
+  display: block;
+}
+
+.social-btn svg path {
+  pointer-events: none;
+}
+
+/* Prevent any text/background color inheritance issues */
+.social-btn {
+  text-decoration: none !important;
+  color: inherit;
+}
+
+.social-btn:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* Ensure Facebook button maintains proper colors */
+.facebook-btn svg {
+  color: white;
+  fill: currentColor;
+}
+
+/* Ensure Google button SVG paths maintain their specific colors */
+.google-btn svg path[fill="#4285F4"] {
+  fill: #4285F4 !important;
+}
+
+.google-btn svg path[fill="#34A853"] {
+  fill: #34A853 !important;
+}
+
+.google-btn svg path[fill="#FBBC05"] {
+  fill: #FBBC05 !important;
+}
+
+.google-btn svg path[fill="#EA4335"] {
+  fill: #EA4335 !important;
+}
+
+/* Prevent any button reset styles from interfering */
+.social-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Common text styles */
+.text-link {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.text-muted {
+  color: #666;
+  font-size: 14px;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Divider */
+.divider {
+  text-align: center;
+  margin: 30px 0;
+  color: #999;
+  font-size: 14px;
+}
+
+/* Common spacing */
+.mb-20 { margin-bottom: 20px; }
+.mb-30 { margin-bottom: 30px; }
+.mt-10 { margin-top: 10px; }
+.p-40 { padding: 40px; }
+
+/* Spinner for loading states */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.social-btn .spinner {
+  width: 20px;
+  height: 20px;
+}
+
+.facebook-btn .spinner {
+  border-color: #ffffff;
+  border-top-color: transparent;
+}
+
+.google-btn .spinner {
+  border-color: #333333;
+  border-top-color: transparent;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Forgot password link styling */
+.forgot-password button {
+  background: none;
+  border: none;
+  color: #999;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.forgot-password button:hover {
+  color: #667eea;
+}
+
+/* Make the header description smaller */
+.login-header p {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 0;
+}

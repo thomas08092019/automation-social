@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Callback - Automation Social</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .brand-section {
+            flex: 1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .brand-text {
+            text-align: center;
+        }
+
+        .brand-text h1 {
+            font-size: 4.5rem;
+            font-weight: 900;
+            margin: 0;
+            line-height: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+        }
+
+        .brand-text h2 {
+            font-size: 4.5rem;
+            font-weight: 900;
+            margin: 0;
+            line-height: 1;
+            background: linear-gradient(135deg, #f093fb 0%, #764ba2 50%, #667eea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+        }
+
+        .callback-container {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .callback-form {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        .callback-header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .callback-content {
+            margin: 30px 0;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .success-icon {
+            width: 60px;
+            height: 60px;
+            background: #27ae60;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .success-icon svg {
+            width: 30px;
+            height: 30px;
+            color: white;
+        }
+
+        .error-icon {
+            width: 60px;
+            height: 60px;
+            background: #e74c3c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .error-icon svg {
+            width: 30px;
+            height: 30px;
+            color: white;
+        }
+
+        .success-message {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .redirect-info {
+            font-size: 14px;
+            color: #999;
+            margin-top: 15px;
+        }
+
+        .retry-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 12px 30px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+        }
+
+        .retry-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .close-button {
+            background: #e0e0e0;
+            border: none;
+            border-radius: 50px;
+            color: #666;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 12px 30px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            margin-top: 20px;
+            margin-left: 10px;
+        }
+
+        .close-button:hover {
+            background: #d0d0d0;
+            transform: translateY(-1px);
+        }
+
+        .progress-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 20px 0;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .dot:nth-child(1) { animation-delay: 0s; }
+        .dot:nth-child(2) { animation-delay: 0.3s; }
+        .dot:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% {
+                background: #e0e0e0;
+                transform: scale(1);
+            }
+            40% {
+                background: #667eea;
+                transform: scale(1.2);
+            }
+        }
+
+        /* States */
+        .loading-state {
+            display: block;
+        }
+
+        .success-state,
+        .error-state {
+            display: none;
+        }
+
+        .show-success .loading-state,
+        .show-error .loading-state {
+            display: none;
+        }
+
+        .show-success .success-state {
+            display: block;
+        }
+
+        .show-error .error-state {
+            display: block;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .brand-section {
+                min-height: 40vh;
+                padding: 20px;
+            }
+            
+            .brand-text h1,
+            .brand-text h2 {
+                font-size: 2.5rem;
+            }
+            
+            .callback-container {
+                padding: 20px;
+            }
+            
+            .callback-form {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Left Side - Brand Section -->
+        <div class="brand-section">
+            <div class="brand-text">
+                <h1>Automation</h1>
+                <h2>Social</h2>
+            </div>
+        </div>
+
+        <!-- Right Side - OAuth Callback -->
+        <div class="callback-container">
+            <div class="callback-form" id="callbackForm">
+                <div class="callback-header">
+                    <h1>Authenticating...</h1>
+                </div>
+
+                <!-- Loading State -->
+                <div class="callback-content loading-state" id="loadingState">
+                    <div class="spinner"></div>
+                    <div class="status-message">
+                        Please wait while we complete your authentication...
+                    </div>
+                    <div class="progress-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+
+                <!-- Success State -->
+                <div class="callback-content success-state" id="successState">
+                    <div class="success-icon">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="status-message success-message">
+                        Authentication successful!
+                    </div>
+                    <div class="redirect-info">
+                        You will be redirected to your dashboard in a few seconds...
+                    </div>
+                    <button class="close-button" onclick="closeWindow()">
+                        Close Window
+                    </button>
+                </div>
+
+                <!-- Error State -->
+                <div class="callback-content error-state" id="errorState">
+                    <div class="error-icon">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="status-message error-message" id="errorMessage">
+                        Authentication failed. Please try again.
+                    </div>
+                    <button class="retry-button" onclick="retryAuthentication()">
+                        Try Again
+                    </button>
+                    <button class="close-button" onclick="closeWindow()">
+                        Close Window
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                code: urlParams.get('code'),
+                error: urlParams.get('error'),
+                error_description: urlParams.get('error_description'),
+                state: urlParams.get('state')
+            };
+        }
+
+        // Show different states
+        function showState(state) {
+            const form = document.getElementById('callbackForm');
+            form.className = 'callback-form';
+            
+            if (state === 'success') {
+                form.classList.add('show-success');
+            } else if (state === 'error') {
+                form.classList.add('show-error');
+            }
+        }
+
+        // Update header text
+        function updateHeader(text) {
+            document.querySelector('.callback-header h1').textContent = text;
+        }
+
+        // Handle OAuth callback
+        function handleOAuthCallback() {
+            const params = getUrlParams();
+            
+            if (params.error) {
+                // Handle OAuth error
+                updateHeader('Authentication Failed');
+                const errorMsg = params.error_description || 'An error occurred during authentication';
+                document.getElementById('errorMessage').textContent = errorMsg;
+                showState('error');
+                
+                // Send error to parent window
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'oauth-error',
+                        error: errorMsg
+                    }, window.location.origin);
+                }
+                
+                return;
+            }
+
+            if (params.code) {
+                // Success - we have an authorization code
+                updateHeader('Authentication Successful');
+                
+                // Send success to parent window
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'oauth-success',
+                        data: {
+                            code: params.code,
+                            state: params.state
+                        }
+                    }, window.location.origin);
+                }
+                
+                // Show success state
+                setTimeout(() => {
+                    showState('success');
+                    
+                    // Auto-close window after 3 seconds
+                    setTimeout(() => {
+                        window.close();
+                    }, 3000);
+                }, 1500);
+                
+                return;
+            }
+
+            // No code or error - something went wrong
+            updateHeader('Authentication Failed');
+            document.getElementById('errorMessage').textContent = 'Invalid callback parameters';
+            showState('error');
+        }
+
+        // Retry authentication
+        function retryAuthentication() {
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'oauth-retry'
+                }, window.location.origin);
+            }
+            window.close();
+        }
+
+        // Close window
+        function closeWindow() {
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'oauth-close'
+                }, window.location.origin);
+            }
+            window.close();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Start processing after a short delay to show loading animation
+            setTimeout(handleOAuthCallback, 1000);
+        });
+
+        // Handle case where window can't be closed (non-popup)
+        window.addEventListener('beforeunload', function() {
+            if (window.opener) {
+                window.opener.postMessage({
+                    type: 'oauth-close'
+                }, window.location.origin);
+            }
+        });
+    </script>
+</body>
+</html>
