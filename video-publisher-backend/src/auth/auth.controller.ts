@@ -131,7 +131,7 @@ export class AuthController {
           throw new Error(`Google token exchange failed: ${tokens.error_description || tokens.error}`);
         }
         
-        accessToken = tokens.access_token;        // Get user info
+        accessToken = tokens.access_token;        // Get user info with enhanced metadata
         const userResponse = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
         userInfo = await userResponse.json();
         
@@ -139,24 +139,64 @@ export class AuthController {
           throw new Error(`Failed to get Google user info: ${userInfo.error.message}`);
         }
 
-        // Extract profile picture from Google response
+        // Extract enhanced profile picture from Google response
         if (userInfo.picture) {
-          userInfo.profilePicture = userInfo.picture;
+          // Get high-resolution profile picture by modifying the URL
+          userInfo.profilePicture = userInfo.picture.replace('s96-c', 's400-c');
         }
 
-        // Check for YouTube channels (fetch all channels, not just first one)
+        // Store complete Google user metadata
+        userInfo.googleMetadata = {
+          id: userInfo.id,
+          email: userInfo.email,
+          verified_email: userInfo.verified_email,
+          name: userInfo.name,
+          given_name: userInfo.given_name,
+          family_name: userInfo.family_name,
+          picture: userInfo.profilePicture,
+          locale: userInfo.locale,
+          hd: userInfo.hd, // Hosted domain for G Suite users
+        };
+
+        // Check for YouTube channels with enhanced metadata
         try {
-          const youtubeResponse = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true&maxResults=50&access_token=${accessToken}`);
+          const youtubeResponse = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails,brandingSettings,status&mine=true&maxResults=50&access_token=${accessToken}`);
           const youtubeData = await youtubeResponse.json();
-          
-          if (youtubeData.items && youtubeData.items.length > 0) {
-            // User has YouTube channels, add them to userInfo for later processing
-            userInfo.youtubeChannels = youtubeData.items;
+            if (youtubeData.items && youtubeData.items.length > 0) {
+            // User has YouTube channels, add enhanced metadata
+            userInfo.youtubeChannels = youtubeData.items.map(channel => ({
+              ...channel,
+              // Add enhanced metadata
+              metadata: {
+                id: channel.id,
+                title: channel.snippet.title,
+                description: channel.snippet.description,
+                customUrl: channel.snippet.customUrl,
+                publishedAt: channel.snippet.publishedAt,
+                thumbnails: channel.snippet.thumbnails,
+                defaultLanguage: channel.snippet.defaultLanguage,
+                country: channel.snippet.country,
+                // Statistics
+                viewCount: channel.statistics?.viewCount,
+                subscriberCount: channel.statistics?.subscriberCount,
+                hiddenSubscriberCount: channel.statistics?.hiddenSubscriberCount,
+                videoCount: channel.statistics?.videoCount,
+                // Content details
+                relatedPlaylists: channel.contentDetails?.relatedPlaylists,
+                // Branding
+                bannerExternalUrl: channel.brandingSettings?.image?.bannerExternalUrl,
+                keywords: channel.brandingSettings?.channel?.keywords,
+                // Status
+                privacyStatus: channel.status?.privacyStatus,
+                isLinked: channel.status?.isLinked,
+                longUploadsStatus: channel.status?.longUploadsStatus,
+              }
+            }));
             userInfo.youtubeAccessToken = accessToken;
             userInfo.youtubeRefreshToken = tokens.refresh_token;
-            console.log(`Found ${youtubeData.items.length} YouTube channel(s):`);
+            console.log(`Found ${youtubeData.items.length} YouTube channel(s) with enhanced metadata`);
             youtubeData.items.forEach((channel, index) => {
-              console.log(`  ${index + 1}. ${channel.snippet.title} (${channel.id})`);
+              console.log(`  ${index + 1}. ${channel.snippet.title} (${channel.id}) - ${channel.statistics?.subscriberCount || 'N/A'} subscribers`);
             });
           } else {
             console.log('No YouTube channels found for this Google account');
@@ -180,8 +220,8 @@ export class AuthController {
           throw new Error(`Facebook token exchange failed: ${tokens.error.message || tokens.error}`);
         }
         
-        accessToken = tokens.access_token;        // Get user info with high-quality picture
-        const userResponse = await fetch(`https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token=${accessToken}`);
+        accessToken = tokens.access_token;        // Get user info with enhanced metadata and high-quality picture
+        const userResponse = await fetch(`https://graph.facebook.com/me?fields=id,name,email,first_name,last_name,middle_name,name_format,short_name,picture.width(400).height(400),cover,age_range,birthday,gender,hometown,location,locale,timezone,verified,website,link&access_token=${accessToken}`);
         userInfo = await userResponse.json();
         
         if (userInfo.error) {
@@ -191,20 +231,80 @@ export class AuthController {
         // Extract profile picture from Facebook response
         if (userInfo.picture && userInfo.picture.data && userInfo.picture.data.url) {
           userInfo.profilePicture = userInfo.picture.data.url;
-        }        // Check for Facebook pages with high-quality pictures
+        }
+
+        // Store complete Facebook user metadata
+        userInfo.facebookMetadata = {
+          id: userInfo.id,
+          name: userInfo.name,
+          first_name: userInfo.first_name,
+          last_name: userInfo.last_name,
+          middle_name: userInfo.middle_name,
+          short_name: userInfo.short_name,
+          name_format: userInfo.name_format,
+          email: userInfo.email,
+          picture: userInfo.profilePicture,
+          cover: userInfo.cover,
+          age_range: userInfo.age_range,
+          birthday: userInfo.birthday,
+          gender: userInfo.gender,
+          hometown: userInfo.hometown,
+          location: userInfo.location,
+          locale: userInfo.locale,
+          timezone: userInfo.timezone,
+          verified: userInfo.verified,
+          website: userInfo.website,
+          link: userInfo.link,
+        };
+
+        // Check for Facebook pages with enhanced metadata
         try {
-          const pagesResponse = await fetch(`https://graph.facebook.com/me/accounts?fields=id,name,access_token,category,picture.width(400).height(400),fan_count,about,description&limit=100&access_token=${accessToken}`);
+          const pagesResponse = await fetch(`https://graph.facebook.com/me/accounts?fields=id,name,access_token,category,category_list,picture.width(400).height(400),cover,fan_count,about,description,website,emails,phone,location,hours,parking,public_transit,price_range,overall_star_rating,rating_count,single_line_address,username,verification_status,voip_info,were_here_count,whatsapp_number&limit=100&access_token=${accessToken}`);
           const pagesData = await pagesResponse.json();
           
           if (pagesData.data && pagesData.data.length > 0) {
-            // User has Facebook pages, add them to userInfo for later processing
-            userInfo.facebookPages = pagesData.data;
+            // User has Facebook pages, add enhanced metadata
+            userInfo.facebookPages = pagesData.data.map(page => ({
+              ...page,
+              // Add enhanced metadata
+              metadata: {
+                id: page.id,
+                name: page.name,
+                category: page.category,
+                category_list: page.category_list,
+                picture: page.picture?.data?.url,
+                cover: page.cover,
+                fan_count: page.fan_count,
+                about: page.about,
+                description: page.description,
+                website: page.website,
+                emails: page.emails,
+                phone: page.phone,
+                location: page.location,
+                hours: page.hours,
+                parking: page.parking,
+                public_transit: page.public_transit,
+                price_range: page.price_range,
+                overall_star_rating: page.overall_star_rating,
+                rating_count: page.rating_count,
+                single_line_address: page.single_line_address,
+                username: page.username,
+                verification_status: page.verification_status,
+                voip_info: page.voip_info,
+                were_here_count: page.were_here_count,
+                whatsapp_number: page.whatsapp_number,
+              }
+            }));
             userInfo.facebookAccessToken = accessToken;
+            console.log(`Found ${pagesData.data.length} Facebook page(s) with enhanced metadata`);
+            pagesData.data.forEach((page, index) => {
+              console.log(`  ${index + 1}. ${page.name} (${page.id}) - ${page.fan_count || 'N/A'} followers`);
+            });
           }
         } catch (facebookError) {
-          // Failed to fetch Facebook pages, continue without them
+          console.log('Failed to fetch Facebook pages:', facebookError.message);
         }
-      }      // Login or register user
+      }      // Login or register user with enhanced metadata
       const socialLoginData = {
         provider,
         accessToken,
@@ -212,6 +312,7 @@ export class AuthController {
         name: userInfo.name || userInfo.given_name || 'User',
         providerId: userInfo.id,
         profilePicture: userInfo.profilePicture,
+        metadata: userInfo.googleMetadata || userInfo.facebookMetadata || {},
         youtubeChannels: userInfo.youtubeChannels,
         youtubeAccessToken: userInfo.youtubeAccessToken,
         youtubeRefreshToken: userInfo.youtubeRefreshToken,

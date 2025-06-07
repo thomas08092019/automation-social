@@ -71,8 +71,8 @@ export class AuthService {
       user: userWithoutPassword,
       accessToken,
     };
-  }  async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
-    const { provider, accessToken, email, name, providerId, profilePicture, youtubeChannels, youtubeAccessToken, youtubeRefreshToken, facebookPages, facebookAccessToken } = socialLoginDto;
+  }  async socialLogin(socialLoginDto: any): Promise<AuthResponse> {
+    const { email, name, providerId, profilePicture, youtubeChannels, youtubeAccessToken, youtubeRefreshToken, facebookPages, facebookAccessToken, metadata } = socialLoginDto;
 
     try {
       // Use the data already provided from OAuth callback instead of verifying token again
@@ -95,17 +95,18 @@ export class AuthService {
           password: crypto.randomBytes(32).toString('hex'),
         };
         user = await this.userService.create(createUserDto);
-      }
-
-      // Update user profile picture if available from OAuth provider
-      if (profilePicture && (!user.profilePicture || user.profilePicture !== profilePicture)) {
+      }      // Only update user profile picture if user doesn't have one already
+      if (profilePicture && !user.profilePicture) {
+        console.log('Updating user profile picture from OAuth provider');
         user = await this.userService.updateProfile(user.id, { profilePicture });
+      } else if (user.profilePicture) {
+        console.log('User already has profile picture, skipping update');
       }// If user has YouTube channels, automatically create social accounts for each channel
       if (youtubeChannels && youtubeChannels.length > 0 && youtubeAccessToken) {
         for (let i = 0; i < youtubeChannels.length; i++) {
           const channel = youtubeChannels[i];
           try {
-            await this.createYoutubeSocialAccount(user.id, channel, youtubeAccessToken, youtubeRefreshToken);
+            await this.createYoutubeSocialAccount(user.id, channel, youtubeAccessToken, youtubeRefreshToken, metadata);
           } catch (youtubeError) {
             console.error(`Failed to create social account for YouTube channel: ${channel.snippet.title}`, youtubeError);
             // Continue with other channels even if one fails
@@ -116,7 +117,7 @@ export class AuthService {
         for (let i = 0; i < facebookPages.length; i++) {
           const page = facebookPages[i];
           try {
-            await this.createFacebookSocialAccount(user.id, page, page.access_token || facebookAccessToken);
+            await this.createFacebookSocialAccount(user.id, page, page.access_token || facebookAccessToken, metadata);
           } catch (facebookError) {
             console.error(`Failed to create social account for Facebook page: ${page.name}`, facebookError);
             // Continue with other pages even if one fails
@@ -275,7 +276,7 @@ export class AuthService {
     });
   }
 
-  private async createYoutubeSocialAccount(userId: string, youtubeChannel: any, accessToken: string, refreshToken?: string) {
+  private async createYoutubeSocialAccount(userId: string, youtubeChannel: any, accessToken: string, refreshToken?: string, metadata?: any) {
     try {
       // Check if YouTube account already exists for this user
       const existingAccount = await this.prisma.socialAccount.findFirst({
@@ -285,15 +286,17 @@ export class AuthService {
           accountId: youtubeChannel.id,
         },
       });      if (existingAccount) {
-        // Update existing account with new tokens
+        // Update existing account with new tokens and metadata
         return await this.prisma.socialAccount.update({
           where: { id: existingAccount.id },
           data: {
             accessToken,
             refreshToken,
+            metadata: metadata || youtubeChannel.metadata || existingAccount.metadata,
+            profilePicture: youtubeChannel.snippet.thumbnails?.high?.url || youtubeChannel.snippet.thumbnails?.default?.url,
           },
         });
-      }      // Find or create a system default YouTube social app
+      }// Find or create a system default YouTube social app
       let youtubeApp = await this.prisma.socialApp.findFirst({
         where: {
           platform: 'YOUTUBE',
@@ -314,9 +317,7 @@ export class AuthService {
             redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
           },
         });
-      }
-
-      // Create new YouTube social account
+      }      // Create new YouTube social account with enhanced metadata
       const socialAccount = await this.prisma.socialAccount.create({
         data: {
           userId,
@@ -327,7 +328,9 @@ export class AuthService {
           accessToken,
           refreshToken,
           socialAppId: youtubeApp.id,
-          metadata: {
+          profilePicture: youtubeChannel.snippet.thumbnails?.high?.url || youtubeChannel.snippet.thumbnails?.default?.url,
+          metadata: metadata || youtubeChannel.metadata || {
+            // Fallback if enhanced metadata not available
             channelId: youtubeChannel.id,
             channelTitle: youtubeChannel.snippet.title,
             channelDescription: youtubeChannel.snippet.description,
@@ -335,7 +338,8 @@ export class AuthService {
             videoCount: youtubeChannel.statistics?.videoCount,
             viewCount: youtubeChannel.statistics?.viewCount,
             thumbnails: youtubeChannel.snippet.thumbnails,
-          },        },
+          },
+        },
       });
 
       return socialAccount;
@@ -345,7 +349,7 @@ export class AuthService {
     }
   }
 
-  private async createFacebookSocialAccount(userId: string, facebookPage: any, accessToken: string) {
+  private async createFacebookSocialAccount(userId: string, facebookPage: any, accessToken: string, metadata?: any) {
     try {
       // Check if Facebook page account already exists for this user
       const existingAccount = await this.prisma.socialAccount.findFirst({
@@ -353,16 +357,21 @@ export class AuthService {
           userId,
           platform: 'FACEBOOK',
           accountId: facebookPage.id,
-        },
-      });      if (existingAccount) {
-        // Update existing account with new tokens
+        },      });
+
+      if (existingAccount) {
+        // Update existing account with new tokens and metadata
         return await this.prisma.socialAccount.update({
           where: { id: existingAccount.id },
           data: {
             accessToken,
+            metadata: metadata || facebookPage.metadata || existingAccount.metadata,
+            profilePicture: facebookPage.picture?.data?.url,
           },
         });
-      }      // Find or create a system default Facebook social app
+      }
+
+      // Find or create a system default Facebook social app
       let facebookApp = await this.prisma.socialApp.findFirst({
         where: {
           platform: 'FACEBOOK',
@@ -383,9 +392,7 @@ export class AuthService {
             redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
           },
         });
-      }
-
-      // Create new Facebook page social account
+      }      // Create new Facebook page social account with enhanced metadata
       const socialAccount = await this.prisma.socialAccount.create({
         data: {
           userId,
@@ -395,7 +402,9 @@ export class AuthService {
           accountName: facebookPage.name,
           accessToken,
           socialAppId: facebookApp.id,
-          metadata: {
+          profilePicture: facebookPage.picture?.data?.url,
+          metadata: metadata || facebookPage.metadata || {
+            // Fallback if enhanced metadata not available
             pageId: facebookPage.id,
             pageName: facebookPage.name,
             pageCategory: facebookPage.category,
@@ -403,7 +412,8 @@ export class AuthService {
             about: facebookPage.about,
             description: facebookPage.description,
             picture: facebookPage.picture?.data?.url,
-          },        },
+          },
+        },
       });
 
       return socialAccount;

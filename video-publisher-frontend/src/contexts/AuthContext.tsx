@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useRef, useMemo } from 'react';
 import { User, AuthResponse, LoginRequest, RegisterRequest, SocialAccount } from '../types';
 import apiService from '../services/api';
 
@@ -29,41 +29,63 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [connectedAccounts, setConnectedAccounts] = useState<SocialAccount[]>([]);
   const [isOAuthLogin, setIsOAuthLogin] = useState(false);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+  const hasInitialized = useRef(false);
+  const isInitializing = useRef(false);
 
-  const isAuthenticated = !!user;
-  // Load user from localStorage on mount
-  useEffect(() => {    const loadUser = async () => {
+  const isAuthenticated = !!user;  // Load user from localStorage on mount
+  useEffect(() => {
+    // Prevent multiple initializations using ref
+    if (hasInitialized.current || isInitializing.current) {
+      console.log('AuthContext: Skipping initialization - already initialized or in progress');
+      return;
+    }
+
+    isInitializing.current = true;
+    console.log('AuthContext: Starting initialization');
+
+    const loadUser = async () => {
       try {
         const token = localStorage.getItem('access_token');
         const savedUser = localStorage.getItem('user');
 
         if (token && savedUser) {
+          console.log('AuthContext: Found token and saved user');
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
           
           // Only validate token if it's not an OAuth login to avoid race conditions
           if (!isOAuthLogin) {
             try {
-              await refreshProfile();
+              console.log('AuthContext: Calling /me API to validate token');
+              // Validate token by refreshing profile - this calls /me API once
+              const freshUser = await apiService.getProfile();
+              localStorage.setItem('user', JSON.stringify(freshUser));
+              setUser(freshUser);
+              
+              console.log('AuthContext: Calling /social-accounts API');
+              // After successful profile refresh, fetch connected accounts
+              await refreshConnectedAccounts(true);
             } catch (error) {
               console.error('Failed to refresh profile:', error);
-              // If token validation fails, keep the user data but don't throw
-              // This handles the case where OAuth just completed
+              // If token validation fails, logout the user
+              logout();
             }
           }
-          
-          await refreshConnectedAccounts();
+        } else {
+          console.log('AuthContext: No token or saved user found');
         }
       } catch (error) {
         console.error('Failed to load user:', error);
         logout();
       } finally {
         setIsLoading(false);
+        hasInitialized.current = true;
+        isInitializing.current = false;
+        console.log('AuthContext: Initialization completed');
       }
-    };
-
-    loadUser();
-  }, [isOAuthLogin]);
+    };loadUser();
+  }, []); // Empty dependency array to run only once
 
   const login = async (credentials: LoginRequest) => {
     try {
@@ -74,13 +96,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);
-      await refreshConnectedAccounts();
+      // Don't fetch connected accounts here as they will be fetched after successful navigation
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
     }
   };
-
   const register = async (userData: RegisterRequest) => {
     try {
       const response: AuthResponse = await apiService.register(userData);
@@ -90,7 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);
-      await refreshConnectedAccounts();
+      // Don't fetch connected accounts here as they will be fetched after successful navigation
     } catch (error) {
       console.error('Registration failed:', error);
       throw error;
@@ -150,12 +171,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);
-      await refreshConnectedAccounts();
+      // Don't fetch connected accounts here as they will be fetched after successful navigation
     } catch (error) {
       console.error('Social login failed:', error);
       throw error;
     }
-  };  const setAuthenticatedUser = async (user: User, token: string) => {
+  };const setAuthenticatedUser = async (user: User, token: string) => {
     // Store token and user data
     localStorage.setItem('access_token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -173,11 +194,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setTimeout(() => {
       setIsOAuthLogin(false);
     }, 1000);
-    
-    // Refresh connected accounts in the background (don't await to avoid blocking navigation)
-    refreshConnectedAccounts().catch(error => {
-      console.error('Failed to refresh connected accounts:', error);
-    });
+      // Refresh connected accounts in the background (don't await to avoid blocking navigation)
+    setTimeout(() => {
+      refreshConnectedAccounts(true).catch(error => {
+        console.error('Failed to refresh connected accounts:', error);
+      });
+    }, 100); // Small delay to ensure auth state is fully updated
   };
 
   const forgotPassword = async (email: string) => {
@@ -186,17 +208,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const resetPassword = async (token: string, password: string) => {
     await apiService.resetPassword({ token, password });
-  };
-
-  const refreshConnectedAccounts = async () => {
+  };  const refreshConnectedAccounts = async (force = false) => {
     try {
       if (isAuthenticated) {
+        // Prevent multiple simultaneous requests
+        if (!force && isLoadingAccounts) {
+          console.log('AuthContext: Skipping social-accounts API - already loading');
+          return;
+        }
+        
+        console.log('AuthContext: Fetching social accounts');
+        setIsLoadingAccounts(true);
         const accounts = await apiService.getSocialAccounts();
         setConnectedAccounts(accounts);
+        console.log('AuthContext: Social accounts fetched successfully');
       }
     } catch (error) {
       console.error('Failed to fetch connected accounts:', error);
       // Don't throw error here as it's a background operation
+    } finally {
+      setIsLoadingAccounts(false);
     }
   };
   const value: AuthContextType = {
