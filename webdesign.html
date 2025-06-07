@@ -1,0 +1,2756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Video Publisher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            transition: all 0.3s ease;
+        }
+
+        /* Dark theme */
+        body.dark {
+            background: #1a1d29;
+            color: #e2e8f0;
+        }        /* Sidebar Styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        box-shadow 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        body.dark .sidebar {
+            background: #2d3748;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }        /* Sidebar Header */
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            flex-shrink: 0;
+            transition: padding 0.3s ease, justify-content 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 20px;
+            justify-content: center;
+            gap: 0;
+        }
+
+        body.dark .sidebar-header {
+            border-bottom-color: #4a5568;
+        }
+
+        .toggle-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .toggle-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: opacity 0.4s ease, width 0.4s ease, transform 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            transform-origin: left center;
+        }
+
+        .sidebar.collapsed .logo {
+            opacity: 0;
+            width: 0;
+            margin: 0;
+            transform: scale(0.8);
+        }        /* User Profile Section */
+        .user-profile {
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            max-height: 100px;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        opacity 0.4s ease,
+                        padding 0.4s ease,
+                        margin 0.3s ease,
+                        transform 0.3s ease;
+            transform-origin: left center;
+        }
+
+        .sidebar.collapsed .user-profile {
+            opacity: 0;
+            max-height: 0;
+            padding: 0 20px;
+            margin: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        body.dark .user-profile {
+            border-bottom-color: #4a5568;
+        }        .user-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;
+            flex-shrink: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .user-avatar {
+            transform: scale(0.8);
+            opacity: 0;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .sidebar.collapsed .user-info {
+            transform: translateX(-10px) scale(0.9);
+            opacity: 0;
+        }        .user-greeting {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 4px;
+            transition: transform 0.3s ease 0.1s, opacity 0.3s ease 0.1s;
+        }
+
+        .sidebar.collapsed .user-greeting {
+            transform: translateY(-5px);
+            opacity: 0;
+        }
+
+        body.dark .user-greeting {
+            color: #94a3b8;
+        }
+
+        .user-email {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            word-break: break-all;
+            transition: transform 0.3s ease 0.15s, opacity 0.3s ease 0.15s;
+        }
+
+        .sidebar.collapsed .user-email {
+            transform: translateY(-5px);
+            opacity: 0;
+        }
+
+        body.dark .user-email {
+            color: #e2e8f0;
+        }/* Navigation Menu */
+        .nav-menu {
+            flex: 1;
+            padding: 10px 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-item {
+            margin: 2px 10px;
+        }
+
+        .sidebar.collapsed .nav-item {
+            margin: 2px 5px;
+        }        .nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            font-weight: 500;
+            position: relative;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 12px;
+            gap: 0;
+        }
+
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: #667eea;
+            transform: translateX(4px);
+        }
+
+        .sidebar.collapsed .nav-link:hover {
+            transform: scale(1.05);
+        }
+
+        body.dark .nav-link {
+            color: #94a3b8;
+        }
+
+        body.dark .nav-link:hover {
+            background: #374151;
+            color: #a78bfa;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }        .nav-text {
+            transition: opacity 0.4s ease, width 0.4s ease, transform 0.3s ease;
+            overflow: hidden;
+            transform-origin: left center;
+        }
+
+        .sidebar.collapsed .nav-text {
+            opacity: 0;
+            width: 0;
+            margin: 0;
+            transform: scale(0.8);
+        }/* Sidebar Footer */
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sidebar.collapsed .sidebar-footer {
+            padding: 20px 20px;
+        }
+
+        body.dark .sidebar-footer {
+            border-top-color: #4a5568;
+        }        .copyright {
+            font-size: 12px;
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 12px;
+            transition: opacity 0.4s ease, height 0.3s ease, margin 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .copyright {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+        }
+
+        .logout-btn {
+            width: 100%;
+            max-width: 200px;
+            padding: 12px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed .logout-btn {
+            padding: 12px;
+            gap: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            max-width: 40px;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .sidebar.collapsed .logout-btn:hover {
+            transform: none;
+        }
+
+        .logout-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }        .logout-text {
+            transition: opacity 0.4s ease, width 0.4s ease, transform 0.3s ease;
+            overflow: hidden;
+            transform-origin: left center;
+        }
+
+        .sidebar.collapsed .logout-text {
+            opacity: 0;
+            width: 0;
+            margin: 0;
+            transform: scale(0.8);
+        }        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            transition: margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            min-height: 100vh;
+        }
+
+        .sidebar.collapsed + .main-content {
+            margin-left: 80px;
+        }        .content-header {
+            background: white;
+            padding: 24px 32px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        body.dark .content-header {
+            background: #2d3748;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        body.dark .page-title {
+            color: #e2e8f0;
+        }
+
+        .theme-toggle {
+            background: #f1f5f9;
+            border: 1px solid #d1d5db;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        body.dark .theme-toggle {
+            background: #374151;
+            border-color: #4b5563;
+            color: #94a3b8;
+        }
+
+        .theme-toggle:hover {
+            background: #e2e8f0;
+        }
+
+        body.dark .theme-toggle:hover {
+            background: #4b5563;
+        }
+
+        .content-body {
+            padding: 32px;
+        }
+
+        .page-content {
+            display: none;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        body.dark .dashboard-card {
+            background: #2d3748;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+
+        body.dark .card-title {
+            color: #e2e8f0;
+        }
+
+        .card-description {
+            color: #64748b;
+            line-height: 1.6;
+        }        body.dark .card-description {
+            color: #94a3b8;
+        }        /* Social Page Section Spacing */
+        #social .dashboard-card:nth-child(2) {
+            margin-top: 24px;
+            margin-bottom: 36px;
+        }
+
+        /* Settings Page Styles */
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        body.dark .setting-label {
+            color: #d1d5db;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        .toggle-input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .toggle-input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        /* Color Picker Styles */
+        .color-picker-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .color-presets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+            gap: 12px;
+            max-width: 400px;
+        }
+
+        .color-preset {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .color-preset:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-preset.active {
+            border-color: #374151;
+            transform: scale(1.05);
+        }
+
+        body.dark .color-preset.active {
+            border-color: #d1d5db;
+        }
+
+        .custom-color-section {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 16px;
+        }
+
+        body.dark .custom-color-section {
+            border-color: #4b5563;
+        }
+
+        .custom-color-inputs {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .color-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .color-input-group label {
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        body.dark .color-input-group label {
+            color: #9ca3af;
+        }
+
+        .color-input-group input[type="color"] {
+            width: 60px;
+            height: 40px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+
+        body.dark .color-input-group input[type="color"] {
+            border-color: #4b5563;
+        }
+
+        /* Color Preview */
+        .color-preview {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .preview-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .preview-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .preview-text {
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Setting Actions */
+        .setting-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        body.dark .setting-actions {
+            border-color: #4b5563;
+        }
+
+        .btn-reset, .btn-apply {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-reset {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-reset:hover {
+            background: #e5e7eb;
+        }
+
+        body.dark .btn-reset {
+            background: #4b5563;
+            color: #d1d5db;
+        }
+
+        body.dark .btn-reset:hover {
+            background: #6b7280;
+        }
+
+        .btn-apply {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-apply:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Setting Select */
+        .setting-select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: white;
+            color: #374151;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        body.dark .setting-select {
+            background: #4b5563;
+            border-color: #6b7280;
+            color: #d1d5db;
+        }
+
+        .setting-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* CSS Custom Properties for Dynamic Theming */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-start: #667eea;
+            --primary-end: #764ba2;
+        }
+
+        /* Apply dynamic colors */
+        .nav-link.active,
+        .toggle-input:checked + .toggle-slider,
+        .preview-button,
+        .preview-text,
+        .btn-apply {
+            background: var(--primary-gradient);
+        }
+
+        .preview-text {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .mobile-overlay.active {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .content-header {
+                padding: 16px 20px;
+            }
+
+            .content-body {            padding: 20px;
+            }
+        }
+
+        /* Social Accounts Page Styles */
+        .platform-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .platform-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            color: #374151;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        body.dark .platform-btn {
+            background: #374151;
+            border-color: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .platform-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .platform-btn[data-platform="youtube"] {
+            border-color: #ff0000;
+        }
+
+        .platform-btn[data-platform="youtube"]:hover {
+            background: #ff0000;
+            color: white;
+            box-shadow: 0 8px 25px rgba(255, 0, 0, 0.3);
+        }
+
+        .platform-btn[data-platform="facebook"] {
+            border-color: #1877f2;
+        }
+
+        .platform-btn[data-platform="facebook"]:hover {
+            background: #1877f2;
+            color: white;
+            box-shadow: 0 8px 25px rgba(24, 119, 242, 0.3);
+        }
+
+        .platform-btn[data-platform="instagram"] {
+            border-color: #e4405f;
+        }
+
+        .platform-btn[data-platform="instagram"]:hover {
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            color: white;
+            box-shadow: 0 8px 25px rgba(225, 48, 108, 0.3);
+        }
+
+        .platform-btn[data-platform="tiktok"] {
+            border-color: #000000;
+        }
+
+        .platform-btn[data-platform="tiktok"]:hover {
+            background: #000000;
+            color: white;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .platform-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .platform-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .youtube-icon {
+            color: #ff0000;
+        }
+
+        .facebook-icon {
+            color: #1877f2;
+        }
+
+        .instagram-icon {
+            color: #e4405f;
+        }
+
+        .tiktok-icon {
+            color: #000000;
+        }
+
+        body.dark .tiktok-icon {
+            color: #ffffff;
+        }
+
+        /* Search Section Styles */
+        .search-section {
+            margin-bottom: 0;
+        }
+
+        .search-filters {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .search-input-group {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            color: #374151;
+            transition: all 0.3s ease;
+        }
+
+        body.dark .search-input {
+            background: #374151;
+            border-color: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            color: #374151;
+            min-width: 150px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        body.dark .filter-select {
+            background: #374151;
+            border-color: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 8px;
+        }.social-accounts-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            background: transparent;
+        }
+
+        body.dark .social-accounts-table {
+            background: transparent;
+        }
+
+        .social-accounts-table th,
+        .social-accounts-table td {
+            padding: 12px 16px;
+            text-align: left;
+            background: white;
+            border: none;
+        }
+
+        body.dark .social-accounts-table th,
+        body.dark .social-accounts-table td {
+            background: #2d3748;
+        }
+
+        .social-accounts-table tbody tr {
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark .social-accounts-table tbody tr {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .social-accounts-table tbody tr td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        .social-accounts-table tbody tr td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }        .social-accounts-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        body.dark .social-accounts-table th {
+            background: #374151;
+            color: #e2e8f0;
+        }
+
+        .social-accounts-table thead tr th:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 0;
+        }
+
+        .social-accounts-table thead tr th:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 0;
+        }        .social-accounts-table td {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        body.dark .social-accounts-table td {
+            color: #9ca3af;
+        }
+
+        .social-accounts-table tbody tr:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        body.dark .social-accounts-table tbody tr:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .platform-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        .platform-badge svg {
+            width: 16px;
+            height: 16px;
+        }        .facebook-badge {
+            background: rgba(24, 119, 242, 0.1);
+            color: #1877f2;
+        }
+
+        body.dark .facebook-badge {
+            background: rgba(24, 119, 242, 0.2);
+        }
+
+        .youtube-badge {
+            background: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+        }
+
+        body.dark .youtube-badge {
+            background: rgba(255, 0, 0, 0.2);
+        }
+
+        .instagram-badge {
+            background: rgba(228, 64, 95, 0.1);
+            color: #e4405f;
+        }
+
+        body.dark .instagram-badge {
+            background: rgba(228, 64, 95, 0.2);
+        }
+
+        .tiktok-badge {
+            background: rgba(0, 0, 0, 0.1);
+            color: #000000;
+        }
+
+        body.dark .tiktok-badge {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .account-type-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }        .page-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        body.dark .page-badge {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .creator-badge {
+            background: rgba(147, 51, 234, 0.1);
+            color: #9333ea;
+        }
+
+        body.dark .creator-badge {
+            background: rgba(147, 51, 234, 0.2);
+        }
+
+        .business-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        body.dark .business-badge {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .profile-badge {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+        }
+
+        body.dark .profile-badge {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        .group-badge {
+            background: rgba(236, 72, 153, 0.1);
+            color: #ec4899;
+        }
+
+        body.dark .group-badge {
+            background: rgba(236, 72, 153, 0.2);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }        .active-status {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+        }
+
+        body.dark .active-status {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .expired-status {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        body.dark .expired-status {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .inactive-status {
+            background: rgba(156, 163, 175, 0.1);
+            color: #9ca3af;
+        }
+
+        body.dark .inactive-status {
+            background: rgba(156, 163, 175, 0.2);
+        }
+
+        .view-metadata-btn {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .view-metadata-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .refresh-btn {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        .refresh-btn:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .delete-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .delete-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Pagination Styles */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        body.dark .pagination-container {
+            border-top-color: #4a5568;
+        }
+
+        .pagination-info {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        body.dark .pagination-info {
+            color: #9ca3af;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        body.dark .pagination-btn {
+            background: #374151;
+            border-color: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        body.dark .pagination-btn:hover:not(:disabled) {
+            background: #4a5568;
+            border-color: #6b7280;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .pagination-numbers {
+            display: flex;
+            gap: 4px;
+        }
+
+        .pagination-number {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+            color: #374151;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        body.dark .pagination-number {
+            background: #374151;
+            border-color: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .pagination-number:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        body.dark .pagination-number:hover {
+            background: #4a5568;
+            border-color: #6b7280;
+        }
+
+        .pagination-number.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        /* Metadata Modal Styles */
+        .metadata-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .metadata-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .metadata-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            max-height: 80vh;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        body.dark .metadata-modal-content {
+            background: #2d3748;
+        }
+
+        .metadata-modal.show .metadata-modal-content {
+            transform: scale(1);
+        }
+
+        .metadata-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        body.dark .metadata-modal-header {
+            border-bottom-color: #4a5568;
+        }
+
+        .metadata-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        body.dark .metadata-modal-title {
+            color: #e2e8f0;
+        }
+
+        .metadata-close-btn {
+            padding: 4px;
+            border: none;
+            background: none;
+            color: #6b7280;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .metadata-close-btn:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        body.dark .metadata-close-btn:hover {
+            background: #4a5568;
+            color: #e2e8f0;
+        }
+
+        .metadata-close-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .metadata-content {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #374151;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        body.dark .metadata-content {
+            background: #1a202c;
+            color: #e2e8f0;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .search-filters {
+                flex-direction: column;
+            }
+
+            .filter-group {
+                flex-direction: column;
+            }
+
+            .filter-select {
+                min-width: unset;
+            }
+
+            .table-container {
+                font-size: 12px;
+            }
+
+            .social-accounts-table th,
+            .social-accounts-table td {
+                padding: 8px 12px;
+            }
+
+            .pagination-container {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .pagination-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .platform-buttons {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <button class="toggle-btn" id="sidebarToggle">
+                <span id="toggleIcon">☰</span>
+            </button>
+            <div class="logo">Automation Social</div>
+        </div>
+
+        <!-- User Profile Section -->
+        <div class="user-profile">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <div class="user-info">
+                <div class="user-greeting">Good day!</div>
+                <div class="user-email" id="userEmail">user@example.com</div>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="nav-menu">
+            <div class="nav-item">
+                <a href="#" class="nav-link active" data-page="dashboard">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                    </svg>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="profile">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="nav-text">My Profile</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="social">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="nav-text">Manage Social</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="videos">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm3 2h6v4H7V5zm8 8v2h1v-2h-1zm-2-2H7v4h6v-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="nav-text">Manage Video</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="upload">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="nav-text">Upload</span>
+                </a>
+            </div>            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="prompts">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="nav-text">Manage Prompt</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="trends">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="nav-text">Google Trends</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="tts">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.824L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.797-3.824a1 1 0 011.617.824zM14 5a1 1 0 011 1v8a1 1 0 11-2 0V6a1 1 0 011-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="nav-text">Text to Speech</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" class="nav-link" data-page="settings">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="nav-text">Settings</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+            <div class="copyright">© 2025 - ducktoan2001</div>            <button class="logout-btn" id="logoutBtn">
+                <svg class="logout-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/>
+                </svg>
+                <span class="logout-text">Logout</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Content Header -->
+        <div class="content-header">
+            <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            <button class="theme-toggle" id="themeToggle">
+                <span id="themeIcon">🌙</span>
+                <span id="themeText">Dark Mode</span>
+            </button>
+        </div>
+
+        <!-- Content Body -->
+        <div class="content-body">
+            <!-- Dashboard Content -->
+            <div class="page-content active" id="dashboard">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3 class="card-title">Welcome to Video Publisher</h3>
+                        <p class="card-description">Manage your social media content and publish videos across multiple platforms with ease.</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3 class="card-title">Quick Stats</h3>
+                        <p class="card-description">Track your publishing performance and engagement metrics in real-time.</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3 class="card-title">Recent Activity</h3>
+                        <p class="card-description">Stay updated with your latest uploads and publishing activities.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div class="page-content" id="profile">
+                <div class="dashboard-card">
+                    <h3 class="card-title">My Profile</h3>
+                    <p class="card-description">Manage your personal information and account settings.</p>
+                </div>
+            </div>            <!-- Social Accounts Content -->
+            <div class="page-content" id="social">
+                <!-- Platform Connection Buttons -->
+                <div class="dashboard-card">
+                    <h3 class="card-title">Connect Social Platforms</h3>
+                    <p class="card-description">Connect your social media accounts to start publishing content.</p>
+                    
+                    <div class="platform-buttons">
+                        <button class="platform-btn" data-platform="youtube">
+                            <div class="platform-icon youtube-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                                </svg>
+                            </div>
+                            <span>YouTube</span>
+                        </button>
+                        
+                        <button class="platform-btn" data-platform="facebook">
+                            <div class="platform-icon facebook-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                </svg>
+                            </div>
+                            <span>Facebook</span>
+                        </button>
+                        
+                        <button class="platform-btn" data-platform="instagram">
+                            <div class="platform-icon instagram-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                                </svg>
+                            </div>
+                            <span>Instagram</span>
+                        </button>
+                        
+                        <button class="platform-btn" data-platform="tiktok">
+                            <div class="platform-icon tiktok-icon">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.28-.33.4-.73.41-1.14.065-1.85-.015-3.71.035-5.56l-.015-8.83z"/>
+                                </svg>
+                            </div>
+                            <span>TikTok</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search and Filter Section -->
+                <div class="dashboard-card">
+                    <div class="search-section">
+                        <div class="search-filters">
+                            <div class="search-input-group">
+                                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" id="accountSearch" placeholder="Search account name..." class="search-input">
+                            </div>
+                            
+                            <div class="filter-group">
+                                <select id="platformFilter" class="filter-select">
+                                    <option value="">All Platforms</option>
+                                    <option value="FACEBOOK">Facebook</option>
+                                    <option value="INSTAGRAM">Instagram</option>
+                                    <option value="TIKTOK">TikTok</option>
+                                    <option value="YOUTUBE">YouTube</option>
+                                    <option value="TWITTER">Twitter</option>
+                                </select>
+                                
+                                <select id="accountTypeFilter" class="filter-select">
+                                    <option value="">All Types</option>
+                                    <option value="PAGE">Page</option>
+                                    <option value="GROUP">Group</option>
+                                    <option value="PROFILE">Profile</option>
+                                    <option value="BUSINESS">Business</option>
+                                    <option value="CREATOR">Creator</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Social Accounts Table -->
+                <div class="dashboard-card">
+                    <h3 class="card-title">Connected Social Accounts</h3>
+                    
+                    <div class="table-container">
+                        <table class="social-accounts-table">
+                            <thead>
+                                <tr>
+                                    <th>Platform</th>
+                                    <th>Type</th>
+                                    <th>Account Name</th>
+                                    <th>Account ID</th>
+                                    <th>Status</th>
+                                    <th>Expires</th>
+                                    <th>Metadata</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>                            <tbody id="socialAccountsTableBody">
+                                <!-- Sample data - this will be populated by JavaScript -->
+                                <tr data-account-id="fb-page-123">
+                                    <td>
+                                        <div class="platform-badge facebook-badge">
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                            </svg>
+                                            Facebook
+                                        </div>
+                                    </td>
+                                    <td><span class="account-type-badge page-badge">PAGE</span></td>
+                                    <td>My Business Page</td>
+                                    <td>123456789</td>
+                                    <td><span class="status-badge active-status">Active</span></td>
+                                    <td>2025-12-31</td>
+                                    <td><button class="view-metadata-btn" onclick="showMetadata('sample-metadata-1')">View</button></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="action-btn refresh-btn" title="Refresh Token">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                </svg>
+                                            </button>
+                                            <button class="action-btn delete-btn" title="Remove Account">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr data-account-id="yt-channel-456">
+                                    <td>
+                                        <div class="platform-badge youtube-badge">
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                                            </svg>
+                                            YouTube
+                                        </div>
+                                    </td>
+                                    <td><span class="account-type-badge creator-badge">CREATOR</span></td>
+                                    <td>Tech Reviews Channel</td>
+                                    <td>UC123456789</td>
+                                    <td><span class="status-badge active-status">Active</span></td>
+                                    <td>2025-11-15</td>
+                                    <td><button class="view-metadata-btn" onclick="showMetadata('youtube-metadata-1')">View</button></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="action-btn refresh-btn" title="Refresh Token">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                </svg>
+                                            </button>
+                                            <button class="action-btn delete-btn" title="Remove Account">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr data-account-id="ig-business-789">
+                                    <td>
+                                        <div class="platform-badge instagram-badge">
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                                            </svg>
+                                            Instagram
+                                        </div>
+                                    </td>
+                                    <td><span class="account-type-badge business-badge">BUSINESS</span></td>
+                                    <td>Fashion Store Official</td>
+                                    <td>17841234567890</td>
+                                    <td><span class="status-badge active-status">Active</span></td>
+                                    <td>2025-10-20</td>
+                                    <td><button class="view-metadata-btn" onclick="showMetadata('instagram-metadata-1')">View</button></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="action-btn refresh-btn" title="Refresh Token">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                </svg>
+                                            </button>
+                                            <button class="action-btn delete-btn" title="Remove Account">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                
+                                <tr data-account-id="tt-profile-321">
+                                    <td>
+                                        <div class="platform-badge tiktok-badge">
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.28-.33.4-.73.41-1.14.065-1.85-.015-3.71.035-5.56l-.015-8.83z"/>
+                                            </svg>
+                                            TikTok
+                                        </div>
+                                    </td>
+                                    <td><span class="account-type-badge profile-badge">PROFILE</span></td>
+                                    <td>@dancingqueen2025</td>
+                                    <td>6789012345</td>
+                                    <td><span class="status-badge expired-status">Expired</span></td>
+                                    <td>2025-05-30</td>
+                                    <td><button class="view-metadata-btn" onclick="showMetadata('tiktok-metadata-1')">View</button></td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="action-btn refresh-btn" title="Refresh Token">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                </svg>
+                                            </button>
+                                            <button class="action-btn delete-btn" title="Remove Account">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="pagination-container">
+                        <div class="pagination-info">
+                            Showing <span id="currentRange">1-10</span> of <span id="totalItems">25</span> accounts
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="pagination-btn" id="prevPage" disabled>
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                                Previous
+                            </button>
+                            <div class="pagination-numbers">
+                                <button class="pagination-number active">1</button>
+                                <button class="pagination-number">2</button>
+                                <button class="pagination-number">3</button>
+                            </div>
+                            <button class="pagination-btn" id="nextPage">
+                                Next
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Videos Content -->
+            <div class="page-content" id="videos">
+                <div class="dashboard-card">
+                    <h3 class="card-title">Manage Videos</h3>
+                    <p class="card-description">Organize and manage your video library for publishing.</p>
+                </div>
+            </div>            <!-- Upload Content -->
+            <div class="page-content" id="upload">
+                <div class="dashboard-card">
+                    <h3 class="card-title">Upload & Publishing Jobs</h3>
+                    <p class="card-description">Create and manage your video publishing jobs and schedules.</p>
+                </div>
+            </div>
+
+            <!-- Prompts Content -->
+            <div class="page-content" id="prompts">
+                <div class="dashboard-card">
+                    <h3 class="card-title">Manage Prompts</h3>
+                    <p class="card-description">Create and manage AI prompts for video content generation and automation.</p>
+                </div>
+            </div>
+
+            <!-- Google Trends Content -->
+            <div class="page-content" id="trends">
+                <div class="dashboard-card">
+                    <h3 class="card-title">Google Trends Analysis</h3>
+                    <p class="card-description">Discover trending keywords and topics to optimize your content strategy.</p>
+                </div>
+            </div>
+
+            <!-- Text to Speech Content -->
+            <div class="page-content" id="tts">
+                <div class="dashboard-card">
+                    <h3 class="card-title">Text to Speech</h3>
+                    <p class="card-description">Convert text content to natural-sounding speech for your videos.</p>
+                </div>
+            </div><!-- Settings Content -->
+            <div class="page-content" id="settings">
+                <div class="settings-container">
+                    <!-- Color Theme Settings -->
+                    <div class="dashboard-card">
+                        <h3 class="card-title">Color Theme</h3>
+                        <p class="card-description">Choose your preferred color scheme</p>
+                        
+                        <div class="setting-group">
+                            <label class="setting-label">Primary Color</label>
+                            <div class="color-picker-group">
+                                <div class="color-presets">
+                                    <div class="color-preset active" data-color="667eea-764ba2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                    <div class="color-preset" data-color="f093fb-f5576c" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+                                    <div class="color-preset" data-color="4facfe-00f2fe" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                                    <div class="color-preset" data-color="43e97b-38f9d7" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div>
+                                    <div class="color-preset" data-color="fa709a-fee140" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"></div>
+                                    <div class="color-preset" data-color="a8edea-fed6e3" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);"></div>
+                                    <div class="color-preset" data-color="ffecd2-fcb69f" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);"></div>
+                                    <div class="color-preset" data-color="ff8a80-ff5722" style="background: linear-gradient(135deg, #ff8a80 0%, #ff5722 100%);"></div>
+                                </div>
+                                <div class="custom-color-section">
+                                    <label class="setting-label">Or pick custom colors:</label>
+                                    <div class="custom-color-inputs">
+                                        <div class="color-input-group">
+                                            <label>Start Color</label>
+                                            <input type="color" id="startColor" value="#667eea">
+                                        </div>
+                                        <div class="color-input-group">
+                                            <label>End Color</label>
+                                            <input type="color" id="endColor" value="#764ba2">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <label class="setting-label">Color Preview</label>
+                            <div class="color-preview">
+                                <div class="preview-button" id="colorPreview">
+                                    <span>Sample Button</span>
+                                </div>
+                                <div class="preview-text" id="textPreview">Sample Text with Gradient</div>
+                            </div>
+                        </div>
+
+                        <div class="setting-actions">
+                            <button class="btn-reset" id="resetColors">Reset to Default</button>
+                            <button class="btn-apply" id="applyColors">Apply Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const toggleIcon = document.getElementById('toggleIcon');
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeText = document.getElementById('themeText');
+        const pageTitle = document.getElementById('pageTitle');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const pageContents = document.querySelectorAll('.page-content');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        const userEmail = document.getElementById('userEmail');
+        const userAvatar = document.getElementById('userAvatar');
+
+        // Initialize user data (you can replace this with actual user data)
+        function initializeUserData() {
+            // This would typically come from your authentication system
+            const userData = {
+                email: 'user@example.com', // Replace with actual user email
+                name: 'User Name' // Replace with actual user name
+            };
+            
+            userEmail.textContent = userData.email;
+            userAvatar.textContent = userData.email.charAt(0).toUpperCase();
+        }
+
+        // Sidebar Toggle
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            toggleIcon.textContent = sidebar.classList.contains('collapsed') ? '☰' : '✕';
+            
+            // Close mobile sidebar if open
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.remove('active');
+            }
+        });
+
+        // Mobile sidebar toggle
+        if (window.innerWidth <= 768) {
+            sidebarToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('open');
+                mobileOverlay.classList.toggle('active');
+            });
+        }
+
+        // Close mobile sidebar when clicking overlay
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            mobileOverlay.classList.remove('active');
+        });
+
+        // Theme Toggle
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            themeIcon.textContent = isDark ? '☀️' : '🌙';
+            themeText.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            
+            // Save theme preference
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark');
+            themeIcon.textContent = '☀️';
+            themeText.textContent = 'Light Mode';
+        }
+
+        // Navigation
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                navLinks.forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                link.classList.add('active');
+                
+                // Hide all page contents
+                pageContents.forEach(content => content.classList.remove('active'));
+                  // Show selected page content
+                const targetPage = link.getAttribute('data-page');
+                const targetContent = document.getElementById(targetPage);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+                  // Initialize settings if settings page is accessed
+                if (targetPage === 'settings') {
+                    initializeSettings();
+                }
+                
+                // Initialize social accounts page if accessed
+                if (targetPage === 'social') {
+                    setTimeout(() => {
+                        initializeSocialAccountsPage();
+                    }, 100);
+                }
+                
+                // Update page title
+                const navText = link.querySelector('.nav-text').textContent;
+                pageTitle.textContent = navText;
+            });
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to logout?')) {
+                // Add your logout logic here
+                alert('Logging out...');
+                // window.location.href = '/login';
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('open');
+                mobileOverlay.classList.remove('active');
+            }
+        });        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeUserData();
+            // Load settings on page load to apply saved theme
+            loadSettings();
+        });// Settings functionality
+        function initializeSettings() {
+            const colorPresets = document.querySelectorAll('.color-preset');
+            const startColorInput = document.getElementById('startColor');
+            const endColorInput = document.getElementById('endColor');
+            const colorPreview = document.getElementById('colorPreview');
+            const textPreview = document.getElementById('textPreview');
+            const resetColorsBtn = document.getElementById('resetColors');
+            const applyColorsBtn = document.getElementById('applyColors');
+
+            // Load saved settings first
+            loadSettings();
+            
+            // Initialize preview with current values
+            if (startColorInput && endColorInput) {
+                updateColorPreview(startColorInput.value, endColorInput.value);
+            }
+
+            // Color preset selection
+            colorPresets.forEach(preset => {
+                preset.addEventListener('click', () => {
+                    // Remove active class from all presets
+                    colorPresets.forEach(p => p.classList.remove('active'));
+                    // Add active class to clicked preset
+                    preset.classList.add('active');
+                    
+                    // Get colors from data attribute
+                    const colors = preset.getAttribute('data-color').split('-');
+                    const startColor = '#' + colors[0];
+                    const endColor = '#' + colors[1];
+                    
+                    // Update color inputs
+                    startColorInput.value = startColor;
+                    endColorInput.value = endColor;
+                    
+                    // Update preview immediately
+                    updateColorPreview(startColor, endColor);
+                });
+            });
+
+            // Custom color inputs
+            startColorInput.addEventListener('input', () => {
+                updateColorPreview(startColorInput.value, endColorInput.value);
+                // Remove active class from presets when using custom colors
+                colorPresets.forEach(p => p.classList.remove('active'));
+            });
+
+            endColorInput.addEventListener('input', () => {
+                updateColorPreview(startColorInput.value, endColorInput.value);
+                // Remove active class from presets when using custom colors
+                colorPresets.forEach(p => p.classList.remove('active'));
+            });
+
+            // Reset colors
+            resetColorsBtn.addEventListener('click', () => {
+                const defaultStart = '#667eea';
+                const defaultEnd = '#764ba2';
+                
+                startColorInput.value = defaultStart;
+                endColorInput.value = defaultEnd;
+                
+                // Set first preset as active
+                colorPresets.forEach(p => p.classList.remove('active'));
+                colorPresets[0].classList.add('active');
+                
+                updateColorPreview(defaultStart, defaultEnd);
+            });
+
+            // Apply colors
+            applyColorsBtn.addEventListener('click', () => {
+                const startColor = startColorInput.value;
+                const endColor = endColorInput.value;
+                
+                applyColorTheme(startColor, endColor);
+                saveSettings();
+                
+                // Show success message
+                showNotification('Color theme applied successfully!', 'success');
+            });
+        }        function updateColorPreview(startColor, endColor) {
+            const gradient = `linear-gradient(135deg, ${startColor} 0%, ${endColor} 100%)`;
+            const colorPreview = document.getElementById('colorPreview');
+            const textPreview = document.getElementById('textPreview');
+            
+            console.log('Updating preview with:', startColor, endColor); // Debug log
+            
+            if (colorPreview) {
+                colorPreview.style.background = gradient;
+                colorPreview.style.setProperty('background', gradient, 'important');
+            }
+            
+            if (textPreview) {
+                textPreview.style.background = gradient;
+                textPreview.style.setProperty('background', gradient, 'important');
+                textPreview.style.webkitBackgroundClip = 'text';
+                textPreview.style.webkitTextFillColor = 'transparent';
+                textPreview.style.backgroundClip = 'text';
+            }
+        }        function applyColorTheme(startColor, endColor) {
+            const gradient = `linear-gradient(135deg, ${startColor} 0%, ${endColor} 100%)`;
+            
+            // Update CSS custom properties
+            document.documentElement.style.setProperty('--primary-gradient', gradient);
+            document.documentElement.style.setProperty('--primary-start', startColor);
+            document.documentElement.style.setProperty('--primary-end', endColor);
+            
+            // Create or update dynamic style element
+            let dynamicStyle = document.getElementById('dynamic-theme-style');
+            if (!dynamicStyle) {
+                dynamicStyle = document.createElement('style');
+                dynamicStyle.id = 'dynamic-theme-style';
+                document.head.appendChild(dynamicStyle);
+            }
+            
+            const css = `
+                .nav-link.active,
+                .toggle-input:checked + .toggle-slider,
+                .preview-button,
+                .btn-apply {
+                    background: ${gradient} !important;
+                }
+                
+                .preview-text {
+                    background: ${gradient} !important;
+                    -webkit-background-clip: text !important;
+                    -webkit-text-fill-color: transparent !important;
+                    background-clip: text !important;
+                }
+                
+                .btn-apply:hover {
+                    box-shadow: 0 4px 12px ${startColor}40 !important;
+                }
+                
+                .sidebar-header .toggle-btn {
+                    background: ${gradient} !important;
+                    color: white !important;
+                }
+                
+                .sidebar-header .logo {
+                    background: ${gradient} !important;
+                    -webkit-background-clip: text !important;
+                    -webkit-text-fill-color: transparent !important;
+                    background-clip: text !important;
+                    font-weight: bold !important;
+                }
+                
+                .content-header {
+                    background: ${gradient} !important;
+                    color: white !important;
+                }
+                
+                .page-title {
+                    color: white !important;
+                }
+                
+                .theme-toggle {
+                    background: rgba(255, 255, 255, 0.2) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                    color: white !important;
+                }
+                
+                .theme-toggle:hover {
+                    background: rgba(255, 255, 255, 0.3) !important;
+                }
+                
+                .copyright {
+                    background: ${gradient} !important;
+                    -webkit-background-clip: text !important;
+                    -webkit-text-fill-color: transparent !important;
+                    background-clip: text !important;
+                    font-weight: 600 !important;
+                }
+            `;
+            
+            dynamicStyle.textContent = css;
+        }function saveSettings() {
+            const settings = {
+                startColor: document.getElementById('startColor').value,
+                endColor: document.getElementById('endColor').value,
+                darkMode: document.body.classList.contains('dark')
+            };
+            
+            localStorage.setItem('dashboardSettings', JSON.stringify(settings));
+        }        function loadSettings() {
+            const savedSettings = localStorage.getItem('dashboardSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                
+                // Apply saved colors
+                if (settings.startColor && settings.endColor) {
+                    const startColorInput = document.getElementById('startColor');
+                    const endColorInput = document.getElementById('endColor');
+                    
+                    if (startColorInput && endColorInput) {
+                        startColorInput.value = settings.startColor;
+                        endColorInput.value = settings.endColor;
+                        updateColorPreview(settings.startColor, settings.endColor);
+                        applyColorTheme(settings.startColor, settings.endColor);
+                        
+                        // Find matching preset
+                        const colorPresets = document.querySelectorAll('.color-preset');
+                        const colorKey = settings.startColor.substring(1) + '-' + settings.endColor.substring(1);
+                        colorPresets.forEach(preset => {
+                            preset.classList.remove('active');
+                            if (preset.getAttribute('data-color') === colorKey) {
+                                preset.classList.add('active');
+                            }
+                        });
+                    }
+                }
+            } else {
+                // Apply default colors if no settings saved
+                const defaultStart = '#667eea';
+                const defaultEnd = '#764ba2';
+                updateColorPreview(defaultStart, defaultEnd);
+                applyColorTheme(defaultStart, defaultEnd);
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            
+            // Add styles
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                z-index: 10000;
+                font-weight: 500;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+              // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }        // Social Accounts Management Functions
+        function showMetadata(metadataId) {
+            // Sample metadata - this would come from your actual data
+            const sampleMetadata = {
+                'sample-metadata-1': {
+                    platform: "facebook",
+                    accountInfo: {
+                        id: "123456789",
+                        name: "My Business Page",
+                        category: "Business",
+                        about: "We are a technology company focused on innovation",
+                        website: "https://example.com",
+                        phone: "+1234567890",
+                        location: {
+                            street: "123 Tech Street",
+                            city: "San Francisco",
+                            state: "CA",
+                            country: "US",
+                            zip: "94105"
+                        },
+                        verification_status: "blue_verified",
+                        follower_count: 15420,
+                        fan_count: 15420,
+                        talking_about_count: 1234,
+                        posts: 156,
+                        created_time: "2020-01-15T08:30:00+0000",
+                        picture: {
+                            data: {
+                                height: 200,
+                                is_silhouette: false,
+                                url: "https://scontent.xx.fbcdn.net/v/example.jpg",
+                                width: 200
+                            }
+                        },
+                        cover: {
+                            cover_id: "987654321",
+                            offset_x: 0,
+                            offset_y: 0,
+                            source: "https://scontent.xx.fbcdn.net/v/cover-example.jpg",
+                            id: "987654321"
+                        },
+                        hours: {
+                            mon_1_open: "0900",
+                            mon_1_close: "1700",
+                            tue_1_open: "0900",
+                            tue_1_close: "1700",
+                            wed_1_open: "0900",
+                            wed_1_close: "1700",
+                            thu_1_open: "0900",
+                            thu_1_close: "1700",
+                            fri_1_open: "0900",
+                            fri_1_close: "1700"
+                        },
+                        emails: ["contact@example.com", "support@example.com"],
+                        category_list: [
+                            {
+                                id: "2201",
+                                name: "Product/Service"
+                            },
+                            {
+                                id: "1602",
+                                name: "Company"
+                            }
+                        ]
+                    },
+                    permissions: ["manage_pages", "publish_pages", "pages_show_list", "read_insights"],
+                    token_info: {
+                        app_id: "your-app-id",
+                        application: "Your App Name",
+                        expires_at: 1735689600,
+                        is_valid: true,
+                        scopes: ["manage_pages", "publish_pages", "pages_show_list", "read_insights"],
+                        user_id: "user123456789"
+                    },
+                    last_updated: "2025-06-07T10:30:00Z"
+                },
+                'youtube-metadata-1': {
+                    platform: "youtube",
+                    channelInfo: {
+                        id: "UC123456789",
+                        title: "Tech Reviews Channel",
+                        description: "Your go-to channel for the latest tech reviews and unboxings",
+                        customUrl: "@techreviews2025",
+                        publishedAt: "2020-03-15T10:00:00Z",
+                        thumbnails: {
+                            default: {
+                                url: "https://yt3.ggpht.com/example-default.jpg",
+                                width: 88,
+                                height: 88
+                            },
+                            medium: {
+                                url: "https://yt3.ggpht.com/example-medium.jpg",
+                                width: 240,
+                                height: 240
+                            },
+                            high: {
+                                url: "https://yt3.ggpht.com/example-high.jpg",
+                                width: 800,
+                                height: 800
+                            }
+                        },
+                        country: "US",
+                        defaultLanguage: "en"
+                    },
+                    statistics: {
+                        viewCount: "2534567",
+                        subscriberCount: "125400",
+                        hiddenSubscriberCount: false,
+                        videoCount: "342"
+                    },
+                    contentDetails: {
+                        relatedPlaylists: {
+                            uploads: "UU123456789uploads",
+                            watchHistory: "HL",
+                            watchLater: "WL"
+                        }
+                    },
+                    brandingSettings: {
+                        channel: {
+                            title: "Tech Reviews Channel",
+                            description: "Your go-to channel for tech reviews",
+                            keywords: "tech reviews technology gadgets unboxing",
+                            moderateComments: true,
+                            showRelatedChannels: true,
+                            showBrowseView: true,
+                            featuredChannelsTitle: "Featured Channels",
+                            featuredChannelsUrls: ["https://youtube.com/c/example1", "https://youtube.com/c/example2"]
+                        },
+                        image: {
+                            bannerExternalUrl: "https://yt3.ggpht.com/banner-example.jpg"
+                        }
+                    },
+                    status: {
+                        privacyStatus: "public",
+                        isLinked: true,
+                        longUploadsStatus: "allowed",
+                        madeForKids: false
+                    },
+                    permissions: ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"],
+                    last_updated: "2025-06-07T10:30:00Z"
+                },
+                'instagram-metadata-1': {
+                    platform: "instagram",
+                    accountInfo: {
+                        id: "17841234567890",
+                        username: "fashionstore_official",
+                        name: "Fashion Store Official",
+                        account_type: "BUSINESS",
+                        media_count: 156,
+                        followers_count: 8450,
+                        follows_count: 234,
+                        profile_picture_url: "https://scontent.cdninstagram.com/example.jpg",
+                        biography: "🛍️ Your favorite fashion destination\n📦 Free shipping worldwide\n👗 New arrivals weekly",
+                        website: "https://fashionstore.com",
+                        category: "Retail Company",
+                        business_discovery: {
+                            ig_id: "17841234567890",
+                            followers_count: 8450,
+                            media_count: 156,
+                            name: "Fashion Store Official",
+                            profile_picture_url: "https://scontent.cdninstagram.com/example.jpg",
+                            username: "fashionstore_official"
+                        }
+                    },
+                    insights: {
+                        reach: 12340,
+                        impressions: 18750,
+                        profile_views: 1250,
+                        website_clicks: 89
+                    },
+                    permissions: ["instagram_basic", "pages_show_list", "instagram_content_publish", "business_management"],
+                    last_updated: "2025-06-07T10:30:00Z"
+                },
+                'tiktok-metadata-1': {
+                    platform: "tiktok",
+                    userInfo: {
+                        open_id: "6789012345",
+                        union_id: "union_6789012345",
+                        avatar_url: "https://p16-sign-sg.tiktokcdn.com/example.jpeg",
+                        avatar_large_url: "https://p16-sign-sg.tiktokcdn.com/example-large.jpeg",
+                        display_name: "Dancing Queen 2025",
+                        bio_description: "✨ Dance enthusiast | Choreographer\n🎵 Creating moves to trending sounds\n💃 Follow for daily dance content",
+                        profile_deep_link: "https://www.tiktok.com/@dancingqueen2025",
+                        is_verified: false,
+                        follower_count: 45678,
+                        following_count: 892,
+                        likes_count: 234567,
+                        video_count: 89
+                    },
+                    analytics: {
+                        profile_view_count: 12450,
+                        total_video_views: 567890,
+                        total_likes: 234567,
+                        total_shares: 12890,
+                        total_comments: 8750
+                    },
+                    permissions: ["user.info.basic", "user.info.profile", "user.info.stats", "video.list"],
+                    status: {
+                        account_status: "active",
+                        content_eligibility: "eligible",
+                        creator_fund_eligibility: "eligible"
+                    },
+                    last_updated: "2025-06-07T10:30:00Z"
+                }
+            };
+
+            const metadata = sampleMetadata[metadataId] || { error: "Metadata not found" };
+            
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('metadataModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'metadataModal';
+                modal.className = 'metadata-modal';
+                modal.innerHTML = `
+                    <div class="metadata-modal-content">
+                        <div class="metadata-modal-header">
+                            <h3 class="metadata-modal-title">Account Metadata</h3>
+                            <button class="metadata-close-btn" onclick="hideMetadata()">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="metadata-content" id="metadataContent"></div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+
+                // Close modal when clicking outside
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        hideMetadata();
+                    }
+                });
+            }
+
+            // Update content
+            document.getElementById('metadataContent').textContent = JSON.stringify(metadata, null, 2);
+            
+            // Show modal
+            modal.classList.add('show');
+        }
+
+        function hideMetadata() {
+            const modal = document.getElementById('metadataModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        // Initialize social accounts page functionality
+        function initializeSocialAccountsPage() {
+            const searchInput = document.getElementById('accountSearch');
+            const platformFilter = document.getElementById('platformFilter');
+            const accountTypeFilter = document.getElementById('accountTypeFilter');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', filterSocialAccounts);
+            }
+            
+            if (platformFilter) {
+                platformFilter.addEventListener('change', filterSocialAccounts);
+            }
+            
+            if (accountTypeFilter) {
+                accountTypeFilter.addEventListener('change', filterSocialAccounts);
+            }
+
+            // Platform connection buttons
+            const platformButtons = document.querySelectorAll('.platform-btn');
+            platformButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const platform = button.getAttribute('data-platform');
+                    connectPlatform(platform);
+                });
+            });
+
+            // Action buttons
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.refresh-btn')) {
+                    const accountId = e.target.closest('tr').dataset.accountId;
+                    refreshAccount(accountId);
+                } else if (e.target.closest('.delete-btn')) {
+                    const accountId = e.target.closest('tr').dataset.accountId;
+                    deleteAccount(accountId);
+                }
+            });
+
+            // Pagination
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    // Handle previous page
+                    console.log('Previous page clicked');
+                });
+            }
+            
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    // Handle next page
+                    console.log('Next page clicked');
+                });
+            }
+        }
+
+        function filterSocialAccounts() {
+            const searchTerm = document.getElementById('accountSearch')?.value.toLowerCase() || '';
+            const platformFilter = document.getElementById('platformFilter')?.value || '';
+            const accountTypeFilter = document.getElementById('accountTypeFilter')?.value || '';
+
+            console.log('Filtering accounts:', { searchTerm, platformFilter, accountTypeFilter });
+            
+            // Here you would implement the actual filtering logic
+            // This would typically make an API call to fetch filtered results
+        }
+
+        function connectPlatform(platform) {
+            console.log(`Connecting to ${platform}...`);
+            showNotification(`Connecting to ${platform.charAt(0).toUpperCase() + platform.slice(1)}...`, 'info');
+            
+            // Here you would redirect to OAuth flow
+            // Example: window.location.href = `/auth/${platform}`;
+        }
+
+        function refreshAccount(accountId) {
+            console.log(`Refreshing account ${accountId}...`);
+            showNotification('Refreshing account token...', 'info');
+            
+            // Here you would make an API call to refresh the account token
+        }
+
+        function deleteAccount(accountId) {
+            if (confirm('Are you sure you want to remove this account? This action cannot be undone.')) {
+                console.log(`Deleting account ${accountId}...`);
+                showNotification('Account removed successfully', 'success');
+                
+                // Here you would make an API call to delete the account
+            }
+        }
+
+        // Close metadata modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideMetadata();
+            }
+        });
+    </script>
+</body>
+</html>
