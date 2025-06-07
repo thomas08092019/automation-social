@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { API_BASE_URL } from '../../config';
@@ -92,7 +92,6 @@ export function Layout({ children }: LayoutProps) {
       setDarkMode(false);
     }
   }, [user]);
-
   // Apply dark mode class to body when darkMode state changes
   useEffect(() => {
     if (darkMode) {
@@ -101,6 +100,15 @@ export function Layout({ children }: LayoutProps) {
       document.body.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Apply sidebar state to body for better CSS performance
+  useEffect(() => {
+    if (sidebarCollapsed) {
+      document.body.classList.add('sidebar-collapsed');
+    } else {
+      document.body.classList.remove('sidebar-collapsed');
+    }
+  }, [sidebarCollapsed]);
 
   // Load saved colors and apply theme
   useEffect(() => {
@@ -198,22 +206,21 @@ export function Layout({ children }: LayoutProps) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Toggle sidebar
-  const toggleSidebar = () => {
+  // Toggle sidebar - optimized with useCallback
+  const toggleSidebar = useCallback(() => {
     if (window.innerWidth <= 768) {
       setMobileMenuOpen(!mobileMenuOpen);
     } else {
       setSidebarCollapsed(!sidebarCollapsed);
     }
-  };  // Toggle theme
-  const toggleTheme = () => {
+  }, [mobileMenuOpen, sidebarCollapsed]);  // Toggle theme - optimized with useCallback
+  const toggleTheme = useCallback(() => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     
     // Save theme preference to localStorage
     localStorage.setItem('theme', newDarkMode ? 'dark' : 'light');
-  };
+  }, [darkMode]);
 
   // Navigate to page (SPA navigation)
   const navigateToPage = (href: string) => {

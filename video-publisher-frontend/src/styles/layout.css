@@ -63,6 +63,9 @@ body.dark {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    will-change: width;
+    transform: translateZ(0); /* Force GPU acceleration */
+    backface-visibility: hidden;
 }
 
 body.dark .sidebar {
@@ -203,11 +206,11 @@ body.dark .user-profile {
     font-size: 14px;
     color: #64748b;
     margin-bottom: 4px;
-    transition: transform 0.3s ease 0.1s, opacity 0.3s ease 0.1s;
+    transition: opacity 0.3s ease 0.1s;
+    will-change: opacity;
 }
 
 .sidebar.collapsed .user-greeting {
-    transform: translateY(-5px);
     opacity: 0;
 }
 
@@ -219,13 +222,14 @@ body.dark .user-greeting {
     font-size: 14px;
     font-weight: 500;
     color: #1e293b;
-    transition: transform 0.3s ease 0.15s, opacity 0.3s ease 0.15s;
+    transition: opacity 0.3s ease 0.15s;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 150px;
     position: relative;
     cursor: default;
+    will-change: opacity;
 }
 
 .user-email:hover::after {
@@ -253,7 +257,6 @@ body.dark .user-email:hover::after {
 }
 
 .sidebar.collapsed .user-email {
-    transform: translateY(-5px);
     opacity: 0;
 }
 
@@ -455,8 +458,17 @@ body.dark .sidebar-footer {
     margin-left: 280px;
     transition: margin-left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     min-height: 100vh;
+    will-change: margin-left;
+    transform: translateZ(0); /* Force GPU acceleration */
+    backface-visibility: hidden;
 }
 
+/* Use body class for main content adjustment in React */
+body.sidebar-collapsed .main-content {
+    margin-left: 80px;
+}
+
+/* Keep the original selector for compatibility */
 .sidebar.collapsed + .main-content {
     margin-left: 80px;
 }
