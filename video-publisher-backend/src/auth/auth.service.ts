@@ -221,9 +221,13 @@ export class AuthService {
     const user = await this.userService.findById(userId);
     return user.email;
   }
-
   async validateUser(payload: JwtPayload): Promise<UserResponseDto> {
-    return this.userService.findById(payload.userId);
+    console.log('🔍 AuthService validateUser called with payload:', payload);    try {
+      const user = await this.userService.findById(payload.userId);
+      return user;
+    } catch (error) {
+      throw error;
+    }
   }
 
   async getMe(userId: string): Promise<UserResponseDto> {

@@ -56,11 +56,15 @@ model User {
   email            String          @unique()
   username         String          @unique()
   password         String?
-  profilePicture   String?
-  resetToken       String?
-  resetTokenExpiry DateTime?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt()
+  profilePicture   String?         @map("profile_picture")
+  resetToken       String?         @map("reset_token")
+  resetTokenExpiry DateTime?       @map("reset_token_expiry")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt() @map("updated_at")
+  deletedAt        DateTime?       @map("deleted_at")
+  createdBy        String?         @map("created_by")
+  updatedBy        String?         @map("updated_by")
+  deletedBy        String?         @map("deleted_by")
   socialAccounts   SocialAccount[]
   videos           Video[]
   publishingJobs   PublishingJob[]
@@ -72,19 +76,25 @@ model User {
 model SocialAccount {
   id              String           @id() @default(uuid())
   platform        SocialPlatform
-  accountType     AccountType
-  accountId       String
-  accountName     String
-  accessToken     String
-  refreshToken    String?
-  expiresAt       DateTime?
-  profilePicture  String?
-  isActive        Boolean          @default(true)
+  accountType     AccountType      @map("account_type")
+  accountId       String           @map("account_id")
+  accountName     String           @map("account_name")
+  accessToken     String           @map("access_token")
+  refreshToken    String?          @map("refresh_token")
+  expiresAt       DateTime?        @map("expires_at")
+  profilePicture  String?          @map("profile_picture")
+  isActive        Boolean          @default(true) @map("is_active")
   metadata        Json?
+  userId          String           @map("user_id")
+  socialAppId     String           @map("social_app_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt() @map("updated_at")
+  deletedAt       DateTime?        @map("deleted_at")
+  createdBy       String?          @map("created_by")
+  updatedBy       String?          @map("updated_by")
+  deletedBy       String?          @map("deleted_by")
   user            User             @relation(fields: [userId], references: [id])
-  userId          String
   socialApp       SocialApp        @relation(fields: [socialAppId], references: [id])
-  socialAppId     String
   publishingTasks PublishingTask[]
 
   @@unique([platform, accountId, userId])
@@ -95,15 +105,19 @@ model Video {
   id              String           @id() @default(uuid())
   title           String
   description     String?
-  filePath        String
-  thumbnailPath   String?
+  filePath        String           @map("file_path")
+  thumbnailPath   String?          @map("thumbnail_path")
   duration        Int?
   status          VideoStatus      @default(PENDING)
+  userId          String           @map("user_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt() @map("updated_at")
+  deletedAt       DateTime?        @map("deleted_at")
+  createdBy       String?          @map("created_by")
+  updatedBy       String?          @map("updated_by")
+  deletedBy       String?          @map("deleted_by")
   user            User             @relation(fields: [userId], references: [id])
-  userId          String
   publishingTasks PublishingTask[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt()
 
   @@map("videos")
 }
@@ -113,12 +127,16 @@ model PublishingJob {
   name         String
   description  String?
   status       PublishingJobStatus @default(PENDING)
-  scheduleTime DateTime?
+  scheduleTime DateTime?           @map("schedule_time")
+  userId       String              @map("user_id")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt() @map("updated_at")
+  deletedAt    DateTime?           @map("deleted_at")
+  createdBy    String?             @map("created_by")
+  updatedBy    String?             @map("updated_by")
+  deletedBy    String?             @map("deleted_by")
   user         User                @relation(fields: [userId], references: [id])
-  userId       String
   tasks        PublishingTask[]
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt()
 
   @@map("publishing_jobs")
 }
@@ -127,14 +145,18 @@ model PublishingTask {
   id              String               @id() @default(uuid())
   status          PublishingTaskStatus @default(PENDING)
   error           String?
+  jobId           String               @map("job_id")
+  videoId         String               @map("video_id")
+  socialAccountId String               @map("social_account_id")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt() @map("updated_at")
+  deletedAt       DateTime?            @map("deleted_at")
+  createdBy       String?              @map("created_by")
+  updatedBy       String?              @map("updated_by")
+  deletedBy       String?              @map("deleted_by")
   job             PublishingJob        @relation(fields: [jobId], references: [id])
-  jobId           String
   video           Video                @relation(fields: [videoId], references: [id])
-  videoId         String
   socialAccount   SocialAccount        @relation(fields: [socialAccountId], references: [id])
-  socialAccountId String
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt()
 
   @@map("publishing_tasks")
 }
@@ -143,15 +165,19 @@ model SocialApp {
   id             String          @id() @default(cuid())
   name           String
   platform       SocialPlatform
-  appId          String
-  appSecret      String
-  redirectUri    String
-  isDefault      Boolean         @default(false)
-  userId         String
+  appId          String          @map("app_id")
+  appSecret      String          @map("app_secret")
+  redirectUri    String          @map("redirect_uri")
+  isDefault      Boolean         @default(false) @map("is_default")
+  userId         String          @map("user_id")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt() @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
+  createdBy      String?         @map("created_by")
+  updatedBy      String?         @map("updated_by")
+  deletedBy      String?         @map("deleted_by")
   user           User            @relation(fields: [userId], references: [id])
   socialAccounts SocialAccount[]
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt()
 
   @@map("social_apps")
 }

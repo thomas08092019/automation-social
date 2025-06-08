@@ -18,7 +18,7 @@ import { PrismaModule } from '../common/prisma.module';
 @Module({
   imports: [
     UserModule,
-    PassportModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     PrismaModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -44,6 +44,7 @@ import { PrismaModule } from '../common/prisma.module';
   controllers: [AuthController, SocialAppsController],
   exports: [
     AuthService, 
+    JwtStrategy,
     TokenManagerService,
     SocialAppService,
     EnhancedSocialAppService,
