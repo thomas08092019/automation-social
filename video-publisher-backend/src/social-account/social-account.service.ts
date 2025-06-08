@@ -9,6 +9,8 @@ import {
   CreateSocialAccountDto,
   UpdateSocialAccountDto,
   SocialAccountResponseDto,
+  SocialAccountQueryDto,
+  SocialAccountsResponseDto,
 } from './dto/social-account.dto';
 
 @Injectable()
@@ -75,10 +77,13 @@ export class SocialAccountService {
       select: {
         id: true,
         platform: true,
+        accountType: true,
         accountId: true,
         accountName: true,
         profilePicture: true,
         isActive: true,
+        metadata: true,
+        expiresAt: true,
       },
     });
 
@@ -86,11 +91,14 @@ export class SocialAccountService {
     return accounts.map(account => ({
       id: account.id,
       platform: account.platform,
+      accountType: account.accountType,
       platformAccountId: account.accountId,
       username: account.accountName,
       scopes: [], // Default empty array since not in schema
       profilePictureUrl: account.profilePicture,
       isActive: account.isActive,
+      expiresAt: account.expiresAt ? new Date(account.expiresAt) : null,
+      metadata: account.metadata || {}, // Default to empty object if not set
       createdAt: new Date(), // Default value since not in schema
       updatedAt: new Date(), // Default value since not in schema
     }));
@@ -109,10 +117,13 @@ export class SocialAccountService {
       select: {
         id: true,
         platform: true,
+        accountType: true,
         accountId: true,
         accountName: true,
         profilePicture: true,
         isActive: true,
+        metadata: true,
+        expiresAt: true,
       },
     });
 
@@ -120,11 +131,14 @@ export class SocialAccountService {
     return accounts.map(account => ({
       id: account.id,
       platform: account.platform,
+      accountType: account.accountType,
       platformAccountId: account.accountId,
       username: account.accountName,
       scopes: [], // Default empty array since not in schema
       profilePictureUrl: account.profilePicture,
       isActive: account.isActive,
+      expiresAt: account.expiresAt ? new Date(account.expiresAt) : null,
+      metadata: account.metadata || {}, // Default to empty object if not set
       createdAt: new Date(), // Default value since not in schema
       updatedAt: new Date(), // Default value since not in schema
     }));
@@ -244,5 +258,114 @@ export class SocialAccountService {
     }
 
     return account.accessToken;
+  }
+  async findAllByUserWithPagination(
+    userId: string,
+    query: SocialAccountQueryDto,
+  ): Promise<SocialAccountsResponseDto> {
+    const {
+      search,
+      platform,
+      accountType,
+      status,
+      page = 1,
+      limit = 10,
+      sortBy = 'accountName',
+      sortOrder = 'desc',
+    } = query;
+
+    // Build where clause
+    const where: any = {
+      userId,
+    };
+
+    // Platform filter
+    if (platform) {
+      where.platform = platform;
+    }
+
+    // Account type filter
+    if (accountType) {
+      where.accountType = accountType;
+    }
+
+    // Status filter
+    if (status) {
+      if (status === 'active') {
+        where.isActive = true;
+        where.OR = [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ];
+      } else if (status === 'inactive') {
+        where.isActive = false;
+      } else if (status === 'expired') {
+        where.isActive = true;
+        where.expiresAt = { lte: new Date() };
+      }
+    }
+
+    // Search filter (search in account name and account ID)
+    if (search) {
+      where.OR = [
+        { accountName: { contains: search, mode: 'insensitive' } },
+        { accountId: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Count total records
+    const total = await this.prisma.socialAccount.count({ where });
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;    // Build order by - validate sortBy field exists in schema
+    const validSortFields = ['accountName', 'platform', 'accountType', 'isActive', 'expiresAt'];
+    const validSortBy = validSortFields.includes(sortBy) ? sortBy : 'accountName';
+    
+    const orderBy: any = {};
+    orderBy[validSortBy] = sortOrder;// Fetch accounts
+    const accounts = await this.prisma.socialAccount.findMany({
+      where,
+      select: {
+        id: true,
+        platform: true,
+        accountType: true,
+        accountId: true,
+        accountName: true,
+        profilePicture: true,
+        isActive: true,
+        metadata: true,
+        expiresAt: true,
+      },
+      orderBy,
+      skip,
+      take: limit,
+    });    // Map schema fields to DTO fields
+    const data = accounts.map(account => ({
+      id: account.id,
+      platform: account.platform,
+      accountType: account.accountType,
+      platformAccountId: account.accountId,
+      username: account.accountName,
+      scopes: [], // Default empty array since not in schema
+      profilePictureUrl: account.profilePicture,
+      isActive: account.isActive,
+      expiresAt: account.expiresAt,
+      metadata: account.metadata || {}, // Default to empty object if not set
+      createdAt: new Date(), // Default value since not in schema
+      updatedAt: new Date(), // Default value since not in schema
+    }));
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage,
+      hasPrevPage,
+    };
   }
 }

@@ -178,10 +178,15 @@ class ApiService {
   async deleteVideo(id: string): Promise<void> {
     await this.api.delete(`/videos/${id}`);
   }
-
   // Social Account endpoints - /social-accounts/*
   async getSocialAccounts(): Promise<SocialAccount[]> {
     const response: AxiosResponse<SocialAccount[]> = await this.api.get('/social-accounts');
+    return response.data;
+  }
+
+  async getSocialAccountsWithQuery(queryString: string): Promise<any> {
+    const url = queryString ? `/social-accounts?${queryString}` : '/social-accounts';
+    const response: AxiosResponse<any> = await this.api.get(url);
     return response.data;
   }
 

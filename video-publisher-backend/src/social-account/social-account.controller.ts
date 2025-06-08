@@ -21,6 +21,8 @@ import {
   CreateSocialAccountDto,
   UpdateSocialAccountDto,
   SocialAccountResponseDto,
+  SocialAccountQueryDto,
+  SocialAccountsResponseDto,
 } from './dto/social-account.dto';
 
 @Controller('social-accounts')
@@ -172,16 +174,18 @@ export class SocialAccountController {
   @Get()
   async findAll(
     @Request() req,
-    @Query('platform') platform?: SocialPlatform,
-  ) {
-    const accounts = platform 
-      ? await this.socialAccountService.findByPlatform(req.user.id, platform)
-      : await this.socialAccountService.findAllByUser(req.user.id);
+    @Query() query: SocialAccountQueryDto,
+  ): Promise<SocialAccountsResponseDto> {
+    const result = await this.socialAccountService.findAllByUserWithPagination(req.user.id, query);
     
     return {
-      success: true,
-      data: accounts,
-      message: 'Social accounts retrieved successfully'
+      data: result.data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+      hasNextPage: result.hasNextPage,
+      hasPrevPage: result.hasPrevPage,
     };
   }
 

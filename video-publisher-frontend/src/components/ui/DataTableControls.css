@@ -1,0 +1,243 @@
+/* Data Table Controls Styles */
+.dashboard-card .search-section {
+  padding: 0;
+  margin-bottom: 24px;
+}
+
+.dashboard-card .search-filters {
+  display: flex !important;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: nowrap !important;
+  flex-direction: row !important;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.dashboard-card .search-input-group {
+  position: relative;
+  flex: 1 1 500px;
+  min-width: 400px;
+  max-width: 600px;
+}
+
+.dashboard-card .search-input {
+  width: 100%;
+  padding: 12px 16px 12px 48px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+body.dark .dashboard-card .search-input {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.dashboard-card .search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+body.dark .dashboard-card .search-input:focus {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-card .search-input::placeholder {
+  color: #9ca3af;
+}
+
+body.dark .dashboard-card .search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dashboard-card .search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+body.dark .dashboard-card .search-icon {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dashboard-card .filter-select {
+  padding: 12px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 130px;
+  max-width: 160px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+body.dark .dashboard-card .filter-select {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.dashboard-card .filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+body.dark .dashboard-card .filter-select:focus {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-card .filter-select option {
+  background: white;
+  color: #374151;
+}
+
+body.dark .dashboard-card .filter-select option {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+/* Reset button specific styling - icon-only like refresh button */
+.dashboard-card .reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  background: #667eea;
+  color: white;
+  font-size: 16px;
+}
+
+.dashboard-card .reset-btn:hover:not(:disabled) {
+  background: #5a67d8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.dashboard-card .reset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dashboard-card .reset-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.dashboard-card .reset-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Table header refresh button styling */
+.dashboard-card .refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  white-space: nowrap;
+  min-height: 36px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.dashboard-card .refresh-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.dashboard-card .refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dashboard-card .refresh-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Rotating animation for refresh icon */
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .dashboard-card .search-input-group {
+    flex: 1 1 350px;
+    min-width: 250px;
+    max-width: 400px;
+  }
+  
+  .dashboard-card .filter-select {
+    min-width: 120px;
+    max-width: 140px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-card .search-filters {
+    flex-direction: column !important;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .dashboard-card .search-input-group {
+    min-width: auto;
+    max-width: none;
+    flex: 1 1 auto;
+  }
+  
+  .dashboard-card .filter-select {
+    min-width: 120px;
+    max-width: none;
+    flex: 1 1 auto;
+  }
+  
+  .dashboard-card .reset-btn {
+    margin-left: 0;
+    justify-self: center;
+  }
+}
