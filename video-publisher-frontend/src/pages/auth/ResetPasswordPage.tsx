@@ -103,7 +103,7 @@ export function ResetPasswordPage() {
       setError(null);      // Reset the password and get the auth response for auto-login
       const authResponse = await apiService.resetPassword({
         token: token,
-        newPassword: data.password,
+        password: data.password,
       });
 
       // Auto-login the user with the returned auth data
