@@ -124,27 +124,24 @@ export const socialAccountsApi = {  // Get all social accounts for the user with
       console.error('Error fetching accounts by platform:', error);
       return [];
     }
-  },
-  // Connect a social platform - Generate OAuth authorization URL
+  },  // Connect a social platform - Generate OAuth authorization URL
   connectPlatform: async (platform: string): Promise<ConnectPlatformResponse> => {
     try {
       // Call backend to get OAuth authorization URL
-      const response = await apiService.api.post(`/social-accounts/connect/${platform.toLowerCase()}`);
+      const response = await apiService.connectPlatform(platform);
       
-      if (response.data.success && response.data.data?.authUrl) {
-        return {
+      if (response.success && response.data?.authUrl) {        return {
           success: true,
           data: {
-            authUrl: response.data.data.authUrl,
-            platform: response.data.data.platform,
+            authUrl: response.data.authUrl,
+            platform: response.data.platform,
           },
-          message: response.data.message || 'Authorization URL generated successfully',
+          message: response.message || 'Authorization URL generated successfully',
         };
-      } else {
-        return {
+      } else {        return {
           success: false,
-          message: response.data.message || 'Failed to generate authorization URL',
-          error: response.data.error,
+          message: response.message || 'Failed to generate authorization URL',
+          error: response.error,
         };
       }
     } catch (error: any) {

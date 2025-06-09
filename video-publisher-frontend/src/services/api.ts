@@ -209,6 +209,11 @@ class ApiService {
     return response.data;
   }
 
+  async connectPlatform(platform: string): Promise<any> {
+    const response = await this.api.post(`/social-accounts/connect/${platform.toLowerCase()}`);
+    return response.data;
+  }
+
   // Social App endpoints - /api/social-apps/*
   async getSocialApps(): Promise<SocialApp[]> {
     const response: AxiosResponse<SocialApp[]> = await this.api.get('/api/social-apps');

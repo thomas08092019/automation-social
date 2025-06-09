@@ -100,14 +100,14 @@ export function OAuthCallbackPage() {
                 setTimeout(() => window.close(), 2000);
               } else {
                 throw new Error(result.message || 'OAuth callback failed');
-              }
-            } catch (callbackError) {
+              }            } catch (callbackError) {
               console.error('OAuth callback processing error:', callbackError);
-              setError(callbackError.message);
+              const errorMessage = callbackError instanceof Error ? callbackError.message : 'Unknown error occurred';
+              setError(errorMessage);
               setStatus('error');
               window.opener.postMessage({ 
                 type: 'oauth-error', 
-                error: callbackError.message 
+                error: errorMessage 
               }, '*');
               setTimeout(() => window.close(), 3000);
             }
