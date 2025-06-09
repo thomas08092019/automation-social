@@ -46,11 +46,31 @@ export class SocialAccountService {
         return AccountType.PROFILE; // Default fallback
     }
   }
-
   async create(
     userId: string,
     createDto: CreateSocialAccountDto,
-  ): Promise<SocialAccountResponseDto> {    // Check if account already exists for this user and platform
+  ): Promise<SocialAccountResponseDto> {
+    // Validate required fields
+    if (!createDto.accessToken || !createDto.accessToken.trim()) {
+      console.error('=== SOCIAL ACCOUNT CREATE ERROR ===');
+      console.error('Missing or empty accessToken in createDto:', {
+        platform: createDto.platform,
+        platformAccountId: createDto.platformAccountId,
+        username: createDto.username,
+        hasAccessToken: !!createDto.accessToken,
+        accessTokenLength: createDto.accessToken?.length || 0,
+        accessTokenPreview: createDto.accessToken ? `${createDto.accessToken.substring(0, 10)}...` : 'NULL'
+      });
+      console.error('===================================');
+      throw new BadRequestException(`Access token is required for creating ${createDto.platform} social account`);
+    }
+
+    console.log('=== SOCIAL ACCOUNT CREATE DEBUG ===');
+    console.log('Platform:', createDto.platform);
+    console.log('Username:', createDto.username);
+    console.log('Access Token Length:', createDto.accessToken.length);
+    console.log('Has Refresh Token:', !!createDto.refreshToken);
+    console.log('====================================');// Check if account already exists for this user and platform
     const existingAccount = await this.prisma.socialAccount.findFirst({
       where: {
         platform: createDto.platform,
@@ -74,28 +94,38 @@ export class SocialAccountService {
             : existingAccount.accountType,
           metadata: createDto.metadata || existingAccount.metadata,
           isActive: true, // Reactivate account if it was disabled
-        },
-        select: {
+        },        select: {
           id: true,
           platform: true,
+          accountType: true,
           accountId: true,
           accountName: true,
           profilePicture: true,
           isActive: true,
+          expiresAt: true,
+          metadata: true, // FIXED: Include metadata in select for updates
+          createdAt: true,
+          updatedAt: true,
         },
       });
 
       // Map schema fields to DTO fields for updated account
-      return {
+      console.log('=== UPDATED ACCOUNT RESPONSE DEBUG ===');
+      console.log('Updated account metadata:', updatedAccount.metadata);
+      console.log('=====================================');
+        return {
         id: updatedAccount.id,
         platform: updatedAccount.platform,
+        accountType: updatedAccount.accountType,
         platformAccountId: updatedAccount.accountId,
         username: updatedAccount.accountName,
         scopes: createDto.scopes,
         profilePictureUrl: updatedAccount.profilePicture,
         isActive: updatedAccount.isActive,
-        createdAt: new Date(), // Default value since not in schema
-        updatedAt: new Date(), // Default value since not in schema
+        metadata: updatedAccount.metadata || {}, // FIXED: Include metadata in response
+        expiresAt: updatedAccount.expiresAt,
+        createdAt: updatedAccount.createdAt,
+        updatedAt: updatedAccount.updatedAt,
       };
     }    // Find or create appropriate social app for this user and platform
     let socialAppId: string;
@@ -159,8 +189,14 @@ export class SocialAccountService {
       throw new BadRequestException(
         `Failed to find or create social app configuration: ${error.message}`
       );
-    }
-        console.log("🚀 ~ SocialAccountService ~ socialAppId:", socialAppId);
+    }    console.log("🚀 ~ SocialAccountService ~ socialAppId:", socialAppId);
+
+    // Debug metadata before creating account
+    console.log('=== CREATING SOCIAL ACCOUNT DEBUG ===');
+    console.log('Platform:', createDto.platform);
+    console.log('Metadata being saved:', createDto.metadata);
+    console.log('Metadata keys:', createDto.metadata ? Object.keys(createDto.metadata) : 'No metadata');
+    console.log('====================================');
 
     const account = await this.prisma.socialAccount.create({
       data: {
@@ -171,31 +207,40 @@ export class SocialAccountService {
         accessToken: createDto.accessToken,
         refreshToken: createDto.refreshToken,
         expiresAt: createDto.expiresAt,
-        profilePicture: createDto.profilePicture,
+        profilePicture: createDto.profilePicture,        metadata: createDto.metadata || {}, // FIXED: Include metadata in creation
         userId,
         socialAppId, // Use the proper socialAppId we found/created
-      },
-      select: {
+      },      select: {
         id: true,
         platform: true,
+        accountType: true,
         accountId: true,
         accountName: true,
         profilePicture: true,
         isActive: true,
+        expiresAt: true,
+        metadata: true, // FIXED: Include metadata in select
+        createdAt: true,
+        updatedAt: true,
       },
-    });
-
-    // Map schema fields to DTO fields
-    return {
+    });    // Map schema fields to DTO fields
+    console.log('=== FINAL ACCOUNT RESPONSE DEBUG ===');
+    console.log('Account metadata from DB:', account.metadata);
+    console.log('Account metadata keys:', account.metadata ? Object.keys(account.metadata) : 'No metadata');
+    console.log('===================================');
+      return {
       id: account.id,
       platform: account.platform,
+      accountType: account.accountType,
       platformAccountId: account.accountId,
       username: account.accountName,
       scopes: createDto.scopes,
       profilePictureUrl: account.profilePicture,
       isActive: account.isActive,
-      createdAt: new Date(), // Default value since not in schema
-      updatedAt: new Date(), // Default value since not in schema
+      metadata: account.metadata || {}, // FIXED: Include metadata in response
+      expiresAt: account.expiresAt,
+      createdAt: account.createdAt,
+      updatedAt: account.updatedAt,
     };
   }
 
@@ -494,24 +539,59 @@ export class SocialAccountService {
       hasPrevPage,
     };
   }
-
   async refreshToken(
     userId: string,
     accountId: string,
   ): Promise<SocialAccountResponseDto> {
+    console.log('=== REFRESH TOKEN DEBUG ===');
+    console.log('User ID:', userId);
+    console.log('Account ID:', accountId);
+    console.log('Timestamp:', new Date().toISOString());
+    
     // Get the social account
     const account = await this.prisma.socialAccount.findFirst({
       where: {
         id: accountId,
         userId,
       },
-    });
+    });    console.log('Account found:', !!account);
+    if (account) {
+      console.log('Account details:', {
+        id: account.id,
+        platform: account.platform,
+        accountName: account.accountName,
+        userId: account.userId,
+        isActive: account.isActive,
+        hasAccessToken: !!account.accessToken,
+        hasRefreshToken: !!account.refreshToken,
+        accessTokenLength: account.accessToken?.length || 0,
+        refreshTokenLength: account.refreshToken?.length || 0,
+        expiresAt: account.expiresAt
+      });
+    } else {
+      // Check if account exists with different userId
+      const accountWithDifferentUser = await this.prisma.socialAccount.findUnique({
+        where: { id: accountId },
+        select: { id: true, userId: true, platform: true, accountName: true }
+      });
+      
+      console.log('Account exists with different user:', !!accountWithDifferentUser);
+      if (accountWithDifferentUser) {
+        console.log('Account belongs to different user:', {
+          accountId: accountWithDifferentUser.id,
+          actualUserId: accountWithDifferentUser.userId,
+          requestedUserId: userId,
+          platform: accountWithDifferentUser.platform,
+          accountName: accountWithDifferentUser.accountName
+        });
+      }
+    }
+    console.log('===========================');
 
     if (!account) {
       throw new NotFoundException('Social account not found');
-    }
-
-    if (!account.refreshToken) {
+    }    // Facebook uses access token exchange instead of refresh tokens
+    if (!account.refreshToken && account.platform !== 'FACEBOOK') {
       throw new BadRequestException('No refresh token available for this account');
     }
 
@@ -536,9 +616,7 @@ export class SocialAccountService {
         expiresAt: true,
         metadata: true,
       },
-    });
-
-    // Map to response DTO
+    });    // Map to response DTO
     return {
       id: updatedAccount.id,
       platform: updatedAccount.platform,
@@ -553,5 +631,170 @@ export class SocialAccountService {
       createdAt: new Date(), // Default value since not in schema
       updatedAt: new Date(), // Default value since not in schema
     };
+  }
+  async deleteBulk(userId: string, accountIds: string[]): Promise<{ success: boolean; deletedCount: number; errors?: any[] }> {
+    console.log('=== DELETE BULK DEBUG START ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('User ID:', userId);
+    console.log('Account IDs to delete:', accountIds);
+    console.log('Account IDs count:', accountIds?.length);
+
+    if (!accountIds || accountIds.length === 0) {
+      console.log('ERROR: Account IDs array is empty or null');
+      throw new BadRequestException('Account IDs array cannot be empty');
+    }
+
+    const errors: any[] = [];
+    let deletedCount = 0;
+
+    for (const accountId of accountIds) {
+      try {
+        console.log(`--- Processing account ID: ${accountId} ---`);
+        
+        // Check if account exists and belongs to user
+        const account = await this.prisma.socialAccount.findFirst({
+          where: {
+            id: accountId,
+            userId,
+          },
+        });
+
+        console.log('Account found for delete:', !!account);
+        if (account) {
+          console.log('Account details:', {
+            id: account.id,
+            platform: account.platform,
+            accountName: account.accountName,
+            userId: account.userId,
+            isActive: account.isActive
+          });
+        }
+
+        if (!account) {
+          console.log(`Account ${accountId} not found for user ${userId}`);
+          
+          // Check if account exists with different user ID for debugging
+          const accountWithDifferentUser = await this.prisma.socialAccount.findFirst({
+            where: { id: accountId },
+            select: { id: true, userId: true, platform: true, accountName: true }
+          });
+          
+          if (accountWithDifferentUser) {
+            console.log('Account exists but with different user ID:', {
+              accountId: accountWithDifferentUser.id,
+              expectedUserId: userId,
+              actualUserId: accountWithDifferentUser.userId,
+              platform: accountWithDifferentUser.platform,
+              accountName: accountWithDifferentUser.accountName
+            });
+          } else {
+            console.log('Account does not exist in database at all');
+          }
+          
+          errors.push({
+            accountId,
+            error: 'Account not found or access denied',
+          });
+          continue;
+        }
+
+        // Delete the account
+        console.log(`Deleting account ${accountId}...`);
+        await this.prisma.socialAccount.delete({
+          where: { id: accountId },
+        });
+
+        console.log(`Successfully deleted account ${accountId}`);
+        deletedCount++;
+      } catch (error) {
+        console.log(`Error deleting account ${accountId}:`, error.message);
+        errors.push({
+          accountId,
+          error: error.message,
+        });
+      }
+    }
+
+    const result = {
+      success: deletedCount > 0,
+      deletedCount,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+
+    console.log('Delete bulk result:', result);
+    console.log('=== DELETE BULK DEBUG END ===');
+
+    return result;
+  }
+  async refreshTokensBulk(userId: string, accountIds: string[]): Promise<{
+    successCount: number;
+    failureCount: number;
+    results: Array<{
+      accountId: string;
+      success: boolean;
+      account?: SocialAccountResponseDto;
+      error?: string;
+    }>;
+  }> {
+    console.log('=== REFRESH BULK DEBUG START ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('User ID:', userId);
+    console.log('Account IDs to refresh:', accountIds);
+    console.log('Account IDs count:', accountIds?.length);
+
+    if (!accountIds || accountIds.length === 0) {
+      console.log('ERROR: Account IDs array is empty or null');
+      throw new BadRequestException('Account IDs array cannot be empty');
+    }
+
+    const results: Array<{
+      accountId: string;
+      success: boolean;
+      account?: SocialAccountResponseDto;
+      error?: string;
+    }> = [];
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const accountId of accountIds) {
+      console.log(`--- Processing refresh for account ID: ${accountId} ---`);
+      
+      try {
+        const refreshedAccount = await this.refreshToken(userId, accountId);
+        console.log(`Successfully refreshed account ${accountId}`);
+        
+        results.push({
+          accountId,
+          success: true,
+          account: refreshedAccount,
+        });
+        successCount++;
+      } catch (error) {
+        console.log(`Failed to refresh account ${accountId}:`, error.message);
+        
+        results.push({
+          accountId,
+          success: false,
+          error: error.message,
+        });
+        failureCount++;
+      }
+    }
+
+    const result = {
+      successCount,
+      failureCount,
+      results,
+    };
+
+    console.log('Refresh bulk final result:', {
+      successCount: result.successCount,
+      failureCount: result.failureCount,
+      totalProcessed: result.results.length
+    });
+    console.log('=== REFRESH BULK DEBUG END ===');
+
+    return result;
   }
 }

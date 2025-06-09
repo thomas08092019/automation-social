@@ -7,6 +7,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsNotEmpty,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { SocialPlatform } from '@prisma/client';
@@ -27,9 +28,8 @@ export class CreateSocialAccountDto {
 
   @IsOptional()
   @IsString()
-  accountType?: string;
-
-  @IsString()
+  accountType?: string;  @IsString()
+  @IsNotEmpty()
   accessToken: string;
 
   @IsOptional()

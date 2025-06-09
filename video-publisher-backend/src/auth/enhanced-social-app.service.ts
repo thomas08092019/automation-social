@@ -216,7 +216,14 @@ export class EnhancedSocialAppService {
    * Lấy system default config từ environment variables
    * Fallback for development when no custom app is configured
    */  private getSystemDefaultConfig(platform: SocialPlatform): AppConfig {
-    const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    // Use ngrok URL for TikTok, localhost for other platforms
+    let baseUrl: string;
+    if (platform === SocialPlatform.TIKTOK) {
+      baseUrl = this.configService.get('FRONTEND_NGROK_URL') || 
+                this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    } else {
+      baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    }
     
     switch (platform) {
       case SocialPlatform.YOUTUBE:
@@ -273,12 +280,11 @@ export class EnhancedSocialAppService {
         };      case SocialPlatform.TIKTOK:
         const tiktokClientId = this.configService.get('TIKTOK_CLIENT_ID');
         const tiktokClientSecret = this.configService.get('TIKTOK_CLIENT_SECRET');
-        
-        // Debug logging for TikTok configuration
+          // Debug logging for TikTok configuration
         this.logger.debug('=== TikTok OAuth Configuration Debug ===');
         this.logger.debug(`TikTok Client ID: ${tiktokClientId ? `${tiktokClientId.substring(0, 10)}...` : 'NOT SET'}`);
         this.logger.debug(`TikTok Client Secret: ${tiktokClientSecret ? `${tiktokClientSecret.substring(0, 10)}...` : 'NOT SET'}`);
-        this.logger.debug(`Frontend URL: ${baseUrl}`);
+        this.logger.debug(`Base URL (ngrok for TikTok): ${baseUrl}`);
         this.logger.debug(`Redirect URI: ${baseUrl}/auth/callback`);
         this.logger.debug(`Is placeholder check: ${this.isPlaceholderCredentials(tiktokClientId, tiktokClientSecret)}`);
         this.logger.debug('==========================================');
@@ -297,7 +303,17 @@ export class EnhancedSocialAppService {
           appId: tiktokClientId,
           appSecret: tiktokClientSecret,
           redirectUri: `${baseUrl}/auth/callback`,
-          scopes: ['user.info.profile', 'user.info.stats', 'video.list'], // Updated with available TikTok scopes
+          scopes: [
+            'user.info.basic',
+            'user.info.profile',
+            'user.info.stats',
+            'user.info.open_id',
+            'video.list',
+            'video.publish',
+            'video.upload',
+            'artist.certification.read',
+            'artist.certification.update'
+          ], // Comprehensive TikTok scopes for sandbox and production mode
           isActive: true,
           source: 'system-default',
         };
@@ -305,20 +321,37 @@ export class EnhancedSocialAppService {
       default:
         throw new BadRequestException(`Unsupported platform: ${platform}. Please configure your app credentials through the UI.`);
     }
-  }
-
-  /**
+  }  /**
    * Lấy default redirect URI cho platform
-   */
-  private getDefaultRedirectUri(platform: SocialPlatform): string {
-    const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');    switch (platform) {
+   */  private getDefaultRedirectUri(platform: SocialPlatform): string {
+    // Only use ngrok URL for TikTok, other platforms use local URL
+    let baseUrl: string;
+    
+    if (platform === SocialPlatform.TIKTOK) {
+      // For TikTok Sandbox mode, prefer localhost, for production use ngrok
+      const tiktokMode = this.configService.get('TIKTOK_MODE', 'sandbox'); // sandbox or production
+      
+      if (tiktokMode === 'sandbox') {
+        // Sandbox mode: use localhost
+        baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+      } else {
+        // Production mode: prefer ngrok URL if available
+        baseUrl = this.configService.get('FRONTEND_NGROK_URL') || 
+                  this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+      }
+    } else {
+      // For other platforms, use local URL only
+      baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    }
+
+    switch (platform) {
       case SocialPlatform.YOUTUBE:
         return `${baseUrl}/auth/google/callback`;
       case SocialPlatform.FACEBOOK:
       case SocialPlatform.INSTAGRAM:
         return `${baseUrl}/auth/facebook/callback`;
       case SocialPlatform.TIKTOK:
-        return `${baseUrl}/auth/tiktok/callback`;
+        return `${baseUrl}/auth/callback`; // Use generic callback for TikTok
       default:
         return `${baseUrl}/auth/callback`;
     }

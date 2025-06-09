@@ -71,6 +71,11 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
     limit: 10,
   });
   
+  // Multi-select state
+  const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
+  const [isAllSelected, setIsAllSelected] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  
   // Metadata modal state
   const [isMetadataModalOpen, setIsMetadataModalOpen] = useState(false);
   const [selectedAccountMetadata, setSelectedAccountMetadata] = useState<{
@@ -79,7 +84,6 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
   } | null>(null);
   
   const { confirm, alert, toast } = useNotifications();
-
   // Reset function to clear all filters and go back to page 1
   const handleReset = useCallback(() => {
     setSearchTerm('');
@@ -88,6 +92,43 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
     setStatusFilter('');
     setCurrentPage(1);
   }, []);
+
+  // Multi-select handlers
+  const handleSelectAccount = useCallback((accountId: string, checked: boolean) => {
+    setSelectedAccountIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(accountId);
+      } else {
+        newSet.delete(accountId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(accounts.map(account => account.id));
+      setSelectedAccountIds(allIds);
+      setIsAllSelected(true);
+    } else {
+      setSelectedAccountIds(new Set());
+      setIsAllSelected(false);
+    }
+  }, [accounts]);
+
+  // Update isAllSelected when selectedAccountIds changes
+  useEffect(() => {
+    const allAccountIds = accounts.map(account => account.id);
+    const allSelected = allAccountIds.length > 0 && allAccountIds.every(id => selectedAccountIds.has(id));
+    setIsAllSelected(allSelected);
+  }, [selectedAccountIds, accounts]);
+
+  // Clear selection when accounts change (e.g., after delete/filter)
+  useEffect(() => {
+    setSelectedAccountIds(new Set());
+    setIsAllSelected(false);
+  }, [accounts]);
 
   // Load accounts on component mount and when filters change
   useEffect(() => {
@@ -161,11 +202,16 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
         // Listen for OAuth completion message from popup
         const messageHandler = async (event: MessageEvent) => {
           if (event.origin !== window.location.origin) return;
-          
-          if (event.data.type === 'oauth-success') {
+            if (event.data.type === 'oauth-success') {
             cleanup();
             toast.success('Connected!', `Successfully connected ${platform} account`);
-            await loadAccounts(); // Reload accounts after successful connection
+            
+            // Add delay to ensure backend transaction is committed before reloading
+            // This fixes the issue where TikTok metadata doesn't appear on first connection
+            setTimeout(async () => {
+              await loadAccounts(); // Reload accounts after successful connection
+            }, 1000); // 1 second delay to ensure database consistency
+            
           } else if (event.data.type === 'oauth-error') {
             cleanup();
             toast.error('Connection Failed', `OAuth failed: ${event.data.error}`);
@@ -220,7 +266,7 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh the account';
       toast.error('Refresh Failed', errorMessage);
     }
-  };const handleDeleteAccount = async (accountId: string) => {
+  };  const handleDeleteAccount = async (accountId: string) => {
     const confirmed = await confirm(
       'Delete Account', 
       'Are you sure you want to remove this social account? This action cannot be undone.',
@@ -239,7 +285,80 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       console.error('Failed to delete account:', error);
       toast.error('Delete Failed', 'Failed to delete the account. Please try again.');
     }
-  };  const handleViewMetadata = (account: SocialAccount) => {
+  };
+
+  // Bulk actions
+  const handleBulkRefresh = async () => {
+    if (selectedAccountIds.size === 0) {
+      toast.error('No Selection', 'Please select accounts to refresh');
+      return;
+    }    const confirmed = await confirm(
+      'Refresh Accounts',
+      `Are you sure you want to refresh ${selectedAccountIds.size} selected account(s)?`,
+      'default'
+    );
+
+    if (!confirmed) return;
+
+    setBulkActionLoading(true);
+    try {
+      const accountIds = Array.from(selectedAccountIds);
+      const result = await socialAccountsApi.refreshAccounts(accountIds);
+      
+      await loadAccounts(); // Reload accounts to show updated data
+      
+      if (result.successCount === accountIds.length) {
+        toast.success('Refresh Complete', `Successfully refreshed all ${result.successCount} accounts`);
+      } else {
+        toast.info('Partial Success', `Refreshed ${result.successCount} out of ${accountIds.length} accounts. ${result.failureCount} failed.`);
+      }
+      
+      // Clear selection after successful operation
+      setSelectedAccountIds(new Set());
+    } catch (error) {
+      console.error('Failed to refresh accounts:', error);
+      toast.error('Bulk Refresh Failed', 'Failed to refresh the selected accounts');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedAccountIds.size === 0) {
+      toast.error('No Selection', 'Please select accounts to delete');
+      return;
+    }
+
+    const confirmed = await confirm(
+      'Delete Accounts',
+      `Are you sure you want to delete ${selectedAccountIds.size} selected account(s)? This action cannot be undone.`,
+      'danger'
+    );
+
+    if (!confirmed) return;
+
+    setBulkActionLoading(true);
+    try {
+      const accountIds = Array.from(selectedAccountIds);
+      const result = await socialAccountsApi.deleteAccounts(accountIds);
+      
+      await loadAccounts(); // Reload accounts after deletion
+      
+      if (result.deletedCount === accountIds.length) {
+        toast.success('Delete Complete', `Successfully deleted all ${result.deletedCount} accounts`);
+      } else {
+        toast.info('Partial Success', `Deleted ${result.deletedCount} out of ${accountIds.length} accounts. Some may have failed.`);
+      }
+      
+      // Clear selection after successful operation
+      setSelectedAccountIds(new Set());
+    } catch (error) {
+      console.error('Failed to delete accounts:', error);
+      toast.error('Bulk Delete Failed', 'Failed to delete the selected accounts');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };const handleViewMetadata = (account: SocialAccount) => {
     setSelectedAccountMetadata({
       title: `Metadata for ${account.accountName}`,
       metadata: account.metadata
@@ -398,20 +517,57 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       <div className="dashboard-card">
         <div className="table-header">
           <h3 className="card-title">Connected Social Accounts</h3>
-          <button
-            className="table-refresh-btn"
-            onClick={loadAccounts}
-            disabled={loading}
-            title="Refresh Data"
-          >
-            <RefreshIcon className={loading ? 'rotating' : ''} />
-          </button>
+          <div className="table-header-actions">
+            {/* Bulk Actions */}
+            {selectedAccountIds.size > 0 && (
+              <div className="bulk-actions">
+                <span className="bulk-selection-count">
+                  {selectedAccountIds.size} selected
+                </span>
+                <button
+                  className="bulk-action-btn refresh-btn"
+                  onClick={handleBulkRefresh}
+                  disabled={bulkActionLoading}
+                  title="Refresh Selected Accounts"
+                >
+                  <RefreshIcon className={bulkActionLoading ? 'rotating' : ''} />
+                  Refresh
+                </button>
+                <button
+                  className="bulk-action-btn delete-btn"
+                  onClick={handleBulkDelete}
+                  disabled={bulkActionLoading}
+                  title="Delete Selected Accounts"
+                >
+                  <DeleteIcon />
+                  Delete
+                </button>
+              </div>
+            )}
+            <button
+              className="table-refresh-btn"
+              onClick={loadAccounts}
+              disabled={loading}
+              title="Refresh Data"
+            >
+              <RefreshIcon className={loading ? 'rotating' : ''} />
+            </button>
+          </div>
         </div>
         
         <div className="table-container">
           <table className="social-accounts-table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    disabled={accounts.length === 0}
+                    className="select-all-checkbox"
+                  />
+                </th>
                 <th>Platform</th>
                 <th>Type</th>
                 <th>Account Name</th>
@@ -424,13 +580,12 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
             </thead>            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px' }}>
                     Loading accounts...
                   </td>
-                </tr>
-              ) : accounts.length === 0 ? (
+                </tr>              ) : accounts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '40px' }}>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px' }}>
                     {pagination.total === 0
                       ? 'No social accounts connected yet. Connect your first platform above!'
                       : 'No accounts match your search criteria.'
@@ -440,6 +595,14 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
               ) : (
                 accounts.map((account) => (
                   <tr key={account.id} data-account-id={account.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedAccountIds.has(account.id)}
+                        onChange={(e) => handleSelectAccount(account.id, e.target.checked)}
+                        className="account-select-checkbox"
+                      />
+                    </td>
                     <td>
                       <div className={getPlatformBadgeClass(account.platform)}>
                         {getPlatformIcon(account.platform)}

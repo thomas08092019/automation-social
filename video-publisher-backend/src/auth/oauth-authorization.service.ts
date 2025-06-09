@@ -154,9 +154,7 @@ export class OAuthAuthorizationService {
         const tiktokState = state || crypto.randomUUID();
         
         // Store the code verifier for later use in token exchange
-        this.storePKCEVerifier(tiktokState, pkce.codeVerifier);
-        
-        const tiktokParams = new URLSearchParams({
+        this.storePKCEVerifier(tiktokState, pkce.codeVerifier);        const tiktokParams = new URLSearchParams({
           client_key: config.clientId, // TikTok uses 'client_key' instead of 'client_id'
           redirect_uri: config.redirectUri,
           scope: config.scopes.join(','), // TikTok uses comma-separated scopes
@@ -164,19 +162,75 @@ export class OAuthAuthorizationService {
           state: tiktokState,
           code_challenge: pkce.codeChallenge,
           code_challenge_method: pkce.codeChallengeMethod,
+          // ULTIMATE FORCE PERMISSION SCREENS - Maximum aggressive parameters
+          force_reauth: 'true', // Force user to re-authenticate
+          force_verify: 'true', // Force verification of permissions
+          approval_prompt: 'force', // Force approval prompt
+          prompt: 'consent', // Alternative force consent parameter
+          access_type: 'offline', // Request offline access
+          include_granted_scopes: 'false', // Don't include previously granted scopes
+          force_login: 'true', // Force login screen
+          force_approval: 'true', // Force approval screen
+          force_consent: 'true', // Additional force consent
+          force_permissions: 'true', // Force permission review
+          reauth: 'true', // Additional reauth parameter
+          consent: 'force', // Force consent mode
+          auth_type: 'rerequest', // Force permission re-request
+          display: 'popup', // Use popup display mode to prevent auto-redirect
+          force_show_permission: 'true', // Additional TikTok-specific force parameter
+          force_authorization: 'true', // Force authorization screens
+          disable_auto_login: 'true', // Disable automatic login
+          always_prompt: 'true', // Always show prompts
+          require_interaction: 'true', // Require user interaction
+          // Anti-cache and fresh session parameters
+          t: Date.now().toString(), // Timestamp to prevent caching
+          v: '4', // Higher version parameter for cache busting
+          fresh: 'true', // Force fresh authorization
+          no_cache: 'true', // Prevent caching
+          nocache: Date.now().toString(), // Additional cache buster
+          rand: Math.random().toString(36).substring(2, 15), // Longer random string
+          _: Date.now().toString(), // jQuery-style cache buster
+          session_invalidate: 'true', // Invalidate existing session
+          cache_buster: Math.random().toString(36).substring(7), // Additional cache buster
+          force_interactive: 'true', // Force interactive mode
         });
-        
-        const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${tiktokParams.toString()}`;
-        
-        // Debug logging for TikTok OAuth URL
-        console.log('=== TikTok OAuth URL Debug ===');
-        console.log(`Client Key: ${config.clientId.substring(0, 10)}...`);
+          const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${tiktokParams.toString()}`;
+          // Debug logging for TikTok OAuth URL        console.log('=== TikTok OAuth URL Debug ===');
+        console.log(`Client Key: ${config.clientId}`);
         console.log(`Redirect URI: ${config.redirectUri}`);
         console.log(`Scopes: ${config.scopes.join(',')}`);
         console.log(`State: ${tiktokState}`);
-        console.log(`Code Challenge: ${pkce.codeChallenge.substring(0, 20)}...`);
+        console.log(`Code Challenge: ${pkce.codeChallenge.substring(0, 20)}...`);        console.log(`🔒 ULTIMATE FORCE PARAMETERS ENABLED:`);
+        console.log(`   - force_reauth: true (Forces re-authentication)`);
+        console.log(`   - force_verify: true (Forces permission verification)`);
+        console.log(`   - approval_prompt: force (Forces approval screens)`);
+        console.log(`   - prompt: consent (Alternative force consent)`);
+        console.log(`   - force_login: true (Forces login screen)`);
+        console.log(`   - force_approval: true (Forces approval screen)`);
+        console.log(`   - force_consent: true (Additional force consent)`);
+        console.log(`   - force_permissions: true (Force permission review)`);
+        console.log(`   - auth_type: rerequest (Force permission re-request)`);
+        console.log(`   - display: popup (Prevent auto-redirect)`);
+        console.log(`   - force_show_permission: true (TikTok-specific force)`);
+        console.log(`   - force_authorization: true (Force authorization screens)`);
+        console.log(`   - disable_auto_login: true (Disable automatic login)`);
+        console.log(`   - always_prompt: true (Always show prompts)`);
+        console.log(`   - require_interaction: true (Require user interaction)`);
+        console.log(`   - include_granted_scopes: false (No cached permissions)`);
+        console.log(`   - fresh: true (Forces fresh authorization)`);
+        console.log(`   - no_cache: true (Prevents caching)`);
+        console.log(`   - session_invalidate: true (Invalidates existing session)`);
+        console.log(`   - force_interactive: true (Force interactive mode)`);
         console.log(`Generated URL: ${authUrl}`);
         console.log('==============================');
+        
+        // Additional debug info for troubleshooting
+        console.log('=== TikTok OAuth Configuration Check ===');
+        console.log(`Full Client Key: ${config.clientId}`);
+        console.log(`Expected Redirect URI: ${config.redirectUri}`);
+        console.log(`Expected Scopes: ${config.scopes.join(',')}`);
+        console.log('Make sure these match EXACTLY in your TikTok Developer Console');
+        console.log('==========================================');
         
         return authUrl;
 
@@ -248,9 +302,7 @@ export class OAuthAuthorizationService {
         errorMessage: error.message,
       };
     }
-  }
-
-  /**
+  }  /**
    * Perform actual token exchange
    */  private async performTokenExchange(
     platform: SocialPlatform,
@@ -260,15 +312,81 @@ export class OAuthAuthorizationService {
   ): Promise<TokenExchangeResult> {    const tokenEndpoint = this.getTokenEndpoint(platform);
     const params = this.buildTokenRequestParams(platform, appConfig, code, state);
 
-    try {
+    console.log(`=== ${platform} Token Exchange Debug ===`);
+    console.log('Token Endpoint:', tokenEndpoint);
+    console.log('Request Params:', Object.fromEntries(params.entries()));
+    console.log('==========================================');
+
+    try {      // Add timeout and retry logic to handle authorization code expiration
       const response = await axios.post(tokenEndpoint, params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Cache-Control': 'no-cache',
         },
+        timeout: 5000, // Reduced to 5 seconds for faster processing
+        maxRedirects: 0, // Prevent redirect delays
+        validateStatus: (status) => status < 500, // Accept 4xx errors for better error handling
       });
 
       const data = response.data;
+      
+      console.log(`=== ${platform} Token Response Debug ===`);
+      console.log('Raw Response Data:', JSON.stringify(data, null, 2));
+      console.log('Response Status:', response.status);
+      console.log('Response Headers:', response.headers);
+      console.log('=========================================');
 
+      // Handle platform-specific response structures
+      if (platform === SocialPlatform.TIKTOK) {
+        // TikTok API response structure validation
+        if (data.error || data.error_code) {
+          const errorMsg = data.error_description || data.message || data.error || 'TikTok token exchange failed';
+          console.error('TikTok API Error:', data);
+          return {
+            success: false,
+            errorMessage: `TikTok token exchange failed: ${errorMsg}`,
+          };
+        }
+
+        // TikTok returns data in nested structure or flat structure depending on endpoint version
+        const tokenData = data.data || data;
+        const accessToken = tokenData.access_token || data.access_token;
+        const refreshToken = tokenData.refresh_token || data.refresh_token;
+        const expiresIn = tokenData.expires_in || data.expires_in;
+        const scope = tokenData.scope || data.scope;
+
+        console.log('=== TikTok Token Extraction Debug ===');
+        console.log('Has data.data:', !!data.data);
+        console.log('Extracted access_token:', accessToken ? `${accessToken.substring(0, 10)}...` : 'MISSING');
+        console.log('Extracted refresh_token:', refreshToken ? 'Present' : 'Missing');
+        console.log('Extracted expires_in:', expiresIn);
+        console.log('Extracted scope:', scope);
+        console.log('=====================================');
+
+        if (!accessToken) {
+          console.error('=== TikTok Access Token Missing ===');
+          console.error('Full response structure:', JSON.stringify(data, null, 2));
+          console.error('Expected paths checked:');
+          console.error('- data.access_token:', data.access_token);
+          console.error('- data.data.access_token:', data.data?.access_token);
+          console.error('===================================');
+          return {
+            success: false,
+            errorMessage: 'TikTok access token not found in response',
+          };
+        }
+
+        return {
+          success: true,
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          expiresIn: expiresIn,
+          tokenType: data.token_type || 'Bearer',
+          scope: scope,
+        };
+      }
+
+      // Default handling for other platforms (Facebook, Google/YouTube)
       return {
         success: true,
         accessToken: data.access_token,
@@ -278,9 +396,19 @@ export class OAuthAuthorizationService {
         scope: data.scope,
       };
     } catch (error) {
+      console.error(`=== ${platform} Token Exchange Error ===`);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+      console.error('=======================================');
+      
       return {
         success: false,
-        errorMessage: `Token exchange failed: ${error.response?.data?.error_description || error.message}`,
+        errorMessage: `Token exchange failed: ${error.response?.data?.error_description || error.response?.data?.message || error.message}`,
       };
     }
   }
@@ -341,14 +469,14 @@ export class OAuthAuthorizationService {
   /**
    * Build token request parameters
    */  private buildTokenRequestParams(platform: SocialPlatform, appConfig: any, code: string, state?: string): URLSearchParams {
-    switch (platform) {
-      case SocialPlatform.TIKTOK:
+    switch (platform) {      case SocialPlatform.TIKTOK:
         // TikTok uses different parameter names and requires PKCE
         const params: any = {
           client_key: appConfig.appId, // TikTok uses 'client_key' instead of 'client_id'
           client_secret: appConfig.appSecret,
           code: code, // TikTok uses 'code' for token exchange
           grant_type: 'authorization_code',
+          redirect_uri: appConfig.redirectUri, // Required: must match authorization request
         };
 
         // Add PKCE code verifier if state is provided
@@ -425,9 +553,15 @@ export class OAuthAuthorizationService {
           'pages_read_engagement',
         ];      case SocialPlatform.TIKTOK:
         return [
+          'user.info.basic',
           'user.info.profile',
           'user.info.stats',
+          'user.info.open_id',
           'video.list',
+          'video.publish',
+          'video.upload',
+          'artist.certification.read',
+          'artist.certification.update',
         ];
 
       default:

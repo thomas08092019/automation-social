@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import '../../styles/metadata-modal.css';
 
 interface MetadataModalProps {
@@ -18,8 +19,7 @@ export const MetadataModal: React.FC<MetadataModalProps> = ({
   const formatJSON = (data: any): string => {
     return JSON.stringify(data, null, 2);
   };
-
-  // Handle escape key press
+  // Simplified scroll lock implementation with better position handling
   React.useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isOpen) {
@@ -28,14 +28,25 @@ export const MetadataModal: React.FC<MetadataModalProps> = ({
     };
 
     if (isOpen) {
+      // Simply prevent body scroll without position manipulation
+      document.body.classList.add('modal-open');
       document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden';
+      
+      // Prevent scrolling on mobile devices
+      const preventScroll = (e: TouchEvent) => {
+        e.preventDefault();
+      };
+      document.addEventListener('touchmove', preventScroll, { passive: false });
+      
+      return () => {
+        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener('touchmove', preventScroll);
+        document.body.classList.remove('modal-open');
+      };
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
     };
   }, [isOpen, onClose]);
 
@@ -45,10 +56,9 @@ export const MetadataModal: React.FC<MetadataModalProps> = ({
       onClose();
     }
   };
-
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div 
       className="metadata-modal-overlay" 
       onClick={handleBackdropClick}
@@ -102,6 +112,7 @@ export const MetadataModal: React.FC<MetadataModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

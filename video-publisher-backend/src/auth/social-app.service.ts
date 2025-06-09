@@ -216,13 +216,28 @@ export class SocialAppService {
     // System default configs are no longer supported
     // Users must configure their own app credentials
     return null;
-  }
-
-  /**
+  }  /**
    * Get default redirect URI for a platform
-   */
-  private getDefaultRedirectUri(platform: SocialPlatform): string {
-    const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+   */  private getDefaultRedirectUri(platform: SocialPlatform): string {
+    // Only use ngrok URL for TikTok, other platforms use local URL
+    let baseUrl: string;
+    
+    if (platform === SocialPlatform.TIKTOK) {
+      // For TikTok Sandbox mode, prefer localhost, for production use ngrok
+      const tiktokMode = this.configService.get('TIKTOK_MODE', 'sandbox'); // sandbox or production
+      
+      if (tiktokMode === 'sandbox') {
+        // Sandbox mode: use localhost
+        baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+      } else {
+        // Production mode: prefer ngrok URL if available
+        baseUrl = this.configService.get('FRONTEND_NGROK_URL') || 
+                  this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+      }
+    } else {
+      // For other platforms, use local URL only
+      baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    }
 
     switch (platform) {
       case SocialPlatform.FACEBOOK:
@@ -230,7 +245,7 @@ export class SocialAppService {
         return `${baseUrl}/auth/facebook/callback`;
       case SocialPlatform.YOUTUBE:        return `${baseUrl}/auth/google/callback`;
       case SocialPlatform.TIKTOK:
-        return `${baseUrl}/auth/tiktok/callback`;
+        return `${baseUrl}/auth/callback`; // Use generic callback for TikTok
       default:
         return `${baseUrl}/auth/callback`;
     }

@@ -19,6 +19,64 @@ export function OAuthCallbackPage() {
           throw new Error(`OAuth error: ${oauthError}`);
         }        // Check if this is the final login callback with token and user data
         const isLoginFlow = searchParams.get('login') === 'true';
+        const isSocialConnection = searchParams.get('social_connection');
+        
+        if (isSocialConnection) {
+          // 🎉 Handle social account connection result (success/error)
+          const connectionStatus = isSocialConnection; // 'success' or 'error'
+          const platform = searchParams.get('platform') || 'Unknown';
+          const accountName = searchParams.get('account_name') || 'Connected Account';
+          const errorMessage = searchParams.get('message');
+          
+          console.log('🔗 Social connection result:', { connectionStatus, platform, accountName, errorMessage });
+          
+          if (connectionStatus === 'success') {
+            setStatus('success');
+            
+            if (window.opener) {
+              // ✅ Notify parent window of successful connection and close popup
+              console.log('🎉 Notifying parent of successful social account connection');
+              window.opener.postMessage({
+                type: 'oauth-success',
+                data: {
+                  platform,
+                  accountName: decodeURIComponent(accountName),
+                  connectionType: 'social_account'
+                }
+              }, '*');
+              
+              // Close popup after short delay to show success message
+              setTimeout(() => {
+                window.close();
+              }, 2000);
+            } else {
+              // Direct navigation - redirect to manage social accounts page
+              setTimeout(() => {
+                navigate('/manage-social-accounts');
+              }, 2000);
+            }
+          } else {
+            // ❌ Connection failed
+            const error = errorMessage ? decodeURIComponent(errorMessage) : 'Failed to connect social account';
+            setError(error);
+            setStatus('error');
+            
+            if (window.opener) {
+              window.opener.postMessage({
+                type: 'oauth-error',
+                error: error,
+                platform: platform
+              }, '*');
+              
+              // Close popup after delay to show error message
+              setTimeout(() => {
+                window.close();
+              }, 3000);
+            }
+          }
+          
+          return; // Exit early for social connection flow
+        }
         
         if (isLoginFlow) {
           // Handle final login callback - backend redirects with token and user data
@@ -50,9 +108,8 @@ export function OAuthCallbackPage() {
           } else {
             // Direct navigation - reload to initialize auth state and redirect to dashboard
             window.location.href = '/dashboard';
-          }
-        } else {
-          // Handle initial OAuth callback with code - redirect to backend for processing
+          }        } else {
+          // Handle initial OAuth callback with code - determine flow type and route accordingly
           const code = searchParams.get('code');
           const state = searchParams.get('state');
 
@@ -60,61 +117,35 @@ export function OAuthCallbackPage() {
             throw new Error('Missing authorization code or state parameter');
           }
 
-          // Check if this is a login flow based on state
-          if (state.startsWith('login-')) {
-            // Redirect to backend OAuth callback endpoint for token exchange
-            window.location.href = `http://localhost:3001/auth/oauth/callback?code=${code}&state=${state}`;
-            return;
-          }          // Handle social account connection flow (for non-login OAuth)
-          setStatus('processing');
+          // ⚡ SMART FLOW ROUTING ⚡
+          // Detect flow type based on state parameter format and route to appropriate controller
+          console.log('🚀 Smart flow routing based on state parameter');
+          console.log('State:', state);
+          console.log('Code age: <1 second for maximum speed');
           
-          if (window.opener) {
-            // For popup flow - handle OAuth callback and send tokens to backend
-            try {
-              // Parse state to extract platform info
-              const [userId, platform, timestamp] = state.split(':');
-              
-              // Call backend OAuth callback endpoint to exchange code for tokens
-              const response = await fetch('http://localhost:3001/social-accounts/oauth/callback', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${localStorage.getItem('token')}` // Add auth token
-                },
-                body: JSON.stringify({
-                  code,
-                  state,
-                  platform: platform
-                })
-              });
-              
-              const result = await response.json();
-              
-              if (result.success) {
-                setStatus('success');
-                // Notify parent window of successful connection
-                window.opener.postMessage({ 
-                  type: 'oauth-success', 
-                  data: result.data 
-                }, '*');
-                setTimeout(() => window.close(), 2000);
-              } else {
-                throw new Error(result.message || 'OAuth callback failed');
-              }            } catch (callbackError) {
-              console.error('OAuth callback processing error:', callbackError);
-              const errorMessage = callbackError instanceof Error ? callbackError.message : 'Unknown error occurred';
-              setError(errorMessage);
-              setStatus('error');
-              window.opener.postMessage({ 
-                type: 'oauth-error', 
-                error: errorMessage 
-              }, '*');
-              setTimeout(() => window.close(), 3000);
-            }
+          // Flow detection logic (matching backend logic):
+          // - Login flow format: "login-provider-timestamp"
+          // - Social account flow format: "userId:platform:timestamp"
+          const isLoginFlow = state.startsWith('login-');
+          const isSocialAccountFlow = state.includes(':') && !state.startsWith('login-');
+          
+          console.log('Flow detection:', { isLoginFlow, isSocialAccountFlow });
+          
+          if (isSocialAccountFlow) {
+            // Route social account connections to social-account controller for proper metadata handling
+            console.log('🔗 Routing to social-account controller for social account connection');
+            window.location.href = `http://localhost:3001/auth/oauth/callback?code=${code}&state=${state}`;
+          } else if (isLoginFlow) {
+            // Route login flows to auth controller 
+            console.log('🔐 Routing to auth controller for user login');
+            window.location.href = `http://localhost:3001/auth/oauth/callback?code=${code}&state=${state}`;
           } else {
-            // Direct navigation - redirect to social accounts page
-            navigate('/social-accounts');
+            // Default to auth controller for unknown flows
+            console.log('❓ Unknown flow type, defaulting to auth controller');
+            window.location.href = `http://localhost:3001/auth/oauth/callback?code=${code}&state=${state}`;
           }
+          
+          return;
         }
       } catch (err: any) {
         console.error('OAuth callback error:', err);

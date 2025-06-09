@@ -688,6 +688,138 @@ body.dark .pagination-number:hover {
   height: 18px;
 }
 
+/* Multi-select and Bulk Actions */
+.table-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-right: 12px;
+}
+
+body.dark .bulk-actions {
+  background: #2d3748;
+  border-color: #4a5568;
+}
+
+.bulk-selection-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-right: 8px;
+}
+
+body.dark .bulk-selection-count {
+  color: #9ca3af;
+}
+
+.bulk-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  justify-content: center;
+}
+
+body.dark .bulk-action-btn {
+  background: #4a5568;
+  border-color: #6b7280;
+  color: #e2e8f0;
+}
+
+.bulk-action-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+body.dark .bulk-action-btn:hover:not(:disabled) {
+  background: #5a6578;
+  border-color: #9ca3af;
+}
+
+.bulk-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulk-action-btn.refresh-btn:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.bulk-action-btn.delete-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+/* Checkbox Styles */
+.select-all-checkbox,
+.account-select-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+}
+
+.select-all-checkbox:checked,
+.account-select-checkbox:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.select-all-checkbox:checked::before,
+.account-select-checkbox:checked::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+body.dark .select-all-checkbox,
+body.dark .account-select-checkbox {
+  border-color: #6b7280;
+}
+
+body.dark .select-all-checkbox:checked,
+body.dark .account-select-checkbox:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Table first column for checkbox */
+.social-accounts-table th:first-child,
+.social-accounts-table td:first-child {
+  width: 40px;
+  text-align: center;
+  padding: 8px 4px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .search-filters {

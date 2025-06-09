@@ -208,10 +208,36 @@ class ApiService {
     const response: AxiosResponse<SocialAccount> = await this.api.post(`/social-accounts/${id}/refresh`);
     return response.data;
   }
-
   async connectPlatform(platform: string): Promise<any> {
     const response = await this.api.post(`/social-accounts/connect/${platform.toLowerCase()}`);
     return response.data;
+  }  // Bulk operations for social accounts
+  async deleteSocialAccountsBulk(accountIds: string[]): Promise<{
+    success: boolean;
+    deletedCount: number;
+    errors?: Array<{ accountId: string; error: string }>;
+  }> {
+    const response = await this.api.delete('/social-accounts/bulk/delete', {
+      data: { accountIds }
+    });
+    // Backend returns { success: boolean, deletedCount: number, errors?: any[] } directly
+    return response.data;
+  }
+  async refreshSocialAccountsBulk(accountIds: string[]): Promise<{
+    successCount: number;
+    failureCount: number;
+    results: Array<{
+      accountId: string;
+      success: boolean;
+      account?: SocialAccount;
+      error?: string;
+    }>;
+  }> {
+    const response = await this.api.post('/social-accounts/bulk/refresh', {
+      accountIds
+    });
+    // Backend returns { success: true, data: { successCount, failureCount, results }, message: "..." }
+    return response.data.data;
   }
 
   // Social App endpoints - /api/social-apps/*
@@ -277,7 +303,9 @@ class ApiService {
     } else {
       throw new Error(response.data.message || 'Failed to get authorization URL');
     }
-  }  async handleOAuthCallback(data: OAuthCallbackDto): Promise<any> {
+  }
+
+  async handleOAuthCallback(data: OAuthCallbackDto): Promise<any> {
     // Check if this is a login flow or social account connection flow
     const isLoginFlow = data.state.startsWith('login-');
     

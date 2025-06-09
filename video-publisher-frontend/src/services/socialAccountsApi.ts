@@ -28,7 +28,8 @@ export interface SocialAccountsApiResponse {
   hasPrevPage: boolean;
 }
 
-export const socialAccountsApi = {  // Get all social accounts for the user with search/filter/pagination
+export const socialAccountsApi = {
+  // Get all social accounts for the user with search/filter/pagination
   getAllAccounts: async (query?: SocialAccountsQuery): Promise<SocialAccountsApiResponse> => {
     try {
       // Build query string
@@ -124,13 +125,16 @@ export const socialAccountsApi = {  // Get all social accounts for the user with
       console.error('Error fetching accounts by platform:', error);
       return [];
     }
-  },  // Connect a social platform - Generate OAuth authorization URL
+  },
+
+  // Connect a social platform - Generate OAuth authorization URL
   connectPlatform: async (platform: string): Promise<ConnectPlatformResponse> => {
     try {
       // Call backend to get OAuth authorization URL
       const response = await apiService.connectPlatform(platform);
       
-      if (response.success && response.data?.authUrl) {        return {
+      if (response.success && response.data?.authUrl) {
+        return {
           success: true,
           data: {
             authUrl: response.data.authUrl,
@@ -138,7 +142,8 @@ export const socialAccountsApi = {  // Get all social accounts for the user with
           },
           message: response.message || 'Authorization URL generated successfully',
         };
-      } else {        return {
+      } else {
+        return {
           success: false,
           message: response.message || 'Failed to generate authorization URL',
           error: response.error,
@@ -159,8 +164,33 @@ export const socialAccountsApi = {  // Get all social accounts for the user with
     await apiService.disconnectSocialAccount(accountId);
   },
 
+  // Delete multiple social accounts
+  deleteAccounts: async (accountIds: string[]): Promise<{
+    success: boolean;
+    deletedCount: number;
+    errors?: Array<{ accountId: string; error: string }>;
+  }> => {
+    const response = await apiService.deleteSocialAccountsBulk(accountIds);
+    return response;
+  },
+
   // Refresh account token
   refreshAccount: async (accountId: string): Promise<SocialAccount> => {
     return await apiService.refreshSocialAccountToken(accountId);
-  }
+  },
+
+  // Refresh multiple account tokens
+  refreshAccounts: async (accountIds: string[]): Promise<{
+    successCount: number;
+    failureCount: number;
+    results: Array<{
+      accountId: string;
+      success: boolean;
+      account?: SocialAccount;
+      error?: string;
+    }>;
+  }> => {
+    const response = await apiService.refreshSocialAccountsBulk(accountIds);
+    return response;
+  },
 };

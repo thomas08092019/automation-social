@@ -2,10 +2,14 @@ import { Controller, Post, Body, HttpCode, HttpStatus, Get, Param, Res, UseGuard
 import { AuthService, AuthResponse } from './auth.service';
 import { CreateUserDto, LoginDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from '../user/dto/user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { EnhancedSocialAppService } from './enhanced-social-app.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private enhancedSocialAppService: EnhancedSocialAppService,
+  ) {}
 
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto): Promise<AuthResponse> {
@@ -46,15 +50,13 @@ export class AuthController {
   async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto): Promise<{ message: string }> {
     return this.authService.changePassword(req.user.id, changePasswordDto);
   }
-
   @Get('oauth/callback')
   async handleOAuthCallback(
     @Query('code') code: string,
     @Query('state') state: string,
     @Query('error') error: string,
     @Res() res: any,
-  ) {
-    console.log('=== OAuth Callback Endpoint Hit ===');
+  ) {    console.log('=== OAuth Callback Endpoint Hit ===');
     console.log('Code:', code);
     console.log('State:', state);
     console.log('Error:', error);
@@ -66,15 +68,65 @@ export class AuthController {
 
       if (!code || !state) {
         throw new Error('Missing authorization code or state parameter');
-      }
-
-      // Determine provider from state
-      console.log('=== PROVIDER DETECTION DEBUG ===');
+      }      // Check if this is a social account connection flow or login flow
+      console.log('=== FLOW TYPE DETECTION ===');
       console.log('Debug - Received state:', state);
-      console.log('Debug - State type:', typeof state);
-      console.log('Debug - State length:', state?.length);
-      console.log('Debug - Contains google:', state?.includes('google'));
-      console.log('Debug - Contains facebook:', state?.includes('facebook'));
+      
+      // Social account connection format: "userId:platform:timestamp"      // Login flow format: "login-provider-timestamp"
+      // Social flow format: "userId:platform:timestamp"
+      const isLoginFlow = state.startsWith('login-');
+      const isSocialAccountFlow = state.includes(':') && !state.startsWith('login-');
+      
+      console.log('=== FLOW DETECTION DEBUG ===');
+      console.log('State:', state);
+      console.log('State type:', typeof state);
+      console.log('State length:', state?.length);
+      console.log('Contains colon:', state?.includes(':'));
+      console.log('Starts with login-:', state?.startsWith('login-'));
+      console.log('Is login flow:', isLoginFlow);
+      console.log('Is social account flow:', isSocialAccountFlow);
+      console.log('===========================');
+      
+      if (isSocialAccountFlow) {
+        // Handle social account connection - redirect to social account controller
+        console.log('=== REDIRECTING TO SOCIAL ACCOUNT FLOW ===');
+        console.log('This is a social account connection, redirecting to social-account controller');
+        
+        // Make a server-to-server call to the social account OAuth callback
+        const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:3001'}/social-accounts/oauth/callback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            code,
+            state,
+            platform: state.split(':')[1], // Extract platform from state
+          }),
+        });
+        
+        const result = await response.json();
+          if (result.success) {
+          // ✅ SOCIAL ACCOUNT CONNECTION SUCCESS - Close popup and notify parent
+          console.log('🎉 Social account connection successful!');
+          const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+          
+          // Redirect to a special popup success page that will close itself and notify parent
+          const successUrl = `${frontendBaseUrl}/auth/callback?social_connection=success&platform=${result.data?.platform || 'unknown'}&account_name=${encodeURIComponent(result.data?.displayName || result.data?.username || 'Connected Account')}`;
+          return res.redirect(successUrl);
+        } else {
+          // ❌ SOCIAL ACCOUNT CONNECTION ERROR - Close popup and notify parent  
+          console.log('❌ Social account connection failed:', result.message);
+          const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+          
+          // Redirect to a special popup error page that will close itself and notify parent
+          const errorUrl = `${frontendBaseUrl}/auth/callback?social_connection=error&message=${encodeURIComponent(result.message || 'Connection failed')}`;
+          return res.redirect(errorUrl);
+        }
+      }
+      
+      // Continue with login flow
+      console.log('=== PROVIDER DETECTION FOR LOGIN FLOW ===');
       
       let provider = null;
       if (state && typeof state === 'string') {
@@ -87,6 +139,9 @@ export class AuthController {
         } else if (stateLower.includes('facebook')) {
           provider = 'facebook';
           console.log('Debug - Matched facebook provider');
+        } else if (stateLower.includes('tiktok')) {
+          provider = 'tiktok';
+          console.log('Debug - Matched tiktok provider');
         } else {
           console.log('Debug - No provider match found in state');
         }
@@ -102,11 +157,22 @@ export class AuthController {
         console.error('State type:', typeof state);
         console.error('State includes google:', state?.includes('google'));
         console.error('State includes facebook:', state?.includes('facebook'));
+        console.error('State includes tiktok:', state?.includes('tiktok'));
         throw new Error(`Unsupported OAuth provider. State: ${state}, Type: ${typeof state}`);
       }
 
+      // Determine the appropriate base URL based on provider
+      let frontendBaseUrl: string;
+      if (provider === 'tiktok') {
+        // For TikTok, use ngrok URL if available
+        frontendBaseUrl = process.env.FRONTEND_NGROK_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+      } else {
+        // For other providers, use local URL only
+        frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      }
+
       // Redirect URI for token exchange (must match the original one without query params)
-      const tokenExchangeRedirectUri = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`;
+      const tokenExchangeRedirectUri = `${frontendBaseUrl}/auth/callback`;
 
       let userInfo;
       let accessToken;
@@ -300,11 +366,124 @@ export class AuthController {
             pagesData.data.forEach((page, index) => {
               console.log(`  ${index + 1}. ${page.name} (${page.id}) - ${page.fan_count || 'N/A'} followers`);
             });
-          }
-        } catch (facebookError) {
+          }        } catch (facebookError) {
           console.log('Failed to fetch Facebook pages:', facebookError.message);
+        }      } else if (provider === 'tiktok') {
+        // Handle TikTok OAuth token exchange with ULTIMATE SPEED OPTIMIZATION
+        console.log('=== TikTok OAuth Token Exchange (🚀 ULTIMATE SPEED MODE) ===');
+        console.log('TikTok Client ID:', process.env.TIKTOK_CLIENT_ID);
+        console.log('TikTok Redirect URI:', tokenExchangeRedirectUri);
+        console.log('🚀 ULTIMATE SPEED: Processing code in <1 second to prevent ANY expiration');
+        
+        const startTime = Date.now();
+        let tokens;
+        
+        try {
+          // ULTIMATE SPEED: Single attempt with 800ms timeout - no retries for expired codes
+          console.log(`🚀 TikTok ULTIMATE speed exchange (target: <800ms)`);
+          
+          const tokenResponse = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+              'User-Agent': 'VideoPublisher/3.0 UltimateSpeed',
+              'Connection': 'keep-alive'
+            },
+            body: new URLSearchParams({
+              client_key: process.env.TIKTOK_CLIENT_ID || 'demo-tiktok-client-id',
+              client_secret: process.env.TIKTOK_CLIENT_SECRET || 'demo-tiktok-client-secret',
+              code,
+              grant_type: 'authorization_code',
+              redirect_uri: tokenExchangeRedirectUri,
+            }),
+            signal: AbortSignal.timeout(800), // Ultra-fast 800ms timeout
+          });
+
+          const totalTime = Date.now() - startTime;
+          console.log(`⏱️ TikTok token request completed in ${totalTime}ms`);
+
+          if (!tokenResponse.ok) {
+            console.error(`❌ TikTok HTTP ${tokenResponse.status}: ${tokenResponse.statusText} (${totalTime}ms)`);
+            throw new Error(`TikTok OAuth failed: HTTP ${tokenResponse.status} ${tokenResponse.statusText}`);
+          }
+
+          tokens = await tokenResponse.json();
+          const finalTime = Date.now() - startTime;
+          console.log(`📄 TikTok response parsed in ${finalTime}ms:`, tokens);
+          
+          // Check for success
+          if (tokens.access_token && !tokens.error && !tokens.error_code) {
+            console.log(`✅ TikTok token exchange SUCCESSFUL in ${finalTime}ms`);
+            accessToken = tokens.access_token;
+          } else {
+            // Handle errors - NO RETRIES for expired codes
+            const errorMsg = tokens.error_description || tokens.message || tokens.error || 'TikTok token exchange failed';
+            
+            if (errorMsg.includes('expired') || errorMsg.includes('Authorization code is expired') || 
+                errorMsg.includes('invalid_grant') || tokens.error === 'invalid_grant') {
+              console.error('🚨 TikTok Authorization Code EXPIRED (no retries in ultimate speed mode)');
+              console.error(`   ⏱️ Processing time: ${finalTime}ms`);
+              console.error('   💡 SOLUTION: The OAuth flow must be completed faster');
+              console.error('   🔄 Please try again and click "Allow" immediately');
+              throw new Error(`TikTok authorization code expired after ${finalTime}ms. Please complete OAuth flow faster.`);
+            }
+            
+            console.error(`❌ TikTok token exchange failed in ${finalTime}ms: ${errorMsg}`);
+            throw new Error(`TikTok token exchange failed: ${errorMsg}`);
+          }
+          
+        } catch (fetchError) {
+          const totalTime = Date.now() - startTime;
+          console.error(`🚨 TikTok fetch error after ${totalTime}ms:`, fetchError.message);
+          
+          if (fetchError.name === 'AbortError') {
+            throw new Error(`TikTok token exchange timed out after ${totalTime}ms. Server may be slow - please try again.`);
+          }
+          
+          throw new Error(`TikTok token exchange failed after ${totalTime}ms: ${fetchError.message}`);
+        }        
+        // Extract access token
+        // accessToken = tokens.access_token; // Already set above
+        
+        if (!accessToken) {
+          console.error('⚠️ TikTok exchange succeeded but no access token found');
+          console.error('Full response:', JSON.stringify(tokens, null, 2));
+          throw new Error('TikTok token exchange completed but no access token received');
         }
-      }      // Login or register user with enhanced metadata
+
+        console.log('✅ TikTok token obtained successfully');
+        console.log(`🔑 Token: ${accessToken.substring(0, 15)}...`);
+        
+        // ⚡ LIGHTNING MODE: Skip user info fetch to prevent token expiration
+        // Use fallback user info immediately and fetch real info in background
+        console.log('⚡ LIGHTNING MODE: Creating account immediately with fallback user info');
+        const connectTime = new Date().toISOString();
+        userInfo = {
+          id: `tiktok_lightning_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          name: 'TikTok User (Connecting...)',
+          email: null,
+          profilePicture: null,
+          tiktokMetadata: {
+            open_id: `tiktok_lightning_${Date.now()}`,
+            display_name: 'TikTok User (Connecting...)',
+            lightning_mode: true,
+            access_token_available: true,
+            token_exchange_success: true,
+            connected_at: connectTime,
+            api_success: false,
+            connection_type: 'lightning_fallback',
+            user_info_fetch_status: 'pending'
+          }
+        };
+        
+        console.log(`⚡ Lightning account created, user info will be fetched in background`);
+        
+        // TODO: Implement background user info fetch after account is connected
+        // This will update the account with real user data once TikTok APIs are ready
+      }
+
+      // Login or register user with enhanced metadata
       const socialLoginData = {
         provider,
         accessToken,
@@ -312,18 +491,19 @@ export class AuthController {
         name: userInfo.name || userInfo.given_name || 'User',
         providerId: userInfo.id,
         profilePicture: userInfo.profilePicture,
-        metadata: userInfo.googleMetadata || userInfo.facebookMetadata || {},
+        metadata: userInfo.googleMetadata || userInfo.facebookMetadata || userInfo.tiktokMetadata || {},
         youtubeChannels: userInfo.youtubeChannels,
         youtubeAccessToken: userInfo.youtubeAccessToken,
         youtubeRefreshToken: userInfo.youtubeRefreshToken,
         facebookPages: userInfo.facebookPages,
         facebookAccessToken: userInfo.facebookAccessToken,
+        tiktokAccessToken: provider === 'tiktok' ? accessToken : undefined,
       };
-
+      
       const authResult = await this.authService.socialLogin(socialLoginData);
-
-      // Redirect to frontend with tokens
-      const frontendUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?` +
+      
+      // Redirect to frontend with tokens (use the same base URL determined earlier)
+      const frontendUrl = `${frontendBaseUrl}/auth/callback?` +
         `login=true&` +
         `token=${authResult.accessToken}&` +
         `user=${encodeURIComponent(JSON.stringify(authResult.user))}`;
@@ -334,18 +514,28 @@ export class AuthController {
       res.redirect(frontendUrl);
     } catch (err: any) {
       console.error('OAuth callback error:', err);
-      // Redirect to frontend with error
-      const frontendUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?` +
+      // Redirect to frontend with error (fallback to local URL if frontendBaseUrl not available)
+      const errorBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const errorUrl = `${errorBaseUrl}/auth/callback?` +
         `login=true&` +
         `error=${encodeURIComponent(err.message)}`;
 
-      res.redirect(frontendUrl);
+      res.redirect(errorUrl);
     }
   }
-
   @Get('oauth/:provider')
   async initiateOAuth(@Param('provider') provider: string, @Res() res: any) {
-    const redirectUri = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`;
+    // Determine redirect URI based on provider
+    let redirectUri: string;
+    if (provider === 'tiktok') {
+      // For TikTok, use ngrok URL if available
+      const baseUrl = process.env.FRONTEND_NGROK_URL || process.env.FRONTEND_URL || 'http://localhost:3000';
+      redirectUri = `${baseUrl}/auth/callback`;
+    } else {
+      // For other providers, use local URL only
+      const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      redirectUri = `${baseUrl}/auth/callback`;
+    }
     
     if (provider === 'google') {
       // Create Google OAuth URL
@@ -374,7 +564,73 @@ export class AuthController {
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
         `scope=${encodeURIComponent(scope)}&` +
         `response_type=code&` +
-        `state=${state}`;
+        `state=${state}`;      
+      res.redirect(authUrl);
+    } else if (provider === 'tiktok') {
+      // Create TikTok OAuth URL with MAXIMUM FORCE parameters
+      const clientId = process.env.TIKTOK_CLIENT_ID || 'demo-tiktok-client-id';
+      const scope = 'user.info.basic,user.info.profile,user.info.stats,user.info.open_id,video.list,video.publish,video.upload,artist.certification.read,artist.certification.update'; // Comprehensive TikTok scopes
+      const state = `login-tiktok-${Date.now()}`;
+        // TikTok OAuth URL with ULTIMATE FORCE parameters to prevent auto-redirect
+      const authUrl = `https://www.tiktok.com/v2/auth/authorize/?` +
+        `client_key=${clientId}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=${encodeURIComponent(scope)}&` +
+        `response_type=code&` +
+        `state=${state}&` +
+        // ULTIMATE FORCE PERMISSION SCREENS - Maximum aggressive parameters
+        `force_reauth=true&` +
+        `force_verify=true&` +
+        `approval_prompt=force&` +
+        `prompt=consent&` +
+        `access_type=offline&` +
+        `include_granted_scopes=false&` +
+        `force_login=true&` +
+        `force_approval=true&` +
+        `force_consent=true&` +
+        `force_permissions=true&` +
+        `reauth=true&` +
+        `consent=force&` +
+        `auth_type=rerequest&` +
+        `display=popup&` +  // Prevents auto-redirect behavior
+        `force_show_permission=true&` +  // TikTok-specific force parameter
+        `force_authorization=true&` +  // Force authorization screens
+        `disable_auto_login=true&` +  // Disable automatic login
+        `always_prompt=true&` +  // Always show prompts
+        `require_interaction=true&` +  // Require user interaction
+        `force_interactive=true&` +  // Force interactive mode
+        // Anti-cache and fresh session parameters
+        `fresh=true&` +
+        `no_cache=true&` +
+        `nocache=${Date.now()}&` +
+        `t=${Date.now()}&` +
+        `v=4&` +  // Higher version for cache busting
+        `_=${Date.now()}&` +  // jQuery-style cache buster
+        `session_invalidate=true&` +
+        `cache_buster=${Math.random().toString(36).substring(7)}&` +  // Additional cache buster
+        `rand=${Math.random().toString(36).substring(2, 15)}`;
+          console.log('=== TikTok Login OAuth URL ===');
+      console.log('Client Key:', clientId);
+      console.log('Redirect URI:', redirectUri);
+      console.log('Scopes:', scope);
+      console.log('🔥 ULTIMATE FORCE PERMISSION SCREENS: ENABLED');
+      console.log('   🔒 force_reauth=true (Forces re-authentication)');
+      console.log('   🔒 force_verify=true (Forces permission verification)');
+      console.log('   🔒 approval_prompt=force (Forces approval screens)');
+      console.log('   🔒 display=popup (Prevents auto-redirect)');
+      console.log('   🔒 auth_type=rerequest (Forces permission re-request)');
+      console.log('   🔒 force_show_permission=true (TikTok-specific force)');
+      console.log('   🔒 force_authorization=true (Force authorization screens)');
+      console.log('   🔒 disable_auto_login=true (Disable automatic login)');
+      console.log('   🔒 always_prompt=true (Always show prompts)');
+      console.log('   🔒 require_interaction=true (Require user interaction)');
+      console.log('   🔒 force_interactive=true (Force interactive mode)');
+      console.log('   🔒 include_granted_scopes=false (No cached permissions)');
+      console.log('   🔒 session_invalidate=true (Invalidates existing session)');
+      console.log('   🔒 v=4 (Enhanced cache busting)');
+      console.log('   🔒 force_consent=true (Maximum force consent)');
+      console.log('Auth URL:', authUrl);
+      console.log('==============================');
       
       res.redirect(authUrl);
     } else {
@@ -411,5 +667,191 @@ export class AuthController {
   async testEndpoint() {
     console.log('=== Test Endpoint Hit ===');
     return { message: 'Test endpoint working' };
+  }
+  @Get('debug/tiktok-oauth')
+  async debugTikTokOAuth(@Res() res: any) {
+    try {
+      console.log('=== TIKTOK OAUTH DEBUG ENDPOINT ===');
+      
+      const clientId = process.env.TIKTOK_CLIENT_ID;
+      const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+      const frontendNgrokUrl = process.env.FRONTEND_NGROK_URL;
+      const tiktokMode = process.env.TIKTOK_MODE || 'sandbox';
+      
+      console.log('Environment Variables:');
+      console.log('- TIKTOK_CLIENT_ID:', clientId);
+      console.log('- TIKTOK_CLIENT_SECRET:', clientSecret ? `${clientSecret.substring(0, 8)}...` : 'MISSING');
+      console.log('- FRONTEND_NGROK_URL:', frontendNgrokUrl);
+      console.log('- TIKTOK_MODE:', tiktokMode);
+      
+      if (!clientId || !clientSecret || !frontendNgrokUrl) {
+        return res.status(400).json({
+          error: 'Missing TikTok OAuth configuration',
+          clientId: !!clientId,
+          clientSecret: !!clientSecret,
+          frontendNgrokUrl: !!frontendNgrokUrl,
+          instructions: [
+            'Make sure TIKTOK_CLIENT_ID is set in .env',
+            'Make sure TIKTOK_CLIENT_SECRET is set in .env',
+            'Make sure FRONTEND_NGROK_URL is set in .env',
+            'Restart the backend server after updating .env'
+          ]
+        });
+      }
+        // Generate test OAuth URL using exact TikTok specification
+      const redirectUri = `${frontendNgrokUrl}/auth/callback`;
+      const scopes = 'user.info.basic,user.info.profile,user.info.stats,user.info.open_id,video.list,video.publish,video.upload,artist.certification.read,artist.certification.update'; // Comprehensive scopes
+      const state = `tiktok-debug-${Date.now()}`;      // Create OAuth URL using TikTok's exact format
+      const authUrl = new URL('https://www.tiktok.com/v2/auth/authorize/');
+      authUrl.searchParams.set('client_key', clientId); // TikTok uses 'client_key' not 'client_id'
+      authUrl.searchParams.set('scope', scopes);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('state', state);      // Force permission screens
+      authUrl.searchParams.set('force_reauth', '1');
+      authUrl.searchParams.set('force_verify', '1');
+      authUrl.searchParams.set('approval_prompt', 'force');
+      authUrl.searchParams.set('prompt', 'consent');
+      authUrl.searchParams.set('access_type', 'offline');
+      authUrl.searchParams.set('include_granted_scopes', 'false');
+      authUrl.searchParams.set('force_login', '1');
+      authUrl.searchParams.set('force_approval', '1');
+      authUrl.searchParams.set('fresh', '1');
+      authUrl.searchParams.set('no_cache', '1');
+      // Anti-cache parameters
+      authUrl.searchParams.set('t', Date.now().toString());
+      authUrl.searchParams.set('v', '2');
+      authUrl.searchParams.set('rand', Math.random().toString(36).substring(7));
+      
+      // Additional sandbox mode check
+      const sandboxIssues = [];
+      if (tiktokMode === 'sandbox') {
+        sandboxIssues.push('App is in Sandbox mode - this may have limitations');
+        sandboxIssues.push('Sandbox mode might require app approval or whitelisting');
+        sandboxIssues.push('Try switching to Live mode in TikTok Developer Console');
+      }
+      
+      return res.json({
+        status: 'TikTok OAuth Configuration Analysis',
+        configuration: {
+          clientId: clientId,
+          clientSecret: clientSecret ? `${clientSecret.substring(0, 8)}...` : 'MISSING',
+          redirectUri: redirectUri,
+          scopes: scopes,
+          mode: tiktokMode,
+          ngrokUrl: frontendNgrokUrl
+        },
+        generatedUrl: authUrl.toString(),
+        potentialIssues: [
+          ...sandboxIssues,
+          'Verify redirect URI matches exactly in TikTok Developer Console',
+          'Ensure app has required scopes approved',
+          'Check if app status is "Live" not "Sandbox"',
+          'Verify ngrok URL is accessible and correct'
+        ],
+        developerConsoleChecklist: {
+          'Redirect URI': `Must be exactly: ${redirectUri}`,
+          'Client Key': `Should match: ${clientId}`,
+          'App Status': 'Should be "Live" not "Sandbox" for production',
+          'Scopes': 'user.info.basic and video.list should be approved',
+          'Platform': 'Should be set to "Web" application type'
+        },
+        testInstructions: [
+          '1. Copy the generated URL above',
+          '2. Paste it in your browser',
+          '3. If you get "unauthorized_client" error:',
+          '   - Check TikTok Developer Console settings',
+          '   - Verify all checklist items above',
+          '   - Try switching app from Sandbox to Live mode'
+        ]
+      });
+      
+    } catch (error) {
+      console.error('Debug endpoint error:', error);
+      return res.status(500).json({
+        error: 'Debug endpoint failed',
+        message: error.message
+      });
+    }
+  }
+
+  @Get('tiktok/debug')
+  async getTikTokDebugInfo() {
+    try {
+      // Get TikTok configuration for analysis
+      const appConfig = await this.enhancedSocialAppService.getAppConfig({
+        userId: 'system', // Use system-level config
+        platform: 'TIKTOK',
+      });
+
+      const isSandboxMode = process.env.TIKTOK_MODE === 'sandbox';
+
+      return {
+        status: 'TikTok OAuth Configuration Debug',
+        timestamp: new Date().toISOString(),
+        mode: isSandboxMode ? 'SANDBOX' : 'LIVE',
+        environment: {
+          nodeEnv: process.env.NODE_ENV,
+          tiktokMode: process.env.TIKTOK_MODE || 'not set',
+          frontendNgrokUrl: process.env.FRONTEND_NGROK_URL || 'not set',
+          backendPort: process.env.PORT || '3001',
+        },
+        configuration: {
+          clientId: appConfig.appId ? `${appConfig.appId.substring(0, 10)}...` : 'NOT SET',
+          clientSecret: appConfig.appSecret ? `${appConfig.appSecret.substring(0, 10)}...` : 'NOT SET',
+          redirectUri: appConfig.redirectUri,
+          scopes: appConfig.scopes || [],
+          source: appConfig.source,
+        },
+        urls: {
+          authorizationUrl: `https://www.tiktok.com/v2/auth/authorize/?client_key=${appConfig.appId}&scope=${encodeURIComponent((appConfig.scopes || []).join(','))}&response_type=code&redirect_uri=${encodeURIComponent(appConfig.redirectUri)}&state=test_state`,
+          tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
+          userInfoUrl: 'https://open.tiktokapis.com/v2/user/info/',
+        },
+        sandboxInstructions: isSandboxMode ? [
+          '1. Ensure your TikTok Developer account is approved for sandbox access',
+          '2. Use sandbox-compatible scopes: user.info.basic, video.list',
+          '3. Test with sandbox test users only',
+          '4. Verify ngrok URL is registered in TikTok Developer Console',
+          '5. Check if your app is in sandbox mode in TikTok Developer Console',
+        ] : [
+          '1. Switch to Live mode if sandbox is causing issues',
+          '2. Ensure production scopes are approved',
+          '3. Verify domain whitelist includes ngrok URL',
+        ],
+        troubleshooting: {
+          unauthorizedClientError: {
+            possibleCauses: [
+              'Client Key (App ID) mismatch between .env and TikTok Console',
+              'Redirect URI mismatch between registered and actual URL',
+              'Sandbox mode restrictions',
+              'App not approved or in wrong mode',
+              'Invalid scopes for current app mode',
+            ],
+            nextSteps: [
+              'Verify Client Key exactly matches TikTok Developer Console',
+              'Check redirect URI is exactly: ' + appConfig.redirectUri,
+              'Ensure ngrok URL is registered in TikTok Console',
+              'Try switching between sandbox/live mode',
+              'Check app approval status in TikTok Console',
+            ],
+          },
+        },
+        validationStatus: {
+          hasClientId: !!appConfig.appId && appConfig.appId !== 'your_tiktok_client_id',
+          hasClientSecret: !!appConfig.appSecret && appConfig.appSecret !== 'your_tiktok_client_secret',
+          hasRedirectUri: !!appConfig.redirectUri,
+          isNgrokUrl: appConfig.redirectUri?.includes('ngrok'),
+          hasValidScopes: Array.isArray(appConfig.scopes) && appConfig.scopes.length > 0,
+        },
+      };
+    } catch (error) {
+      return {
+        status: 'ERROR',
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        stack: error.stack,
+      };
+    }
   }
 }

@@ -1,4 +1,4 @@
-/* Metadata Modal Styles */
+/* Metadata Modal Styles - Fixed Positioning */
 .metadata-modal-overlay {
   position: fixed;
   top: 0;
@@ -13,6 +13,11 @@
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: fadeIn 0.2s ease-out;
+}
+
+/* Prevent body scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
 }
 
 .metadata-modal-container {
