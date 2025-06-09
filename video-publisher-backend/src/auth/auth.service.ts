@@ -281,15 +281,16 @@ export class AuthService {
   }
 
   private async createYoutubeSocialAccount(userId: string, youtubeChannel: any, accessToken: string, refreshToken?: string, metadata?: any) {
-    try {
-      // Check if YouTube account already exists for this user
+    try {      // Check if YouTube account already exists for this user
       const existingAccount = await this.prisma.socialAccount.findFirst({
         where: {
           userId,
           platform: 'YOUTUBE',
           accountId: youtubeChannel.id,
         },
-      });      if (existingAccount) {
+      });
+
+      if (existingAccount) {
         // Update existing account with new tokens and metadata
         return await this.prisma.socialAccount.update({
           where: { id: existingAccount.id },
@@ -297,10 +298,11 @@ export class AuthService {
             accessToken,
             refreshToken,
             metadata: metadata || youtubeChannel.metadata || existingAccount.metadata,
-            profilePicture: youtubeChannel.snippet.thumbnails?.high?.url || youtubeChannel.snippet.thumbnails?.default?.url,
-          },
+            profilePicture: youtubeChannel.snippet.thumbnails?.high?.url || youtubeChannel.snippet.thumbnails?.default?.url,          },
         });
-      }// Find or create a system default YouTube social app
+      }
+
+      // Find or create a system default YouTube social app
       let youtubeApp = await this.prisma.socialApp.findFirst({
         where: {
           platform: 'YOUTUBE',
@@ -354,14 +356,14 @@ export class AuthService {
   }
 
   private async createFacebookSocialAccount(userId: string, facebookPage: any, accessToken: string, metadata?: any) {
-    try {
-      // Check if Facebook page account already exists for this user
+    try {      // Check if Facebook page account already exists for this user
       const existingAccount = await this.prisma.socialAccount.findFirst({
         where: {
           userId,
           platform: 'FACEBOOK',
           accountId: facebookPage.id,
-        },      });
+        },
+      });
 
       if (existingAccount) {
         // Update existing account with new tokens and metadata
@@ -393,10 +395,11 @@ export class AuthService {
             appSecret: process.env.FACEBOOK_APP_SECRET || '',
             userId,
             isDefault: true,
-            redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
-          },
+            redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,          },
         });
-      }      // Create new Facebook page social account with enhanced metadata
+      }
+
+      // Create new Facebook page social account with enhanced metadata
       const socialAccount = await this.prisma.socialAccount.create({
         data: {
           userId,

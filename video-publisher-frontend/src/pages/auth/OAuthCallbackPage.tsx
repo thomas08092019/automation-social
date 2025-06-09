@@ -65,20 +65,54 @@ export function OAuthCallbackPage() {
             // Redirect to backend OAuth callback endpoint for token exchange
             window.location.href = `http://localhost:3001/auth/oauth/callback?code=${code}&state=${state}`;
             return;
-          }
-
-          // Handle social account connection flow (for non-login OAuth)
-          setStatus('success');
+          }          // Handle social account connection flow (for non-login OAuth)
+          setStatus('processing');
           
           if (window.opener) {
-            // Notify parent window for social account connection
-            window.opener.postMessage({ 
-              type: 'oauth-success', 
-              data: { code, state } 
-            }, '*');
-            window.close();
+            // For popup flow - handle OAuth callback and send tokens to backend
+            try {
+              // Parse state to extract platform info
+              const [userId, platform, timestamp] = state.split(':');
+              
+              // Call backend OAuth callback endpoint to exchange code for tokens
+              const response = await fetch('http://localhost:3001/social-accounts/oauth/callback', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${localStorage.getItem('token')}` // Add auth token
+                },
+                body: JSON.stringify({
+                  code,
+                  state,
+                  platform: platform
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (result.success) {
+                setStatus('success');
+                // Notify parent window of successful connection
+                window.opener.postMessage({ 
+                  type: 'oauth-success', 
+                  data: result.data 
+                }, '*');
+                setTimeout(() => window.close(), 2000);
+              } else {
+                throw new Error(result.message || 'OAuth callback failed');
+              }
+            } catch (callbackError) {
+              console.error('OAuth callback processing error:', callbackError);
+              setError(callbackError.message);
+              setStatus('error');
+              window.opener.postMessage({ 
+                type: 'oauth-error', 
+                error: callbackError.message 
+              }, '*');
+              setTimeout(() => window.close(), 3000);
+            }
           } else {
-            // Direct navigation to social accounts page
+            // Direct navigation - redirect to social accounts page
             navigate('/social-accounts');
           }
         }

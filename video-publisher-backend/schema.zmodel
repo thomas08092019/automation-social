@@ -111,7 +111,7 @@ model SocialAccount {
 
   // Access control
   @@allow('all', auth() == user)
-  @@unique([platform, accountId, userId])
+  @@unique([accountId, userId, deletedAt])
   @@map("social_accounts")
 }
 

@@ -21,6 +21,14 @@ export class CreateSocialAccountDto {
   @IsString()
   username: string;
 
+  @IsOptional()
+  @IsString()
+  displayName?: string;
+
+  @IsOptional()
+  @IsString()
+  accountType?: string;
+
   @IsString()
   accessToken: string;
 
@@ -37,7 +45,10 @@ export class CreateSocialAccountDto {
 
   @IsOptional()
   @IsString()
-  profilePictureUrl?: string;
+  profilePicture?: string;
+
+  @IsOptional()
+  metadata?: any;
 }
 
 export class UpdateSocialAccountDto {

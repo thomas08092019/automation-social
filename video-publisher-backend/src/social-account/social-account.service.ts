@@ -2,9 +2,12 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
-import { SocialPlatform } from '@prisma/client';
+import { SocialPlatform, AccountType } from '@prisma/client';
 import { PrismaService } from '../common';
+import { TokenManagerService } from '../auth/token-manager.service';
+import { EnhancedSocialAppService } from '../auth/enhanced-social-app.service';
 import {
   CreateSocialAccountDto,
   UpdateSocialAccountDto,
@@ -15,13 +18,39 @@ import {
 
 @Injectable()
 export class SocialAccountService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private tokenManagerService: TokenManagerService,
+    private enhancedSocialAppService: EnhancedSocialAppService,
+  ) {}
+
+  /**
+   * Convert string account type to AccountType enum
+   */
+  private convertToAccountType(accountType?: string): AccountType {
+    if (!accountType) return AccountType.PROFILE;
+    
+    const upperType = accountType.toUpperCase();
+    switch (upperType) {
+      case 'PAGE':
+        return AccountType.PAGE;
+      case 'GROUP':
+        return AccountType.GROUP;
+      case 'PROFILE':
+        return AccountType.PROFILE;
+      case 'BUSINESS':
+        return AccountType.BUSINESS;
+      case 'CREATOR':
+        return AccountType.CREATOR;
+      default:
+        return AccountType.PROFILE; // Default fallback
+    }
+  }
 
   async create(
     userId: string,
     createDto: CreateSocialAccountDto,
-  ): Promise<SocialAccountResponseDto> {
-    // Check if account already exists for this user and platform
+  ): Promise<SocialAccountResponseDto> {    // Check if account already exists for this user and platform
     const existingAccount = await this.prisma.socialAccount.findFirst({
       where: {
         platform: createDto.platform,
@@ -31,21 +60,120 @@ export class SocialAccountService {
     });
 
     if (existingAccount) {
-      throw new ConflictException('Social account already connected');
+      // Update existing account with new tokens and data instead of throwing error
+      const updatedAccount = await this.prisma.socialAccount.update({
+        where: { id: existingAccount.id },
+        data: {
+          accountName: createDto.username,
+          accessToken: createDto.accessToken,
+          refreshToken: createDto.refreshToken,
+          expiresAt: createDto.expiresAt,
+          profilePicture: createDto.profilePicture,
+          accountType: createDto.accountType 
+            ? this.convertToAccountType(createDto.accountType)
+            : existingAccount.accountType,
+          metadata: createDto.metadata || existingAccount.metadata,
+          isActive: true, // Reactivate account if it was disabled
+        },
+        select: {
+          id: true,
+          platform: true,
+          accountId: true,
+          accountName: true,
+          profilePicture: true,
+          isActive: true,
+        },
+      });
+
+      // Map schema fields to DTO fields for updated account
+      return {
+        id: updatedAccount.id,
+        platform: updatedAccount.platform,
+        platformAccountId: updatedAccount.accountId,
+        username: updatedAccount.accountName,
+        scopes: createDto.scopes,
+        profilePictureUrl: updatedAccount.profilePicture,
+        isActive: updatedAccount.isActive,
+        createdAt: new Date(), // Default value since not in schema
+        updatedAt: new Date(), // Default value since not in schema
+      };
+    }    // Find or create appropriate social app for this user and platform
+    let socialAppId: string;
+    
+    try {
+      // First, try to find an existing social app for this user and platform
+      const existingApp = await this.prisma.socialApp.findFirst({
+        where: {
+          userId,
+          platform: createDto.platform,
+          isDefault: true,
+        },
+      });
+
+      if (existingApp) {
+        socialAppId = existingApp.id;
+      } else {
+        // Try to find any app for this user and platform
+        const anyApp = await this.prisma.socialApp.findFirst({
+          where: {
+            userId,
+            platform: createDto.platform,
+          },
+        });
+
+        if (anyApp) {
+          socialAppId = anyApp.id;
+        } else {
+          // Try to get app config using the enhanced service (will use system defaults if available)
+          try {
+            const appConfig = await this.enhancedSocialAppService.getAppConfig({
+              userId,
+              platform: createDto.platform,
+              requireCustomApp: false,
+            });
+
+            if (appConfig.socialAppId) {
+              socialAppId = appConfig.socialAppId;
+            } else {
+              // Create a default app using system config
+              const createdApp = await this.enhancedSocialAppService.createApp(userId, {
+                name: `Default ${createDto.platform} App`,
+                platform: createDto.platform,
+                appId: appConfig.appId,
+                appSecret: appConfig.appSecret,
+                redirectUri: appConfig.redirectUri,
+                isDefault: true,
+              });
+              socialAppId = createdApp.id;
+            }
+          } catch (appConfigError) {
+            throw new BadRequestException(
+              `No social app configuration available for ${createDto.platform}. ` +
+              `Please configure your app credentials first or ensure OAuth credentials are properly set. ` +
+              `Error: ${appConfigError.message}`
+            );
+          }
+        }
+      }
+    } catch (error) {
+      throw new BadRequestException(
+        `Failed to find or create social app configuration: ${error.message}`
+      );
     }
+        console.log("🚀 ~ SocialAccountService ~ socialAppId:", socialAppId);
 
     const account = await this.prisma.socialAccount.create({
       data: {
         platform: createDto.platform,
-        accountType: 'PROFILE', // Use valid enum value
+        accountType: this.convertToAccountType(createDto.accountType),
         accountId: createDto.platformAccountId,
         accountName: createDto.username,
         accessToken: createDto.accessToken,
         refreshToken: createDto.refreshToken,
         expiresAt: createDto.expiresAt,
-        profilePicture: createDto.profilePictureUrl,
+        profilePicture: createDto.profilePicture,
         userId,
-        socialAppId: 'default-social-app-id', // You may need to provide this properly
+        socialAppId, // Use the proper socialAppId we found/created
       },
       select: {
         id: true,
@@ -356,9 +484,7 @@ export class SocialAccountService {
       metadata: account.metadata || {}, // Default to empty object if not set
       createdAt: new Date(), // Default value since not in schema
       updatedAt: new Date(), // Default value since not in schema
-    }));
-
-    return {
+    }));    return {
       data,
       total,
       page,
@@ -366,6 +492,66 @@ export class SocialAccountService {
       totalPages,
       hasNextPage,
       hasPrevPage,
+    };
+  }
+
+  async refreshToken(
+    userId: string,
+    accountId: string,
+  ): Promise<SocialAccountResponseDto> {
+    // Get the social account
+    const account = await this.prisma.socialAccount.findFirst({
+      where: {
+        id: accountId,
+        userId,
+      },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Social account not found');
+    }
+
+    if (!account.refreshToken) {
+      throw new BadRequestException('No refresh token available for this account');
+    }
+
+    // Use TokenManagerService to refresh the token
+    const refreshResult = await this.tokenManagerService.refreshTokenIfNeeded(accountId);
+
+    if (!refreshResult.success) {
+      throw new BadRequestException(refreshResult.errorMessage || 'Failed to refresh token');
+    }
+
+    // Get updated account data
+    const updatedAccount = await this.prisma.socialAccount.findUnique({
+      where: { id: accountId },
+      select: {
+        id: true,
+        platform: true,
+        accountType: true,
+        accountId: true,
+        accountName: true,
+        profilePicture: true,
+        isActive: true,
+        expiresAt: true,
+        metadata: true,
+      },
+    });
+
+    // Map to response DTO
+    return {
+      id: updatedAccount.id,
+      platform: updatedAccount.platform,
+      accountType: updatedAccount.accountType,
+      platformAccountId: updatedAccount.accountId,
+      username: updatedAccount.accountName,
+      scopes: [], // Default empty array since not in schema
+      profilePictureUrl: updatedAccount.profilePicture,
+      isActive: updatedAccount.isActive,
+      expiresAt: updatedAccount.expiresAt,
+      metadata: updatedAccount.metadata || {},
+      createdAt: new Date(), // Default value since not in schema
+      updatedAt: new Date(), // Default value since not in schema
     };
   }
 }

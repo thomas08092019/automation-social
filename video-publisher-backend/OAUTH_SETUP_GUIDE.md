@@ -1,14 +1,97 @@
-# OAuth Setup Guide - Quick Start
+# OAuth Setup Guide
 
-## Current Issue
-Your OAuth connection is failing because no Google OAuth credentials are configured. The error "No app configuration available for platform YOUTUBE_SHORTS" means the system can't find valid OAuth app credentials.
+This guide will help you configure OAuth credentials for social media platforms to enable the social account connection feature.
 
-## Solution: Set Up Google OAuth Credentials
+## ⚠️ Current Critical Issue: TikTok OAuth
 
-### Step 1: Create Google Cloud Project (FREE)
+The current TikTok OAuth credentials in your `.env` file are test/placeholder values and **will not work** for actual OAuth authentication. You need to replace them with real credentials from TikTok's developer platform.
 
-1. **Go to Google Cloud Console**
-   - Visit: https://console.cloud.google.com/
+### TikTok Error Details
+If you're seeing:
+- `param_error` with `errCode=10003` and `error_type=client_key`
+- "Something went wrong - We couldn't log in with TikTok"
+- URL showing `client_id=aw7u03nbpa4vszuo`
+
+This means your TikTok OAuth credentials are invalid placeholder values.
+
+## Quick Fix for TikTok OAuth
+
+### Step 1: Create TikTok Developer Account (FREE)
+
+1. **Go to TikTok for Developers**
+   - Visit: https://developers.tiktok.com/
+   - Sign up or log in with your TikTok account
+   - Complete the developer verification process
+
+2. **Create a New App**
+   - Navigate to "Manage Apps"
+   - Click "Create an App"
+   - Fill in required details:
+     - App Name: "Social Media Automation Tool" (or your preferred name)
+     - Company Name: Your name/company
+     - Industry: "Marketing & Advertisement"
+     - Use Case: "Content Publishing"
+
+3. **Configure Login Kit**
+   - In your app dashboard, add "Login Kit" product
+   - Configure redirect URIs (MUST MATCH EXACTLY):
+     ```
+     http://localhost:3000/auth/callback
+     ```
+   - **IMPORTANT**: TikTok now requires PKCE (Proof Key for Code Exchange) for security
+   - The system automatically handles PKCE generation and verification
+   - Request scopes (UPDATED - only these scopes are available):
+     - `user.info.profile` - Read access to profile information  
+     - `user.info.stats` - Read access to user statistics (followers, likes, etc.)
+     - `video.list` - List user's videos
+     - **Note**: `user.info.basic`, `video.upload`, and `video.publish` are no longer available
+
+4. **App Settings Checklist**
+   - ✅ Redirect URI must be **exactly**: `http://localhost:3000/auth/callback`
+   - ✅ App must be approved for the requested scopes
+   - ✅ PKCE is now automatically handled by the backend
+   - ✅ Make sure your app is in "Live" mode (not sandbox)
+
+5. **Get Your Real Credentials**
+   - Copy your `Client Key` (this becomes `TIKTOK_CLIENT_ID`)
+   - Copy your `Client Secret` (this becomes `TIKTOK_CLIENT_SECRET`)
+
+5. **Update Your .env File**
+   Replace the placeholder values:
+   ```bash
+   # Replace these lines:
+   TIKTOK_CLIENT_ID=aw7u03nbpa4vszuo
+   TIKTOK_CLIENT_SECRET=i56VhaIcOYjfdCvrHnfQ6MEu5TTY5Xwe
+   
+   # With your real credentials:
+   TIKTOK_CLIENT_ID=your_actual_client_key_from_tiktok
+   TIKTOK_CLIENT_SECRET=your_actual_client_secret_from_tiktok
+   ```
+
+6. **Restart Your Server**
+   ```bash
+   cd video-publisher-backend
+   npm run start:dev
+   ```
+
+## Other Platform Setup Instructions
+
+### 📘 Facebook/Meta for Developers
+
+1. **Create Facebook App**
+   - Go to [Facebook for Developers](https://developers.facebook.com/)
+   - Create app for "Business" use case
+   - Add "Facebook Login" product
+
+2. **Configure OAuth**
+   - Add redirect URI: `http://localhost:3000/auth/callback`
+   - Request permissions: `pages_manage_posts`, `pages_read_engagement`, `pages_show_list`
+
+3. **Update .env**
+   ```bash
+   FACEBOOK_APP_ID=your_facebook_app_id
+   FACEBOOK_APP_SECRET=your_facebook_app_secret
+   ```
    - Sign in with your Google account
 
 2. **Create a New Project**

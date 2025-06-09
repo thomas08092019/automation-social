@@ -12,6 +12,7 @@ import { TokenManagerService } from './token-manager.service';
 import { SocialAppService } from './social-app.service';
 import { EnhancedSocialAppService } from './enhanced-social-app.service';
 import { OAuthAuthorizationService } from './oauth-authorization.service';
+import { PlatformUserInfoService } from './platform-user-info.service';
 import { SocialAppsController } from './social-apps.controller';
 import { PrismaModule } from '../common/prisma.module';
 
@@ -38,6 +39,7 @@ import { PrismaModule } from '../common/prisma.module';
     SocialAppService,
     EnhancedSocialAppService,
     OAuthAuthorizationService,
+    PlatformUserInfoService,
     OAuthService,
     EmailService,
   ],
@@ -49,6 +51,7 @@ import { PrismaModule } from '../common/prisma.module';
     SocialAppService,
     EnhancedSocialAppService,
     OAuthAuthorizationService,
+    PlatformUserInfoService,
     OAuthService,
     EmailService,
   ],

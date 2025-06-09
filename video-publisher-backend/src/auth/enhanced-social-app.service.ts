@@ -7,9 +7,12 @@ export interface AppConfig {
   appId: string;
   appSecret: string;
   redirectUri: string;
+  platform?: SocialPlatform;
   name?: string;
   socialAppId?: string; // ID của SocialApp record nếu có
   source: 'social-app' | 'inline' | 'system-default'; // Nguồn config
+  scopes?: string[];
+  isActive?: boolean;
 }
 
 export interface CreateSocialAppDto {
@@ -209,13 +212,99 @@ export class EnhancedSocialAppService {
 
     return systemConfig;
   }
-
   /**
    * Lấy system default config từ environment variables
+   * Fallback for development when no custom app is configured
    */  private getSystemDefaultConfig(platform: SocialPlatform): AppConfig {
-    // System default configs are no longer supported
-    // Users must configure their own app credentials
-    throw new BadRequestException(`No app configuration found for platform ${platform}. Please configure your app credentials through the UI.`);
+    const baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+    
+    switch (platform) {
+      case SocialPlatform.YOUTUBE:
+        const googleClientId = this.configService.get('GOOGLE_CLIENT_ID');
+        const googleClientSecret = this.configService.get('GOOGLE_CLIENT_SECRET');
+        
+        if (!googleClientId || !googleClientSecret || this.isPlaceholderCredentials(googleClientId, googleClientSecret)) {
+          throw new BadRequestException(
+            `No valid Google OAuth credentials configured. Please either:\n` +
+            `1. Set up custom app credentials through the UI, or\n` +
+            `2. Configure real GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file.\n` +
+            `See OAUTH_SETUP_GUIDE.md for detailed instructions.`
+          );
+        }          return {
+          socialAppId: null, // Will be created when needed
+          name: 'System Google OAuth',
+          platform: SocialPlatform.YOUTUBE,
+          appId: googleClientId,
+          appSecret: googleClientSecret,
+          redirectUri: `${baseUrl}/auth/callback`,
+          scopes: [
+            'https://www.googleapis.com/auth/youtube.upload',
+            'https://www.googleapis.com/auth/youtube',
+            'https://www.googleapis.com/auth/youtube.readonly',
+          ],
+          isActive: true,
+          source: 'system-default',
+        };
+
+      case SocialPlatform.FACEBOOK:
+      case SocialPlatform.INSTAGRAM:
+        const facebookAppId = this.configService.get('FACEBOOK_APP_ID');
+        const facebookAppSecret = this.configService.get('FACEBOOK_APP_SECRET');
+        
+        if (!facebookAppId || !facebookAppSecret || this.isPlaceholderCredentials(facebookAppId, facebookAppSecret)) {
+          throw new BadRequestException(
+            `No valid Facebook OAuth credentials configured. Please either:\n` +
+            `1. Set up custom app credentials through the UI, or\n` +
+            `2. Configure real FACEBOOK_APP_ID and FACEBOOK_APP_SECRET in your .env file.\n` +
+            `See OAUTH_SETUP_GUIDE.md for detailed instructions.`
+          );
+        }          return {
+          socialAppId: null, // Will be created when needed
+          name: 'System Facebook OAuth',
+          platform: SocialPlatform.FACEBOOK,
+          appId: facebookAppId,
+          appSecret: facebookAppSecret,
+          redirectUri: `${baseUrl}/auth/callback`,
+          scopes: platform === SocialPlatform.INSTAGRAM 
+            ? ['instagram_basic', 'instagram_content_publish', 'pages_show_list', 'pages_read_engagement']
+            : ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'publish_video'],
+          isActive: true,
+          source: 'system-default',
+        };      case SocialPlatform.TIKTOK:
+        const tiktokClientId = this.configService.get('TIKTOK_CLIENT_ID');
+        const tiktokClientSecret = this.configService.get('TIKTOK_CLIENT_SECRET');
+        
+        // Debug logging for TikTok configuration
+        this.logger.debug('=== TikTok OAuth Configuration Debug ===');
+        this.logger.debug(`TikTok Client ID: ${tiktokClientId ? `${tiktokClientId.substring(0, 10)}...` : 'NOT SET'}`);
+        this.logger.debug(`TikTok Client Secret: ${tiktokClientSecret ? `${tiktokClientSecret.substring(0, 10)}...` : 'NOT SET'}`);
+        this.logger.debug(`Frontend URL: ${baseUrl}`);
+        this.logger.debug(`Redirect URI: ${baseUrl}/auth/callback`);
+        this.logger.debug(`Is placeholder check: ${this.isPlaceholderCredentials(tiktokClientId, tiktokClientSecret)}`);
+        this.logger.debug('==========================================');
+        
+        if (!tiktokClientId || !tiktokClientSecret || this.isPlaceholderCredentials(tiktokClientId, tiktokClientSecret)) {
+          throw new BadRequestException(
+            `No valid TikTok OAuth credentials configured. Please either:\n` +
+            `1. Set up custom app credentials through the UI, or\n` +
+            `2. Configure real TIKTOK_CLIENT_ID and TIKTOK_CLIENT_SECRET in your .env file.\n` +
+            `See OAUTH_SETUP_GUIDE.md for detailed instructions.`
+          );
+        }        return {
+          socialAppId: null, // Will be created when needed
+          name: 'System TikTok OAuth',
+          platform: SocialPlatform.TIKTOK,
+          appId: tiktokClientId,
+          appSecret: tiktokClientSecret,
+          redirectUri: `${baseUrl}/auth/callback`,
+          scopes: ['user.info.profile', 'user.info.stats', 'video.list'], // Updated with available TikTok scopes
+          isActive: true,
+          source: 'system-default',
+        };
+
+      default:
+        throw new BadRequestException(`Unsupported platform: ${platform}. Please configure your app credentials through the UI.`);
+    }
   }
 
   /**

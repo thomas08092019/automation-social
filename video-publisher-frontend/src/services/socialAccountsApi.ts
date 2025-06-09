@@ -125,11 +125,36 @@ export const socialAccountsApi = {  // Get all social accounts for the user with
       return [];
     }
   },
-
-  // Connect a social platform
+  // Connect a social platform - Generate OAuth authorization URL
   connectPlatform: async (platform: string): Promise<ConnectPlatformResponse> => {
-    // This will be handled by OAuth flow in the component
-    throw new Error('Use OAuth flow for platform connection');
+    try {
+      // Call backend to get OAuth authorization URL
+      const response = await apiService.api.post(`/social-accounts/connect/${platform.toLowerCase()}`);
+      
+      if (response.data.success && response.data.data?.authUrl) {
+        return {
+          success: true,
+          data: {
+            authUrl: response.data.data.authUrl,
+            platform: response.data.data.platform,
+          },
+          message: response.data.message || 'Authorization URL generated successfully',
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Failed to generate authorization URL',
+          error: response.data.error,
+        };
+      }
+    } catch (error: any) {
+      console.error('Error connecting platform:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || `Failed to connect to ${platform}`,
+        error: error.response?.data?.error || 'CONNECTION_FAILED',
+      };
+    }
   },
 
   // Delete a social account

@@ -97,7 +97,7 @@ model SocialAccount {
   socialApp       SocialApp        @relation(fields: [socialAppId], references: [id])
   publishingTasks PublishingTask[]
 
-  @@unique([platform, accountId, userId])
+  @@unique([accountId, userId, deletedAt])
   @@map("social_accounts")
 }
 

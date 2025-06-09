@@ -17,6 +17,7 @@ import { SocialPlatform } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SocialAccountService } from './social-account.service';
 import { OAuthAuthorizationService } from '../auth/oauth-authorization.service';
+import { PlatformUserInfoService } from '../auth/platform-user-info.service';
 import {
   CreateSocialAccountDto,
   UpdateSocialAccountDto,
@@ -26,22 +27,23 @@ import {
 } from './dto/social-account.dto';
 
 @Controller('social-accounts')
-@UseGuards(JwtAuthGuard)
 export class SocialAccountController {
   constructor(
     private socialAccountService: SocialAccountService,
     private oauthAuthorizationService: OAuthAuthorizationService,
+    private platformUserInfoService: PlatformUserInfoService,
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   async create(
     @Request() req,
     @Body() createDto: CreateSocialAccountDto,
   ): Promise<SocialAccountResponseDto> {
     return this.socialAccountService.create(req.user.id, createDto);
   }
-
   @Post('connect/:platform')
+  @UseGuards(JwtAuthGuard)
   async connectSocialAccount(
     @Request() req,
     @Param('platform') platform: string,
@@ -126,14 +128,13 @@ export class SocialAccountController {
         throw new BadRequestException('Invalid state parameter');
       }
 
-      const socialPlatform = platform as SocialPlatform;
-
-      // Exchange code for token
+      const socialPlatform = platform as SocialPlatform;      // Exchange code for token
       const tokenResult = await this.oauthAuthorizationService.exchangeCodeForToken(
         socialPlatform,
         body.code,
         userId,
         body.appId,
+        body.state, // Pass the state for PKCE verification
       );
 
       if (!tokenResult.success) {
@@ -143,17 +144,40 @@ export class SocialAccountController {
         };
       }
 
-      // Create social account with the obtained tokens
+      // Fetch platform-specific user information
+      let userInfo;
+      try {
+        userInfo = await this.platformUserInfoService.fetchUserInfo(
+          socialPlatform,
+          tokenResult.accessToken!,
+        );
+      } catch (error) {
+        // If we can't fetch user info, use fallback values
+        console.warn(`Failed to fetch platform user info for ${socialPlatform}:`, error.message);
+        userInfo = {
+          platformAccountId: `temp-${Date.now()}`,
+          username: `Connected ${socialPlatform} Account`,
+          displayName: `Connected ${socialPlatform} Account`,
+          accountType: 'PROFILE',
+          metadata: { error: 'Failed to fetch platform user info' },
+        };
+      }
+
+      // Create social account with the obtained tokens and user info
       const socialAccountData: CreateSocialAccountDto = {
         platform: socialPlatform,
-        platformAccountId: 'temp-id', // We'll need to fetch this from the platform
-        username: 'Connected Account', // We'll need to fetch this from the platform
+        platformAccountId: userInfo.platformAccountId,
+        username: userInfo.username,
+        displayName: userInfo.displayName,
+        accountType: userInfo.accountType,
         accessToken: tokenResult.accessToken!,
         refreshToken: tokenResult.refreshToken,
         expiresAt: tokenResult.expiresIn 
           ? new Date(Date.now() + tokenResult.expiresIn * 1000)
           : undefined,
         scopes: tokenResult.scope ? tokenResult.scope.split(' ') : [],
+        profilePicture: userInfo.profilePictureUrl,
+        metadata: userInfo.metadata || {},
       };
 
       const socialAccount = await this.socialAccountService.create(userId, socialAccountData);
@@ -161,17 +185,18 @@ export class SocialAccountController {
       return {
         success: true,
         data: socialAccount,
-        message: 'Social account connected successfully',
+        message: `${socialPlatform} account connected successfully`,
       };
     } catch (error) {
+      console.error('OAuth callback error:', error);
       return {
         success: false,
         message: `OAuth callback failed: ${error.message}`,
       };
     }
   }
-
   @Get()
+  @UseGuards(JwtAuthGuard)
   async findAll(
     @Request() req,
     @Query() query: SocialAccountQueryDto,
@@ -188,16 +213,16 @@ export class SocialAccountController {
       hasPrevPage: result.hasPrevPage,
     };
   }
-
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   async findOne(
     @Request() req,
     @Param('id') id: string,
   ): Promise<SocialAccountResponseDto> {
     return this.socialAccountService.findById(req.user.id, id);
   }
-
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
   async update(
     @Request() req,
     @Param('id') id: string,
@@ -205,10 +230,30 @@ export class SocialAccountController {
   ): Promise<SocialAccountResponseDto> {
     return this.socialAccountService.update(req.user.id, id, updateDto);
   }
-
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Request() req, @Param('id') id: string): Promise<void> {
     return this.socialAccountService.delete(req.user.id, id);
+  }
+  @Post(':id/refresh')
+  @UseGuards(JwtAuthGuard)
+  async refreshToken(
+    @Request() req,
+    @Param('id') id: string,
+  ) {
+    try {
+      const refreshedAccount = await this.socialAccountService.refreshToken(req.user.id, id);
+      return {
+        success: true,
+        data: refreshedAccount,
+        message: 'Token refreshed successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to refresh token: ${error.message}`,
+      };
+    }
   }
 }

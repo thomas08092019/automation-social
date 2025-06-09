@@ -134,14 +134,70 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       setLoading(false);
     }
   }, [currentPage, searchTerm, platformFilter, accountTypeFilter, statusFilter]);
-
   const handleConnectPlatform = async (platform: SocialPlatform) => {
     try {
       const response = await socialAccountsApi.connectPlatform(platform.toLowerCase());
       
       if (response.success && response.data?.authUrl) {
-        // Open OAuth URL in new window
-        window.open(response.data.authUrl, '_blank', 'width=600,height=700');      } else {
+        // Show connecting status
+        toast.info('Connecting...', `Opening ${platform} OAuth window`);
+        
+        // Open OAuth popup window
+        const popup = window.open(
+          response.data.authUrl, 
+          `${platform.toLowerCase()}-oauth`, 
+          'width=600,height=700,scrollbars=yes,resizable=yes'
+        );
+
+        if (!popup) {
+          toast.error('Popup Blocked', 'Please allow popups for this site and try again.');
+          return;
+        }
+
+        // Initialize cleanup variables
+        let checkClosed: NodeJS.Timeout;
+        let timeoutId: NodeJS.Timeout;
+
+        // Listen for OAuth completion message from popup
+        const messageHandler = async (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          
+          if (event.data.type === 'oauth-success') {
+            cleanup();
+            toast.success('Connected!', `Successfully connected ${platform} account`);
+            await loadAccounts(); // Reload accounts after successful connection
+          } else if (event.data.type === 'oauth-error') {
+            cleanup();
+            toast.error('Connection Failed', `OAuth failed: ${event.data.error}`);
+          }
+        };
+
+        // Cleanup function
+        const cleanup = () => {
+          if (checkClosed) clearInterval(checkClosed);
+          if (timeoutId) clearTimeout(timeoutId);
+          window.removeEventListener('message', messageHandler);
+        };
+
+        // Start cleanup processes
+        window.addEventListener('message', messageHandler);
+        
+        // Check if popup was closed manually
+        checkClosed = setInterval(() => {
+          if (popup.closed) {
+            cleanup();
+            toast.info('Cancelled', 'OAuth connection was cancelled');
+          }
+        }, 1000);
+
+        // Timeout after 5 minutes
+        timeoutId = setTimeout(() => {
+          cleanup();
+          popup.close();
+          toast.error('Timeout', 'OAuth connection timeout. Please try again.');
+        }, 300000);
+
+      } else {
         console.error('Failed to get auth URL:', response.message);
         toast.error('Connection Failed', response.message || 'Failed to connect to platform');
       }
@@ -149,18 +205,22 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       console.error('Failed to connect platform:', error);
       toast.error('Connection Error', 'An error occurred while connecting to the platform');
     }
-  };
-  const handleRefreshAccount = async (accountId: string) => {
+  };  const handleRefreshAccount = async (accountId: string) => {
     try {
-      // TODO: Implement refresh token functionality
-      console.log('Refreshing account:', accountId);
       toast.info('Refresh Started', 'Account refresh is in progress...');
-      // In a real app, call refresh API and reload accounts
+      
+      await socialAccountsApi.refreshAccount(accountId);
+      
+      // Reload accounts to show updated data
+      await loadAccounts();
+      
+      toast.success('Refresh Complete', 'Account has been refreshed successfully');
     } catch (error) {
       console.error('Failed to refresh account:', error);
-      toast.error('Refresh Failed', 'Failed to refresh the account');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh the account';
+      toast.error('Refresh Failed', errorMessage);
     }
-  };  const handleDeleteAccount = async (accountId: string) => {
+  };const handleDeleteAccount = async (accountId: string) => {
     const confirmed = await confirm(
       'Delete Account', 
       'Are you sure you want to remove this social account? This action cannot be undone.',

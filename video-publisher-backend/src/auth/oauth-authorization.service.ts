@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EnhancedSocialAppService } from './enhanced-social-app.service';
 import { SocialPlatform } from '@prisma/client';
 import axios from 'axios';
+import * as crypto from 'crypto';
 
 export interface OAuthConfig {
   clientId: string;
@@ -39,6 +40,12 @@ export interface AuthorizationRequest {
   customScopes?: string[];
 }
 
+export interface PKCEPair {
+  codeVerifier: string;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+}
+
 @Injectable()
 export class OAuthAuthorizationService {
   constructor(
@@ -48,9 +55,16 @@ export class OAuthAuthorizationService {
 
   /**
    * Generate authorization URL with enhanced app selection
-   */
-  async generateAuthorizationUrl(request: AuthorizationRequest): Promise<AuthorizationResult> {
+   */  async generateAuthorizationUrl(request: AuthorizationRequest): Promise<AuthorizationResult> {
     try {
+      // Validate platform is supported
+      if (!Object.values(SocialPlatform).includes(request.platform)) {
+        return {
+          success: false,
+          errorMessage: `Unsupported platform: ${request.platform}. Supported platforms: ${Object.values(SocialPlatform).join(', ')}`,
+        };
+      }
+
       // Get appropriate app config
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
         userId: request.userId,
@@ -60,14 +74,30 @@ export class OAuthAuthorizationService {
       });
 
       if (!appConfig.appId || !appConfig.appSecret) {
+        const platformName = request.platform.toLowerCase();
         return {
           success: false,
-          errorMessage: `No valid app configuration found for platform: ${request.platform}`,
+          errorMessage: `No valid OAuth credentials found for ${platformName}. Please ensure ${platformName.toUpperCase()}_CLIENT_ID and ${platformName.toUpperCase()}_CLIENT_SECRET are configured in your environment variables.`,
+        };
+      }
+
+      // Validate OAuth configuration
+      if (!appConfig.redirectUri) {
+        return {
+          success: false,
+          errorMessage: `No redirect URI configured for platform: ${request.platform}`,
         };
       }
 
       // Get scopes from request or default
       const scopes = request.customScopes || this.getDefaultScopes(request.platform);
+      
+      if (!scopes || scopes.length === 0) {
+        return {
+          success: false,
+          errorMessage: `No OAuth scopes configured for platform: ${request.platform}`,
+        };
+      }
 
       const oauthConfig: OAuthConfig = {
         clientId: appConfig.appId,
@@ -88,39 +118,72 @@ export class OAuthAuthorizationService {
     } catch (error) {
       return {
         success: false,
-        errorMessage: error.message,
+        errorMessage: `OAuth authorization failed: ${error.message}`,
       };
     }
   }
-
   /**
    * Build platform-specific authorization URL
    */
   private buildAuthorizationUrl(platform: SocialPlatform, config: OAuthConfig, state?: string): string {
-    const params = new URLSearchParams({
-      client_id: config.clientId,
-      redirect_uri: config.redirectUri,
-      scope: config.scopes.join(' '),
-      response_type: 'code',
-      access_type: 'offline', // For refresh tokens
-      prompt: 'consent', // Force consent screen
-      ...(state && { state }),
-    });    switch (platform) {
+    switch (platform) {
       case SocialPlatform.YOUTUBE:
-        return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+        const googleParams = new URLSearchParams({
+          client_id: config.clientId,
+          redirect_uri: config.redirectUri,
+          scope: config.scopes.join(' '),
+          response_type: 'code',
+          access_type: 'offline', // For refresh tokens
+          prompt: 'consent', // Force consent screen
+          ...(state && { state }),
+        });
+        return `https://accounts.google.com/o/oauth2/v2/auth?${googleParams.toString()}`;
 
       case SocialPlatform.FACEBOOK:
       case SocialPlatform.INSTAGRAM:
-        return `https://www.facebook.com/v18.0/dialog/oauth?${params.toString()}`;
-
-      case SocialPlatform.TIKTOK:
-        return `https://www.tiktok.com/auth/authorize/?${params.toString()}`;
+        const facebookParams = new URLSearchParams({
+          client_id: config.clientId,
+          redirect_uri: config.redirectUri,
+          scope: config.scopes.join(','), // Facebook uses comma-separated scopes
+          response_type: 'code',
+          ...(state && { state }),
+        });
+        return `https://www.facebook.com/v18.0/dialog/oauth?${facebookParams.toString()}`;      case SocialPlatform.TIKTOK:
+        // TikTok requires PKCE (Proof Key for Code Exchange) for security
+        const pkce = this.generatePKCE();
+        const tiktokState = state || crypto.randomUUID();
+        
+        // Store the code verifier for later use in token exchange
+        this.storePKCEVerifier(tiktokState, pkce.codeVerifier);
+        
+        const tiktokParams = new URLSearchParams({
+          client_key: config.clientId, // TikTok uses 'client_key' instead of 'client_id'
+          redirect_uri: config.redirectUri,
+          scope: config.scopes.join(','), // TikTok uses comma-separated scopes
+          response_type: 'code',
+          state: tiktokState,
+          code_challenge: pkce.codeChallenge,
+          code_challenge_method: pkce.codeChallengeMethod,
+        });
+        
+        const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${tiktokParams.toString()}`;
+        
+        // Debug logging for TikTok OAuth URL
+        console.log('=== TikTok OAuth URL Debug ===');
+        console.log(`Client Key: ${config.clientId.substring(0, 10)}...`);
+        console.log(`Redirect URI: ${config.redirectUri}`);
+        console.log(`Scopes: ${config.scopes.join(',')}`);
+        console.log(`State: ${tiktokState}`);
+        console.log(`Code Challenge: ${pkce.codeChallenge.substring(0, 20)}...`);
+        console.log(`Generated URL: ${authUrl}`);
+        console.log('==============================');
+        
+        return authUrl;
 
       default:
         throw new Error(`Unsupported platform: ${platform}`);
     }
   }
-
   /**
    * Exchange authorization code for access token with enhanced app selection
    */
@@ -129,6 +192,7 @@ export class OAuthAuthorizationService {
     code: string,
     userId: string,
     socialAppId?: string,
+    state?: string,
   ): Promise<TokenExchangeResult> {
     try {
       // Get app config based on socialAppId or default
@@ -145,7 +209,7 @@ export class OAuthAuthorizationService {
         };
       }
 
-      return this.performTokenExchange(platform, code, appConfig);
+      return this.performTokenExchange(platform, code, appConfig, state);
     } catch (error) {
       return {
         success: false,
@@ -188,14 +252,13 @@ export class OAuthAuthorizationService {
 
   /**
    * Perform actual token exchange
-   */
-  private async performTokenExchange(
+   */  private async performTokenExchange(
     platform: SocialPlatform,
     code: string,
     appConfig: any,
-  ): Promise<TokenExchangeResult> {
-    const tokenEndpoint = this.getTokenEndpoint(platform);
-    const params = this.buildTokenRequestParams(platform, appConfig, code);
+    state?: string,
+  ): Promise<TokenExchangeResult> {    const tokenEndpoint = this.getTokenEndpoint(platform);
+    const params = this.buildTokenRequestParams(platform, appConfig, code, state);
 
     try {
       const response = await axios.post(tokenEndpoint, params, {
@@ -257,7 +320,6 @@ export class OAuthAuthorizationService {
       };
     }
   }
-
   /**
    * Get platform-specific token endpoint
    */
@@ -270,33 +332,43 @@ export class OAuthAuthorizationService {
         return 'https://graph.facebook.com/v18.0/oauth/access_token';
 
       case SocialPlatform.TIKTOK:
-        return 'https://open-api.tiktok.com/oauth/access_token/';
+        return 'https://open.tiktokapis.com/v2/oauth/token/'; // Updated TikTok API endpoint
 
       default:
         throw new Error(`Unsupported platform: ${platform}`);
     }
   }
-
   /**
    * Build token request parameters
-   */
-  private buildTokenRequestParams(platform: SocialPlatform, appConfig: any, code: string): URLSearchParams {
-    const baseParams = {
-      client_id: appConfig.appId,
-      client_secret: appConfig.appSecret,
-      redirect_uri: appConfig.redirectUri,
-      grant_type: 'authorization_code',
-      code,
-    };
-
+   */  private buildTokenRequestParams(platform: SocialPlatform, appConfig: any, code: string, state?: string): URLSearchParams {
     switch (platform) {
       case SocialPlatform.TIKTOK:
-        return new URLSearchParams({
-          ...baseParams,
-          auth_code: code, // TikTok uses 'auth_code' instead of 'code'
-        });
+        // TikTok uses different parameter names and requires PKCE
+        const params: any = {
+          client_key: appConfig.appId, // TikTok uses 'client_key' instead of 'client_id'
+          client_secret: appConfig.appSecret,
+          code: code, // TikTok uses 'code' for token exchange
+          grant_type: 'authorization_code',
+        };
+
+        // Add PKCE code verifier if state is provided
+        if (state) {
+          const codeVerifier = this.getPKCEVerifier(state);
+          if (codeVerifier) {
+            params.code_verifier = codeVerifier;
+          }
+        }
+
+        return new URLSearchParams(params);
 
       default:
+        const baseParams = {
+          client_id: appConfig.appId,
+          client_secret: appConfig.appSecret,
+          redirect_uri: appConfig.redirectUri,
+          grant_type: 'authorization_code',
+          code,
+        };
         return new URLSearchParams(baseParams);
     }
   }
@@ -351,17 +423,53 @@ export class OAuthAuthorizationService {
           'instagram_content_publish',
           'pages_show_list',
           'pages_read_engagement',
-        ];
-
-      case SocialPlatform.TIKTOK:
+        ];      case SocialPlatform.TIKTOK:
         return [
-          'user.info.basic',
-          'video.upload',
-          'video.publish',
+          'user.info.profile',
+          'user.info.stats',
+          'video.list',
         ];
 
       default:
         return [];
     }
+  }
+
+  /**
+   * Generate PKCE code verifier and challenge for TikTok OAuth
+   */
+  private generatePKCE(): PKCEPair {
+    // Generate a random 128-character string for code verifier
+    const codeVerifier = crypto.randomBytes(32).toString('base64url');
+    
+    // Create SHA256 hash of the verifier and encode as base64url
+    const codeChallenge = crypto
+      .createHash('sha256')
+      .update(codeVerifier)
+      .digest('base64url');
+
+    return {
+      codeVerifier,
+      codeChallenge,
+      codeChallengeMethod: 'S256',
+    };
+  }
+
+  /**
+   * Store PKCE code verifier for later use in token exchange
+   * In production, this should be stored in Redis or database
+   */
+  private pkceStorage = new Map<string, string>();
+
+  private storePKCEVerifier(state: string, codeVerifier: string): void {
+    this.pkceStorage.set(state, codeVerifier);
+    // Clean up after 10 minutes
+    setTimeout(() => {
+      this.pkceStorage.delete(state);
+    }, 10 * 60 * 1000);
+  }
+
+  private getPKCEVerifier(state: string): string | undefined {
+    return this.pkceStorage.get(state);
   }
 }
