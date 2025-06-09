@@ -47,7 +47,7 @@ export class SocialLoginDto {
 
   // Profile picture from OAuth provider
   profilePicture?: string;
-  
+
   // Optional YouTube data - now supports multiple channels
   youtubeChannels?: any[];
   youtubeAccessToken?: string;

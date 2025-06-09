@@ -47,8 +47,10 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
-        this.logger.log(`Attempting to connect to RabbitMQ (attempt ${attempt}/${maxRetries}): ${rabbitmqUrl}`);
-        
+        this.logger.log(
+          `Attempting to connect to RabbitMQ (attempt ${attempt}/${maxRetries}): ${rabbitmqUrl}`,
+        );
+
         this.connection = await amqp.connect(rabbitmqUrl);
         this.channel = await this.connection.createChannel();
 
@@ -65,14 +67,19 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
         return; // Success, exit retry loop
       } catch (error) {
-        this.logger.error(`Failed to connect to RabbitMQ (attempt ${attempt}/${maxRetries}):`, error);
-        
+        this.logger.error(
+          `Failed to connect to RabbitMQ (attempt ${attempt}/${maxRetries}):`,
+          error,
+        );
+
         if (attempt === maxRetries) {
-          throw new Error(`Failed to connect to RabbitMQ after ${maxRetries} attempts: ${error.message}`);
+          throw new Error(
+            `Failed to connect to RabbitMQ after ${maxRetries} attempts: ${error.message}`,
+          );
         }
 
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
       }
     }
   }
@@ -121,19 +128,13 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
     try {
       const messageBuffer = Buffer.from(JSON.stringify(message));
-      await this.channel.sendToQueue(
-        this.VIDEO_PUBLISH_QUEUE,
-        messageBuffer,
-        {
-          persistent: true,
-          messageId: message.publishingTaskId,
-          timestamp: Date.now(),
-        },
-      );
+      await this.channel.sendToQueue(this.VIDEO_PUBLISH_QUEUE, messageBuffer, {
+        persistent: true,
+        messageId: message.publishingTaskId,
+        timestamp: Date.now(),
+      });
 
-      this.logger.log(
-        `Published task to queue: ${message.publishingTaskId}`,
-      );
+      this.logger.log(`Published task to queue: ${message.publishingTaskId}`);
     } catch (error) {
       this.logger.error('Failed to publish task:', error);
       throw error;
@@ -171,7 +172,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     let waited = 0;
 
     while (!this.channel && waited < maxWait) {
-      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      await new Promise((resolve) => setTimeout(resolve, checkInterval));
       waited += checkInterval;
     }
 
@@ -192,9 +193,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
               const message: PublishingTaskMessage = JSON.parse(
                 msg.content.toString(),
               );
-              this.logger.log(
-                `Processing task: ${message.publishingTaskId}`,
-              );
+              this.logger.log(`Processing task: ${message.publishingTaskId}`);
 
               await handler(message);
 
@@ -274,10 +273,10 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   async waitForReady(timeoutMs: number = 10000): Promise<void> {
     const start = Date.now();
-    while (!this.isReady() && (Date.now() - start) < timeoutMs) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    while (!this.isReady() && Date.now() - start < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    
+
     if (!this.isReady()) {
       throw new Error('RabbitMQ service not ready within timeout');
     }

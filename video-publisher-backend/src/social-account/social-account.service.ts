@@ -29,7 +29,7 @@ export class SocialAccountService {
    */
   private convertToAccountType(accountType?: string): AccountType {
     if (!accountType) return AccountType.PROFILE;
-    
+
     const upperType = accountType.toUpperCase();
     switch (upperType) {
       case 'PAGE':
@@ -59,10 +59,14 @@ export class SocialAccountService {
         username: createDto.username,
         hasAccessToken: !!createDto.accessToken,
         accessTokenLength: createDto.accessToken?.length || 0,
-        accessTokenPreview: createDto.accessToken ? `${createDto.accessToken.substring(0, 10)}...` : 'NULL'
+        accessTokenPreview: createDto.accessToken
+          ? `${createDto.accessToken.substring(0, 10)}...`
+          : 'NULL',
       });
       console.error('===================================');
-      throw new BadRequestException(`Access token is required for creating ${createDto.platform} social account`);
+      throw new BadRequestException(
+        `Access token is required for creating ${createDto.platform} social account`,
+      );
     }
 
     console.log('=== SOCIAL ACCOUNT CREATE DEBUG ===');
@@ -70,7 +74,7 @@ export class SocialAccountService {
     console.log('Username:', createDto.username);
     console.log('Access Token Length:', createDto.accessToken.length);
     console.log('Has Refresh Token:', !!createDto.refreshToken);
-    console.log('====================================');// Check if account already exists for this user and platform
+    console.log('===================================='); // Check if account already exists for this user and platform
     const existingAccount = await this.prisma.socialAccount.findFirst({
       where: {
         platform: createDto.platform,
@@ -89,12 +93,13 @@ export class SocialAccountService {
           refreshToken: createDto.refreshToken,
           expiresAt: createDto.expiresAt,
           profilePicture: createDto.profilePicture,
-          accountType: createDto.accountType 
+          accountType: createDto.accountType
             ? this.convertToAccountType(createDto.accountType)
             : existingAccount.accountType,
           metadata: createDto.metadata || existingAccount.metadata,
           isActive: true, // Reactivate account if it was disabled
-        },        select: {
+        },
+        select: {
           id: true,
           platform: true,
           accountType: true,
@@ -113,7 +118,7 @@ export class SocialAccountService {
       console.log('=== UPDATED ACCOUNT RESPONSE DEBUG ===');
       console.log('Updated account metadata:', updatedAccount.metadata);
       console.log('=====================================');
-        return {
+      return {
         id: updatedAccount.id,
         platform: updatedAccount.platform,
         accountType: updatedAccount.accountType,
@@ -127,9 +132,9 @@ export class SocialAccountService {
         createdAt: updatedAccount.createdAt,
         updatedAt: updatedAccount.updatedAt,
       };
-    }    // Find or create appropriate social app for this user and platform
+    } // Find or create appropriate social app for this user and platform
     let socialAppId: string;
-    
+
     try {
       // First, try to find an existing social app for this user and platform
       const existingApp = await this.prisma.socialApp.findFirst({
@@ -166,36 +171,43 @@ export class SocialAccountService {
               socialAppId = appConfig.socialAppId;
             } else {
               // Create a default app using system config
-              const createdApp = await this.enhancedSocialAppService.createApp(userId, {
-                name: `Default ${createDto.platform} App`,
-                platform: createDto.platform,
-                appId: appConfig.appId,
-                appSecret: appConfig.appSecret,
-                redirectUri: appConfig.redirectUri,
-                isDefault: true,
-              });
+              const createdApp = await this.enhancedSocialAppService.createApp(
+                userId,
+                {
+                  name: `Default ${createDto.platform} App`,
+                  platform: createDto.platform,
+                  appId: appConfig.appId,
+                  appSecret: appConfig.appSecret,
+                  redirectUri: appConfig.redirectUri,
+                  isDefault: true,
+                },
+              );
               socialAppId = createdApp.id;
             }
           } catch (appConfigError) {
             throw new BadRequestException(
               `No social app configuration available for ${createDto.platform}. ` +
-              `Please configure your app credentials first or ensure OAuth credentials are properly set. ` +
-              `Error: ${appConfigError.message}`
+                `Please configure your app credentials first or ensure OAuth credentials are properly set. ` +
+                `Error: ${appConfigError.message}`,
             );
           }
         }
       }
     } catch (error) {
       throw new BadRequestException(
-        `Failed to find or create social app configuration: ${error.message}`
+        `Failed to find or create social app configuration: ${error.message}`,
       );
-    }    console.log("🚀 ~ SocialAccountService ~ socialAppId:", socialAppId);
+    }
+    console.log('🚀 ~ SocialAccountService ~ socialAppId:', socialAppId);
 
     // Debug metadata before creating account
     console.log('=== CREATING SOCIAL ACCOUNT DEBUG ===');
     console.log('Platform:', createDto.platform);
     console.log('Metadata being saved:', createDto.metadata);
-    console.log('Metadata keys:', createDto.metadata ? Object.keys(createDto.metadata) : 'No metadata');
+    console.log(
+      'Metadata keys:',
+      createDto.metadata ? Object.keys(createDto.metadata) : 'No metadata',
+    );
     console.log('====================================');
 
     const account = await this.prisma.socialAccount.create({
@@ -207,10 +219,12 @@ export class SocialAccountService {
         accessToken: createDto.accessToken,
         refreshToken: createDto.refreshToken,
         expiresAt: createDto.expiresAt,
-        profilePicture: createDto.profilePicture,        metadata: createDto.metadata || {}, // FIXED: Include metadata in creation
+        profilePicture: createDto.profilePicture,
+        metadata: createDto.metadata || {}, // FIXED: Include metadata in creation
         userId,
         socialAppId, // Use the proper socialAppId we found/created
-      },      select: {
+      },
+      select: {
         id: true,
         platform: true,
         accountType: true,
@@ -223,12 +237,15 @@ export class SocialAccountService {
         createdAt: true,
         updatedAt: true,
       },
-    });    // Map schema fields to DTO fields
+    }); // Map schema fields to DTO fields
     console.log('=== FINAL ACCOUNT RESPONSE DEBUG ===');
     console.log('Account metadata from DB:', account.metadata);
-    console.log('Account metadata keys:', account.metadata ? Object.keys(account.metadata) : 'No metadata');
+    console.log(
+      'Account metadata keys:',
+      account.metadata ? Object.keys(account.metadata) : 'No metadata',
+    );
     console.log('===================================');
-      return {
+    return {
       id: account.id,
       platform: account.platform,
       accountType: account.accountType,
@@ -261,7 +278,7 @@ export class SocialAccountService {
     });
 
     // Map schema fields to DTO fields
-    return accounts.map(account => ({
+    return accounts.map((account) => ({
       id: account.id,
       platform: account.platform,
       accountType: account.accountType,
@@ -301,7 +318,7 @@ export class SocialAccountService {
     });
 
     // Map schema fields to DTO fields
-    return accounts.map(account => ({
+    return accounts.map((account) => ({
       id: account.id,
       platform: account.platform,
       accountType: account.accountType,
@@ -366,10 +383,13 @@ export class SocialAccountService {
     const updateData: any = {};
     if (updateDto.username) updateData.accountName = updateDto.username;
     if (updateDto.accessToken) updateData.accessToken = updateDto.accessToken;
-    if (updateDto.refreshToken) updateData.refreshToken = updateDto.refreshToken;
+    if (updateDto.refreshToken)
+      updateData.refreshToken = updateDto.refreshToken;
     if (updateDto.expiresAt) updateData.expiresAt = updateDto.expiresAt;
-    if (updateDto.profilePictureUrl) updateData.profilePicture = updateDto.profilePictureUrl;
-    if (updateDto.isActive !== undefined) updateData.isActive = updateDto.isActive;
+    if (updateDto.profilePictureUrl)
+      updateData.profilePicture = updateDto.profilePictureUrl;
+    if (updateDto.isActive !== undefined)
+      updateData.isActive = updateDto.isActive;
 
     const account = await this.prisma.socialAccount.update({
       where: { id: accountId },
@@ -466,10 +486,7 @@ export class SocialAccountService {
     if (status) {
       if (status === 'active') {
         where.isActive = true;
-        where.OR = [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } }
-        ];
+        where.OR = [{ expiresAt: null }, { expiresAt: { gt: new Date() } }];
       } else if (status === 'inactive') {
         where.isActive = false;
       } else if (status === 'expired') {
@@ -493,12 +510,20 @@ export class SocialAccountService {
     const skip = (page - 1) * limit;
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;    // Build order by - validate sortBy field exists in schema
-    const validSortFields = ['accountName', 'platform', 'accountType', 'isActive', 'expiresAt'];
-    const validSortBy = validSortFields.includes(sortBy) ? sortBy : 'accountName';
-    
+    const hasPrevPage = page > 1; // Build order by - validate sortBy field exists in schema
+    const validSortFields = [
+      'accountName',
+      'platform',
+      'accountType',
+      'isActive',
+      'expiresAt',
+    ];
+    const validSortBy = validSortFields.includes(sortBy)
+      ? sortBy
+      : 'accountName';
+
     const orderBy: any = {};
-    orderBy[validSortBy] = sortOrder;// Fetch accounts
+    orderBy[validSortBy] = sortOrder; // Fetch accounts
     const accounts = await this.prisma.socialAccount.findMany({
       where,
       select: {
@@ -515,8 +540,8 @@ export class SocialAccountService {
       orderBy,
       skip,
       take: limit,
-    });    // Map schema fields to DTO fields
-    const data = accounts.map(account => ({
+    }); // Map schema fields to DTO fields
+    const data = accounts.map((account) => ({
       id: account.id,
       platform: account.platform,
       accountType: account.accountType,
@@ -529,7 +554,8 @@ export class SocialAccountService {
       metadata: account.metadata || {}, // Default to empty object if not set
       createdAt: new Date(), // Default value since not in schema
       updatedAt: new Date(), // Default value since not in schema
-    }));    return {
+    }));
+    return {
       data,
       total,
       page,
@@ -547,14 +573,15 @@ export class SocialAccountService {
     console.log('User ID:', userId);
     console.log('Account ID:', accountId);
     console.log('Timestamp:', new Date().toISOString());
-    
+
     // Get the social account
     const account = await this.prisma.socialAccount.findFirst({
       where: {
         id: accountId,
         userId,
       },
-    });    console.log('Account found:', !!account);
+    });
+    console.log('Account found:', !!account);
     if (account) {
       console.log('Account details:', {
         id: account.id,
@@ -566,23 +593,27 @@ export class SocialAccountService {
         hasRefreshToken: !!account.refreshToken,
         accessTokenLength: account.accessToken?.length || 0,
         refreshTokenLength: account.refreshToken?.length || 0,
-        expiresAt: account.expiresAt
+        expiresAt: account.expiresAt,
       });
     } else {
       // Check if account exists with different userId
-      const accountWithDifferentUser = await this.prisma.socialAccount.findUnique({
-        where: { id: accountId },
-        select: { id: true, userId: true, platform: true, accountName: true }
-      });
-      
-      console.log('Account exists with different user:', !!accountWithDifferentUser);
+      const accountWithDifferentUser =
+        await this.prisma.socialAccount.findUnique({
+          where: { id: accountId },
+          select: { id: true, userId: true, platform: true, accountName: true },
+        });
+
+      console.log(
+        'Account exists with different user:',
+        !!accountWithDifferentUser,
+      );
       if (accountWithDifferentUser) {
         console.log('Account belongs to different user:', {
           accountId: accountWithDifferentUser.id,
           actualUserId: accountWithDifferentUser.userId,
           requestedUserId: userId,
           platform: accountWithDifferentUser.platform,
-          accountName: accountWithDifferentUser.accountName
+          accountName: accountWithDifferentUser.accountName,
         });
       }
     }
@@ -590,16 +621,21 @@ export class SocialAccountService {
 
     if (!account) {
       throw new NotFoundException('Social account not found');
-    }    // Facebook uses access token exchange instead of refresh tokens
+    } // Facebook uses access token exchange instead of refresh tokens
     if (!account.refreshToken && account.platform !== 'FACEBOOK') {
-      throw new BadRequestException('No refresh token available for this account');
+      throw new BadRequestException(
+        'No refresh token available for this account',
+      );
     }
 
     // Use TokenManagerService to refresh the token
-    const refreshResult = await this.tokenManagerService.refreshTokenIfNeeded(accountId);
+    const refreshResult =
+      await this.tokenManagerService.refreshTokenIfNeeded(accountId);
 
     if (!refreshResult.success) {
-      throw new BadRequestException(refreshResult.errorMessage || 'Failed to refresh token');
+      throw new BadRequestException(
+        refreshResult.errorMessage || 'Failed to refresh token',
+      );
     }
 
     // Get updated account data
@@ -616,7 +652,7 @@ export class SocialAccountService {
         expiresAt: true,
         metadata: true,
       },
-    });    // Map to response DTO
+    }); // Map to response DTO
     return {
       id: updatedAccount.id,
       platform: updatedAccount.platform,
@@ -632,7 +668,10 @@ export class SocialAccountService {
       updatedAt: new Date(), // Default value since not in schema
     };
   }
-  async deleteBulk(userId: string, accountIds: string[]): Promise<{ success: boolean; deletedCount: number; errors?: any[] }> {
+  async deleteBulk(
+    userId: string,
+    accountIds: string[],
+  ): Promise<{ success: boolean; deletedCount: number; errors?: any[] }> {
     console.log('=== DELETE BULK DEBUG START ===');
     console.log('Timestamp:', new Date().toISOString());
     console.log('User ID:', userId);
@@ -650,7 +689,7 @@ export class SocialAccountService {
     for (const accountId of accountIds) {
       try {
         console.log(`--- Processing account ID: ${accountId} ---`);
-        
+
         // Check if account exists and belongs to user
         const account = await this.prisma.socialAccount.findFirst({
           where: {
@@ -666,31 +705,37 @@ export class SocialAccountService {
             platform: account.platform,
             accountName: account.accountName,
             userId: account.userId,
-            isActive: account.isActive
+            isActive: account.isActive,
           });
         }
 
         if (!account) {
           console.log(`Account ${accountId} not found for user ${userId}`);
-          
+
           // Check if account exists with different user ID for debugging
-          const accountWithDifferentUser = await this.prisma.socialAccount.findFirst({
-            where: { id: accountId },
-            select: { id: true, userId: true, platform: true, accountName: true }
-          });
-          
+          const accountWithDifferentUser =
+            await this.prisma.socialAccount.findFirst({
+              where: { id: accountId },
+              select: {
+                id: true,
+                userId: true,
+                platform: true,
+                accountName: true,
+              },
+            });
+
           if (accountWithDifferentUser) {
             console.log('Account exists but with different user ID:', {
               accountId: accountWithDifferentUser.id,
               expectedUserId: userId,
               actualUserId: accountWithDifferentUser.userId,
               platform: accountWithDifferentUser.platform,
-              accountName: accountWithDifferentUser.accountName
+              accountName: accountWithDifferentUser.accountName,
             });
           } else {
             console.log('Account does not exist in database at all');
           }
-          
+
           errors.push({
             accountId,
             error: 'Account not found or access denied',
@@ -726,7 +771,10 @@ export class SocialAccountService {
 
     return result;
   }
-  async refreshTokensBulk(userId: string, accountIds: string[]): Promise<{
+  async refreshTokensBulk(
+    userId: string,
+    accountIds: string[],
+  ): Promise<{
     successCount: number;
     failureCount: number;
     results: Array<{
@@ -759,11 +807,11 @@ export class SocialAccountService {
 
     for (const accountId of accountIds) {
       console.log(`--- Processing refresh for account ID: ${accountId} ---`);
-      
+
       try {
         const refreshedAccount = await this.refreshToken(userId, accountId);
         console.log(`Successfully refreshed account ${accountId}`);
-        
+
         results.push({
           accountId,
           success: true,
@@ -772,7 +820,7 @@ export class SocialAccountService {
         successCount++;
       } catch (error) {
         console.log(`Failed to refresh account ${accountId}:`, error.message);
-        
+
         results.push({
           accountId,
           success: false,
@@ -791,7 +839,7 @@ export class SocialAccountService {
     console.log('Refresh bulk final result:', {
       successCount: result.successCount,
       failureCount: result.failureCount,
-      totalProcessed: result.results.length
+      totalProcessed: result.results.length,
     });
     console.log('=== REFRESH BULK DEBUG END ===');
 

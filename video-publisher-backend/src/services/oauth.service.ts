@@ -10,7 +10,7 @@ export class OAuthService {
     this.googleClient = new OAuth2Client(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_CALLBACK_URL
+      process.env.GOOGLE_CALLBACK_URL,
     );
   }
 
@@ -34,9 +34,9 @@ export class OAuthService {
   async verifyFacebookToken(token: string): Promise<any> {
     try {
       const response = await axios.get(
-        `https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token=${token}`
+        `https://graph.facebook.com/me?fields=id,name,email,picture.width(400).height(400)&access_token=${token}`,
       );
-      
+
       if (!response.data || !response.data.id) {
         throw new Error('Invalid Facebook response');
       }
@@ -51,4 +51,4 @@ export class OAuthService {
       throw new UnauthorizedException('Invalid Facebook token');
     }
   }
-} 
+}

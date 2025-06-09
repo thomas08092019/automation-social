@@ -18,10 +18,12 @@ export class TokenManagerService {
 
   constructor(
     private prisma: PrismaService,
-    private enhancedSocialAppService: EnhancedSocialAppService
+    private enhancedSocialAppService: EnhancedSocialAppService,
   ) {}
 
-  async refreshTokenIfNeeded(socialAccountId: string): Promise<TokenRefreshResult> {
+  async refreshTokenIfNeeded(
+    socialAccountId: string,
+  ): Promise<TokenRefreshResult> {
     try {
       const socialAccount = await this.prisma.socialAccount.findUnique({
         where: { id: socialAccountId },
@@ -95,24 +97,32 @@ export class TokenManagerService {
     }
   }
 
-  private async refreshFacebookToken(socialAccount: any): Promise<TokenRefreshResult> {
+  private async refreshFacebookToken(
+    socialAccount: any,
+  ): Promise<TokenRefreshResult> {
     try {
       // Get app configuration for Facebook
-      const platform = socialAccount.platform === SocialPlatform.INSTAGRAM ? SocialPlatform.INSTAGRAM : SocialPlatform.FACEBOOK;
+      const platform =
+        socialAccount.platform === SocialPlatform.INSTAGRAM
+          ? SocialPlatform.INSTAGRAM
+          : SocialPlatform.FACEBOOK;
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
         userId: socialAccount.userId,
         platform,
         socialAccountId: socialAccount.id,
       });
 
-      const response = await axios.get('https://graph.facebook.com/oauth/access_token', {
-        params: {
-          grant_type: 'fb_exchange_token',
-          client_id: appConfig.appId,
-          client_secret: appConfig.appSecret,
-          fb_exchange_token: socialAccount.accessToken,
+      const response = await axios.get(
+        'https://graph.facebook.com/oauth/access_token',
+        {
+          params: {
+            grant_type: 'fb_exchange_token',
+            client_id: appConfig.appId,
+            client_secret: appConfig.appSecret,
+            fb_exchange_token: socialAccount.accessToken,
+          },
         },
-      });
+      );
 
       return {
         success: true,
@@ -128,7 +138,9 @@ export class TokenManagerService {
     }
   }
 
-  private async refreshGoogleToken(socialAccount: any): Promise<TokenRefreshResult> {
+  private async refreshGoogleToken(
+    socialAccount: any,
+  ): Promise<TokenRefreshResult> {
     try {
       if (!socialAccount.refreshToken) {
         return {
@@ -136,7 +148,7 @@ export class TokenManagerService {
           errorMessage: 'No refresh token available',
         };
       }
-      
+
       // Get app configuration for YouTube
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
         userId: socialAccount.userId,
@@ -166,7 +178,9 @@ export class TokenManagerService {
     }
   }
 
-  private async refreshTikTokToken(socialAccount: any): Promise<TokenRefreshResult> {
+  private async refreshTikTokToken(
+    socialAccount: any,
+  ): Promise<TokenRefreshResult> {
     try {
       if (!socialAccount.refreshToken) {
         return {
@@ -182,15 +196,19 @@ export class TokenManagerService {
         socialAccountId: socialAccount.id,
       });
 
-      const response = await axios.post('https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/', {
-        app_id: appConfig.appId,
-        secret: appConfig.appSecret,
-        refresh_token: socialAccount.refreshToken,
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await axios.post(
+        'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/',
+        {
+          app_id: appConfig.appId,
+          secret: appConfig.appSecret,
+          refresh_token: socialAccount.refreshToken,
         },
-      });
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
 
       if (response.data.code !== 0) {
         return {
@@ -214,10 +232,14 @@ export class TokenManagerService {
     }
   }
 
-  private async updateTokens(socialAccountId: string, tokens: TokenRefreshResult): Promise<void> {
-    const expiresAt = tokens.expiresIn 
+  private async updateTokens(
+    socialAccountId: string,
+    tokens: TokenRefreshResult,
+  ): Promise<void> {
+    const expiresAt = tokens.expiresIn
       ? new Date(Date.now() + tokens.expiresIn * 1000)
-      : null;    await this.prisma.socialAccount.update({
+      : null;
+    await this.prisma.socialAccount.update({
       where: { id: socialAccountId },
       data: {
         accessToken: tokens.accessToken,
@@ -231,14 +253,20 @@ export class TokenManagerService {
    * Get Facebook Page Access Token from User Access Token
    * This is needed for posting to Facebook Pages
    */
-  async getPageAccessToken(userAccessToken: string, pageId: string): Promise<{ success: boolean; pageToken?: string; errorMessage?: string }> {
+  async getPageAccessToken(
+    userAccessToken: string,
+    pageId: string,
+  ): Promise<{ success: boolean; pageToken?: string; errorMessage?: string }> {
     try {
-      const response = await axios.get(`https://graph.facebook.com/v18.0/${pageId}`, {
-        params: {
-          fields: 'access_token',
-          access_token: userAccessToken,
+      const response = await axios.get(
+        `https://graph.facebook.com/v18.0/${pageId}`,
+        {
+          params: {
+            fields: 'access_token',
+            access_token: userAccessToken,
+          },
         },
-      });
+      );
 
       return {
         success: true,
@@ -257,20 +285,27 @@ export class TokenManagerService {
    * Get Instagram Business Account ID from Facebook Page
    * This is needed for Instagram uploads
    */
-  async getInstagramBusinessAccountId(pageAccessToken: string, pageId: string): Promise<{ success: boolean; igUserId?: string; errorMessage?: string }> {
+  async getInstagramBusinessAccountId(
+    pageAccessToken: string,
+    pageId: string,
+  ): Promise<{ success: boolean; igUserId?: string; errorMessage?: string }> {
     try {
-      const response = await axios.get(`https://graph.facebook.com/v18.0/${pageId}`, {
-        params: {
-          fields: 'instagram_business_account',
-          access_token: pageAccessToken,
+      const response = await axios.get(
+        `https://graph.facebook.com/v18.0/${pageId}`,
+        {
+          params: {
+            fields: 'instagram_business_account',
+            access_token: pageAccessToken,
+          },
         },
-      });
+      );
 
       const igUserId = response.data.instagram_business_account?.id;
       if (!igUserId) {
         return {
           success: false,
-          errorMessage: 'No Instagram Business Account linked to this Facebook Page',
+          errorMessage:
+            'No Instagram Business Account linked to this Facebook Page',
         };
       }
 
@@ -291,7 +326,10 @@ export class TokenManagerService {
    * Get TikTok Creator/Business Account Token
    * This handles both Creator and Business account token flows
    */
-  async getTikTokCreatorToken(refreshToken: string, userId: string): Promise<TokenRefreshResult> {
+  async getTikTokCreatorToken(
+    refreshToken: string,
+    userId: string,
+  ): Promise<TokenRefreshResult> {
     try {
       // Get the app configuration for TikTok from the enhanced app service
       const appConfig = await this.enhancedSocialAppService.getAppConfig({
@@ -299,16 +337,20 @@ export class TokenManagerService {
         platform: SocialPlatform.TIKTOK,
       });
 
-      const response = await axios.post('https://open-api.tiktok.com/oauth/refresh_token/', {
-        client_key: appConfig.appId,
-        client_secret: appConfig.appSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await axios.post(
+        'https://open-api.tiktok.com/oauth/refresh_token/',
+        {
+          client_key: appConfig.appId,
+          client_secret: appConfig.appSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token',
         },
-      });
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
 
       const data = response.data;
       if (data.error_code !== 0) {
@@ -333,7 +375,16 @@ export class TokenManagerService {
   /**
    * Validate and convert token types based on platform requirements
    */
-  async getValidTokenForPlatform(socialAccountId: string, platform: string, pageId?: string): Promise<{ success: boolean; token?: string; additionalData?: any; errorMessage?: string }> {
+  async getValidTokenForPlatform(
+    socialAccountId: string,
+    platform: string,
+    pageId?: string,
+  ): Promise<{
+    success: boolean;
+    token?: string;
+    additionalData?: any;
+    errorMessage?: string;
+  }> {
     try {
       const socialAccount = await this.prisma.socialAccount.findUnique({
         where: { id: socialAccountId },
@@ -358,7 +409,10 @@ export class TokenManagerService {
         case 'facebook':
           if (pageId) {
             // Get page access token for posting to Facebook Page
-            const pageTokenResult = await this.getPageAccessToken(userToken, pageId);
+            const pageTokenResult = await this.getPageAccessToken(
+              userToken,
+              pageId,
+            );
             return {
               success: pageTokenResult.success,
               token: pageTokenResult.pageToken,
@@ -373,12 +427,18 @@ export class TokenManagerService {
         case 'instagram':
           if (pageId) {
             // First get page token, then get Instagram Business Account ID
-            const pageTokenResult = await this.getPageAccessToken(userToken, pageId);
+            const pageTokenResult = await this.getPageAccessToken(
+              userToken,
+              pageId,
+            );
             if (!pageTokenResult.success) {
               return pageTokenResult;
             }
 
-            const igAccountResult = await this.getInstagramBusinessAccountId(pageTokenResult.pageToken, pageId);
+            const igAccountResult = await this.getInstagramBusinessAccountId(
+              pageTokenResult.pageToken,
+              pageId,
+            );
             return {
               success: igAccountResult.success,
               token: pageTokenResult.pageToken,
@@ -412,7 +472,10 @@ export class TokenManagerService {
           };
       }
     } catch (error) {
-      this.logger.error(`Failed to get valid token for platform ${platform}:`, error);
+      this.logger.error(
+        `Failed to get valid token for platform ${platform}:`,
+        error,
+      );
       return {
         success: false,
         errorMessage: error.message || 'Failed to get valid token',

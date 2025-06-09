@@ -55,7 +55,9 @@ export class OAuthAuthorizationService {
 
   /**
    * Generate authorization URL with enhanced app selection
-   */  async generateAuthorizationUrl(request: AuthorizationRequest): Promise<AuthorizationResult> {
+   */ async generateAuthorizationUrl(
+    request: AuthorizationRequest,
+  ): Promise<AuthorizationResult> {
     try {
       // Validate platform is supported
       if (!Object.values(SocialPlatform).includes(request.platform)) {
@@ -90,8 +92,9 @@ export class OAuthAuthorizationService {
       }
 
       // Get scopes from request or default
-      const scopes = request.customScopes || this.getDefaultScopes(request.platform);
-      
+      const scopes =
+        request.customScopes || this.getDefaultScopes(request.platform);
+
       if (!scopes || scopes.length === 0) {
         return {
           success: false,
@@ -108,7 +111,11 @@ export class OAuthAuthorizationService {
         socialAppId: appConfig.socialAppId,
       };
 
-      const authorizationUrl = this.buildAuthorizationUrl(request.platform, oauthConfig, request.state);
+      const authorizationUrl = this.buildAuthorizationUrl(
+        request.platform,
+        oauthConfig,
+        request.state,
+      );
 
       return {
         success: true,
@@ -125,7 +132,11 @@ export class OAuthAuthorizationService {
   /**
    * Build platform-specific authorization URL
    */
-  private buildAuthorizationUrl(platform: SocialPlatform, config: OAuthConfig, state?: string): string {
+  private buildAuthorizationUrl(
+    platform: SocialPlatform,
+    config: OAuthConfig,
+    state?: string,
+  ): string {
     switch (platform) {
       case SocialPlatform.YOUTUBE:
         const googleParams = new URLSearchParams({
@@ -148,13 +159,15 @@ export class OAuthAuthorizationService {
           response_type: 'code',
           ...(state && { state }),
         });
-        return `https://www.facebook.com/v18.0/dialog/oauth?${facebookParams.toString()}`;      case SocialPlatform.TIKTOK:
+        return `https://www.facebook.com/v18.0/dialog/oauth?${facebookParams.toString()}`;
+      case SocialPlatform.TIKTOK:
         // TikTok requires PKCE (Proof Key for Code Exchange) for security
         const pkce = this.generatePKCE();
         const tiktokState = state || crypto.randomUUID();
-        
+
         // Store the code verifier for later use in token exchange
-        this.storePKCEVerifier(tiktokState, pkce.codeVerifier);        const tiktokParams = new URLSearchParams({
+        this.storePKCEVerifier(tiktokState, pkce.codeVerifier);
+        const tiktokParams = new URLSearchParams({
           client_key: config.clientId, // TikTok uses 'client_key' instead of 'client_id'
           redirect_uri: config.redirectUri,
           scope: config.scopes.join(','), // TikTok uses comma-separated scopes
@@ -194,13 +207,16 @@ export class OAuthAuthorizationService {
           cache_buster: Math.random().toString(36).substring(7), // Additional cache buster
           force_interactive: 'true', // Force interactive mode
         });
-          const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${tiktokParams.toString()}`;
-          // Debug logging for TikTok OAuth URL        console.log('=== TikTok OAuth URL Debug ===');
+        const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${tiktokParams.toString()}`;
+        // Debug logging for TikTok OAuth URL        console.log('=== TikTok OAuth URL Debug ===');
         console.log(`Client Key: ${config.clientId}`);
         console.log(`Redirect URI: ${config.redirectUri}`);
         console.log(`Scopes: ${config.scopes.join(',')}`);
         console.log(`State: ${tiktokState}`);
-        console.log(`Code Challenge: ${pkce.codeChallenge.substring(0, 20)}...`);        console.log(`🔒 ULTIMATE FORCE PARAMETERS ENABLED:`);
+        console.log(
+          `Code Challenge: ${pkce.codeChallenge.substring(0, 20)}...`,
+        );
+        console.log(`🔒 ULTIMATE FORCE PARAMETERS ENABLED:`);
         console.log(`   - force_reauth: true (Forces re-authentication)`);
         console.log(`   - force_verify: true (Forces permission verification)`);
         console.log(`   - approval_prompt: force (Forces approval screens)`);
@@ -212,26 +228,36 @@ export class OAuthAuthorizationService {
         console.log(`   - auth_type: rerequest (Force permission re-request)`);
         console.log(`   - display: popup (Prevent auto-redirect)`);
         console.log(`   - force_show_permission: true (TikTok-specific force)`);
-        console.log(`   - force_authorization: true (Force authorization screens)`);
+        console.log(
+          `   - force_authorization: true (Force authorization screens)`,
+        );
         console.log(`   - disable_auto_login: true (Disable automatic login)`);
         console.log(`   - always_prompt: true (Always show prompts)`);
-        console.log(`   - require_interaction: true (Require user interaction)`);
-        console.log(`   - include_granted_scopes: false (No cached permissions)`);
+        console.log(
+          `   - require_interaction: true (Require user interaction)`,
+        );
+        console.log(
+          `   - include_granted_scopes: false (No cached permissions)`,
+        );
         console.log(`   - fresh: true (Forces fresh authorization)`);
         console.log(`   - no_cache: true (Prevents caching)`);
-        console.log(`   - session_invalidate: true (Invalidates existing session)`);
+        console.log(
+          `   - session_invalidate: true (Invalidates existing session)`,
+        );
         console.log(`   - force_interactive: true (Force interactive mode)`);
         console.log(`Generated URL: ${authUrl}`);
         console.log('==============================');
-        
+
         // Additional debug info for troubleshooting
         console.log('=== TikTok OAuth Configuration Check ===');
         console.log(`Full Client Key: ${config.clientId}`);
         console.log(`Expected Redirect URI: ${config.redirectUri}`);
         console.log(`Expected Scopes: ${config.scopes.join(',')}`);
-        console.log('Make sure these match EXACTLY in your TikTok Developer Console');
+        console.log(
+          'Make sure these match EXACTLY in your TikTok Developer Console',
+        );
         console.log('==========================================');
-        
+
         return authUrl;
 
       default:
@@ -302,22 +328,30 @@ export class OAuthAuthorizationService {
         errorMessage: error.message,
       };
     }
-  }  /**
+  }
+  /**
    * Perform actual token exchange
-   */  private async performTokenExchange(
+   */ private async performTokenExchange(
     platform: SocialPlatform,
     code: string,
     appConfig: any,
     state?: string,
-  ): Promise<TokenExchangeResult> {    const tokenEndpoint = this.getTokenEndpoint(platform);
-    const params = this.buildTokenRequestParams(platform, appConfig, code, state);
+  ): Promise<TokenExchangeResult> {
+    const tokenEndpoint = this.getTokenEndpoint(platform);
+    const params = this.buildTokenRequestParams(
+      platform,
+      appConfig,
+      code,
+      state,
+    );
 
     console.log(`=== ${platform} Token Exchange Debug ===`);
     console.log('Token Endpoint:', tokenEndpoint);
     console.log('Request Params:', Object.fromEntries(params.entries()));
     console.log('==========================================');
 
-    try {      // Add timeout and retry logic to handle authorization code expiration
+    try {
+      // Add timeout and retry logic to handle authorization code expiration
       const response = await axios.post(tokenEndpoint, params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -329,7 +363,7 @@ export class OAuthAuthorizationService {
       });
 
       const data = response.data;
-      
+
       console.log(`=== ${platform} Token Response Debug ===`);
       console.log('Raw Response Data:', JSON.stringify(data, null, 2));
       console.log('Response Status:', response.status);
@@ -340,7 +374,11 @@ export class OAuthAuthorizationService {
       if (platform === SocialPlatform.TIKTOK) {
         // TikTok API response structure validation
         if (data.error || data.error_code) {
-          const errorMsg = data.error_description || data.message || data.error || 'TikTok token exchange failed';
+          const errorMsg =
+            data.error_description ||
+            data.message ||
+            data.error ||
+            'TikTok token exchange failed';
           console.error('TikTok API Error:', data);
           return {
             success: false,
@@ -357,15 +395,24 @@ export class OAuthAuthorizationService {
 
         console.log('=== TikTok Token Extraction Debug ===');
         console.log('Has data.data:', !!data.data);
-        console.log('Extracted access_token:', accessToken ? `${accessToken.substring(0, 10)}...` : 'MISSING');
-        console.log('Extracted refresh_token:', refreshToken ? 'Present' : 'Missing');
+        console.log(
+          'Extracted access_token:',
+          accessToken ? `${accessToken.substring(0, 10)}...` : 'MISSING',
+        );
+        console.log(
+          'Extracted refresh_token:',
+          refreshToken ? 'Present' : 'Missing',
+        );
         console.log('Extracted expires_in:', expiresIn);
         console.log('Extracted scope:', scope);
         console.log('=====================================');
 
         if (!accessToken) {
           console.error('=== TikTok Access Token Missing ===');
-          console.error('Full response structure:', JSON.stringify(data, null, 2));
+          console.error(
+            'Full response structure:',
+            JSON.stringify(data, null, 2),
+          );
           console.error('Expected paths checked:');
           console.error('- data.access_token:', data.access_token);
           console.error('- data.data.access_token:', data.data?.access_token);
@@ -405,7 +452,7 @@ export class OAuthAuthorizationService {
         headers: error.response?.headers,
       });
       console.error('=======================================');
-      
+
       return {
         success: false,
         errorMessage: `Token exchange failed: ${error.response?.data?.error_description || error.response?.data?.message || error.message}`,
@@ -422,7 +469,11 @@ export class OAuthAuthorizationService {
     appConfig: any,
   ): Promise<TokenExchangeResult> {
     const tokenEndpoint = this.getTokenEndpoint(platform);
-    const params = this.buildRefreshTokenParams(platform, appConfig, refreshToken);
+    const params = this.buildRefreshTokenParams(
+      platform,
+      appConfig,
+      refreshToken,
+    );
 
     try {
       const response = await axios.post(tokenEndpoint, params, {
@@ -451,7 +502,8 @@ export class OAuthAuthorizationService {
   /**
    * Get platform-specific token endpoint
    */
-  private getTokenEndpoint(platform: SocialPlatform): string {    switch (platform) {
+  private getTokenEndpoint(platform: SocialPlatform): string {
+    switch (platform) {
       case SocialPlatform.YOUTUBE:
         return 'https://oauth2.googleapis.com/token';
 
@@ -468,8 +520,14 @@ export class OAuthAuthorizationService {
   }
   /**
    * Build token request parameters
-   */  private buildTokenRequestParams(platform: SocialPlatform, appConfig: any, code: string, state?: string): URLSearchParams {
-    switch (platform) {      case SocialPlatform.TIKTOK:
+   */ private buildTokenRequestParams(
+    platform: SocialPlatform,
+    appConfig: any,
+    code: string,
+    state?: string,
+  ): URLSearchParams {
+    switch (platform) {
+      case SocialPlatform.TIKTOK:
         // TikTok uses different parameter names and requires PKCE
         const params: any = {
           client_key: appConfig.appId, // TikTok uses 'client_key' instead of 'client_id'
@@ -503,7 +561,11 @@ export class OAuthAuthorizationService {
   /**
    * Build refresh token parameters
    */
-  private buildRefreshTokenParams(platform: SocialPlatform, appConfig: any, refreshToken: string): URLSearchParams {
+  private buildRefreshTokenParams(
+    platform: SocialPlatform,
+    appConfig: any,
+    refreshToken: string,
+  ): URLSearchParams {
     const baseParams = {
       client_id: appConfig.appId,
       client_secret: appConfig.appSecret,
@@ -528,7 +590,7 @@ export class OAuthAuthorizationService {
 
   /**
    * Get default scopes for platform
-   */  private getDefaultScopes(platform: SocialPlatform): string[] {
+   */ private getDefaultScopes(platform: SocialPlatform): string[] {
     switch (platform) {
       case SocialPlatform.YOUTUBE:
         return [
@@ -551,7 +613,8 @@ export class OAuthAuthorizationService {
           'instagram_content_publish',
           'pages_show_list',
           'pages_read_engagement',
-        ];      case SocialPlatform.TIKTOK:
+        ];
+      case SocialPlatform.TIKTOK:
         return [
           'user.info.basic',
           'user.info.profile',
@@ -575,7 +638,7 @@ export class OAuthAuthorizationService {
   private generatePKCE(): PKCEPair {
     // Generate a random 128-character string for code verifier
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
-    
+
     // Create SHA256 hash of the verifier and encode as base64url
     const codeChallenge = crypto
       .createHash('sha256')
@@ -598,9 +661,12 @@ export class OAuthAuthorizationService {
   private storePKCEVerifier(state: string, codeVerifier: string): void {
     this.pkceStorage.set(state, codeVerifier);
     // Clean up after 10 minutes
-    setTimeout(() => {
-      this.pkceStorage.delete(state);
-    }, 10 * 60 * 1000);
+    setTimeout(
+      () => {
+        this.pkceStorage.delete(state);
+      },
+      10 * 60 * 1000,
+    );
   }
 
   private getPKCEVerifier(state: string): string | undefined {

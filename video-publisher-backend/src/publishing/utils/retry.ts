@@ -1,4 +1,3 @@
-
 import { Logger } from '@nestjs/common';
 
 export interface RetryOptions {
@@ -33,9 +32,12 @@ export class RetryUtil {
         return await operation();
       } catch (error) {
         lastError = error as Error;
-        
-        const isRetryable = this.isRetryableError(error as Error, retryableErrors);
-        
+
+        const isRetryable = this.isRetryableError(
+          error as Error,
+          retryableErrors,
+        );
+
         if (!isRetryable || attempt === maxAttempts) {
           this.logger.error(
             `${context}: Failed after ${attempt} attempts`,
@@ -61,7 +63,10 @@ export class RetryUtil {
     throw lastError!;
   }
 
-  private static isRetryableError(error: Error, retryableErrors?: string[]): boolean {
+  private static isRetryableError(
+    error: Error,
+    retryableErrors?: string[],
+  ): boolean {
     // Check if error has retryable property
     if ('retryable' in error) {
       return (error as any).retryable === true;
@@ -69,10 +74,11 @@ export class RetryUtil {
 
     // Check against specific error codes
     if (retryableErrors) {
-      return retryableErrors.some(code => 
-        error.message.includes(code) || 
-        error.name.includes(code) ||
-        ('code' in error && (error as any).code === code)
+      return retryableErrors.some(
+        (code) =>
+          error.message.includes(code) ||
+          error.name.includes(code) ||
+          ('code' in error && (error as any).code === code),
       );
     }
 
@@ -83,13 +89,15 @@ export class RetryUtil {
     }
 
     // Network errors are usually retryable
-    return error.name === 'NetworkError' || 
-           error.message.includes('ECONNRESET') ||
-           error.message.includes('ETIMEDOUT') ||
-           error.message.includes('ENOTFOUND');
+    return (
+      error.name === 'NetworkError' ||
+      error.message.includes('ECONNRESET') ||
+      error.message.includes('ETIMEDOUT') ||
+      error.message.includes('ENOTFOUND')
+    );
   }
 
   private static sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

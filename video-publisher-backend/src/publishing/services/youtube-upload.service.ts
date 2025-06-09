@@ -11,13 +11,13 @@ import { EnhancedSocialAppService } from '../../auth/enhanced-social-app.service
 import { RetryUtil, RetryOptions } from '../utils/retry';
 import { RateLimiter } from '../utils/rate-limiter';
 import { VideoValidator } from '../utils/video-validator';
-import { 
-  PublishingError, 
-  TokenExpiredError, 
-  RateLimitError, 
+import {
+  PublishingError,
+  TokenExpiredError,
+  RateLimitError,
   VideoValidationError,
   NetworkError,
-  PlatformAPIError 
+  PlatformAPIError,
 } from '../utils/errors';
 import * as fs from 'fs';
 
@@ -41,9 +41,11 @@ export class YoutubeUploadService extends BasePlatformUploadService {
 
   async uploadVideo(context: UploadContext): Promise<UploadResult> {
     const platform = 'youtube';
-    
+
     try {
-      this.logger.log(`Starting YouTube Shorts upload for video ${context.video.id}`);
+      this.logger.log(
+        `Starting YouTube Shorts upload for video ${context.video.id}`,
+      );
 
       // Validate video against YouTube requirements
       await VideoValidator.validateVideo(platform, context.video.filePath, {
@@ -59,10 +61,12 @@ export class YoutubeUploadService extends BasePlatformUploadService {
         this.RETRY_OPTIONS,
         `YouTube upload for video ${context.video.id}`,
       );
-
     } catch (error) {
-      this.logger.error(`YouTube upload failed for video ${context.video.id}:`, error);
-      
+      this.logger.error(
+        `YouTube upload failed for video ${context.video.id}:`,
+        error,
+      );
+
       if (error instanceof VideoValidationError) {
         return {
           success: false,
@@ -80,13 +84,15 @@ export class YoutubeUploadService extends BasePlatformUploadService {
       if (error instanceof TokenExpiredError) {
         return {
           success: false,
-          errorMessage: 'Authentication failed. Please reconnect your YouTube account.',
+          errorMessage:
+            'Authentication failed. Please reconnect your YouTube account.',
         };
       }
 
       return {
         success: false,
-        errorMessage: error.message || 'Unknown error occurred during YouTube upload',
+        errorMessage:
+          error.message || 'Unknown error occurred during YouTube upload',
       };
     }
   }
@@ -94,7 +100,9 @@ export class YoutubeUploadService extends BasePlatformUploadService {
   private async performUpload(context: UploadContext): Promise<UploadResult> {
     try {
       // Refresh token if needed
-      const tokenResult = await this.tokenManager.refreshTokenIfNeeded(context.socialAccount.id);
+      const tokenResult = await this.tokenManager.refreshTokenIfNeeded(
+        context.socialAccount.id,
+      );
       if (!tokenResult.success) {
         throw new TokenExpiredError('youtube');
       }
@@ -112,12 +120,16 @@ export class YoutubeUploadService extends BasePlatformUploadService {
       });
 
       // Setup YouTube API
-      const auth = await this.getYouTubeAuth(tokenResult.accessToken, context.socialAccount.userId);
+      const auth = await this.getYouTubeAuth(
+        tokenResult.accessToken,
+        context.socialAccount.userId,
+      );
       const youtube = google.youtube({ version: 'v3', auth });
 
       // Prepare video metadata
       const title = context.customTitle || context.video.title;
-      const description = context.customDescription || context.video.description || '';
+      const description =
+        context.customDescription || context.video.description || '';
       const finalDescription = `${description}\n\n#Shorts`;
 
       const videoResource: any = {
@@ -133,10 +145,16 @@ export class YoutubeUploadService extends BasePlatformUploadService {
       };
 
       // Handle scheduled publishing
-      if (publishingJob?.scheduleTime && publishingJob.scheduleTime > new Date()) {
+      if (
+        publishingJob?.scheduleTime &&
+        publishingJob.scheduleTime > new Date()
+      ) {
         videoResource.status.privacyStatus = 'private';
-        videoResource.status.publishAt = publishingJob.scheduleTime.toISOString();
-        this.logger.log(`Scheduled publish time set: ${publishingJob.scheduleTime.toISOString()}`);
+        videoResource.status.publishAt =
+          publishingJob.scheduleTime.toISOString();
+        this.logger.log(
+          `Scheduled publish time set: ${publishingJob.scheduleTime.toISOString()}`,
+        );
       }
 
       // Create video stream
@@ -154,7 +172,10 @@ export class YoutubeUploadService extends BasePlatformUploadService {
 
       const videoId = uploadResponse.data.id;
       if (!videoId) {
-        throw new PlatformAPIError('youtube', 'No video ID returned from YouTube API');
+        throw new PlatformAPIError(
+          'youtube',
+          'No video ID returned from YouTube API',
+        );
       }
 
       this.logger.log(`Successfully uploaded to YouTube: ${videoId}`);
@@ -162,21 +183,26 @@ export class YoutubeUploadService extends BasePlatformUploadService {
         success: true,
         platformPostId: videoId,
       };
-
     } catch (error) {
       // Convert API errors to our error types
       if (error.response?.status === 401) {
         throw new TokenExpiredError('youtube');
       }
-      
+
       if (error.response?.status === 429) {
-        const retryAfter = error.response.headers['retry-after'] ? 
-          parseInt(error.response.headers['retry-after']) : undefined;
+        const retryAfter = error.response.headers['retry-after']
+          ? parseInt(error.response.headers['retry-after'])
+          : undefined;
         throw new RateLimitError('youtube', undefined, retryAfter);
       }
 
       if (error.response?.status >= 500) {
-        throw new PlatformAPIError('youtube', error.message, error.response.status.toString(), error.response.status);
+        throw new PlatformAPIError(
+          'youtube',
+          error.message,
+          error.response.status.toString(),
+          error.response.status,
+        );
       }
 
       if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {

@@ -33,8 +33,8 @@ import { PrismaModule } from '../common/prisma.module';
     }),
   ],
   providers: [
-    AuthService, 
-    JwtStrategy, 
+    AuthService,
+    JwtStrategy,
     TokenManagerService,
     SocialAppService,
     EnhancedSocialAppService,
@@ -45,7 +45,7 @@ import { PrismaModule } from '../common/prisma.module';
   ],
   controllers: [AuthController, SocialAppsController],
   exports: [
-    AuthService, 
+    AuthService,
     JwtStrategy,
     TokenManagerService,
     SocialAppService,

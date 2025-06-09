@@ -1,4 +1,3 @@
-
 export class PublishingError extends Error {
   constructor(
     message: string,
@@ -75,7 +74,9 @@ export class PlatformAPIError extends PublishingError {
     code?: string,
     statusCode?: number,
   ) {
-    const isRetryable = statusCode ? statusCode >= 500 || statusCode === 429 : true;
+    const isRetryable = statusCode
+      ? statusCode >= 500 || statusCode === 429
+      : true;
     super(message, platform, code, statusCode, isRetryable);
     this.name = 'PlatformAPIError';
   }

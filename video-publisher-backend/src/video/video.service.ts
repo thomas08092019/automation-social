@@ -95,7 +95,7 @@ export class VideoService {
     });
 
     // Map to response DTO
-    return videos.map(video => ({
+    return videos.map((video) => ({
       ...video,
       status: video.status as VideoStatus,
     }));

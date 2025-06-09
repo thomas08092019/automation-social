@@ -14,22 +14,25 @@ export class UserContextInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    
+
     // Extract user ID from JWT payload (set by JwtStrategy)
     try {
       if (request.user) {
         // Handle both string userId and object with id property
-        const userId = typeof request.user === 'string' ? request.user : 
-                      (request.user.id || request.user.userId);
-          if (userId && this.userContextService) {
+        const userId =
+          typeof request.user === 'string'
+            ? request.user
+            : request.user.id || request.user.userId;
+        if (userId && this.userContextService) {
           this.userContextService.setUserId(userId);
-          
+
           // Run the request within AsyncLocalStorage context
           return userContextStorage.run({ userId }, () => {
             return next.handle();
           });
         }
-      }    } catch (error) {
+      }
+    } catch (error) {
       // Don't throw error - just continue without setting user context
     }
 

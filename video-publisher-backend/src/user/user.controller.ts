@@ -1,4 +1,15 @@
-import { Controller, Get, Patch, UseGuards, Request, Body, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  UseGuards,
+  Request,
+  Body,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserService } from './user.service';
@@ -12,12 +23,12 @@ const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const userId = (req as any).user.id;
     const uploadPath = path.join(process.cwd(), 'uploads', 'avatars', userId);
-    
+
     // Create directory if it doesn't exist
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
-    
+
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -40,8 +51,8 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
   async updateProfile(
-    @Request() req, 
-    @Body() updates: Partial<{ username: string; profilePicture: string }>
+    @Request() req,
+    @Body() updates: Partial<{ username: string; profilePicture: string }>,
   ): Promise<UserResponseDto> {
     return this.userService.updateProfile(req.user.id, updates);
   }
@@ -64,7 +75,9 @@ export class UserController {
         ];
         if (!allowedMimeTypes.includes(file.mimetype)) {
           return callback(
-            new BadRequestException('Invalid image file type. Only JPEG, PNG, GIF, and WebP are allowed.'),
+            new BadRequestException(
+              'Invalid image file type. Only JPEG, PNG, GIF, and WebP are allowed.',
+            ),
             false,
           );
         }
@@ -82,11 +95,17 @@ export class UserController {
 
     // Get current user to check for existing avatar
     const currentUser = await this.userService.findById(req.user.id);
-    
+
     // Delete old avatar file if it exists and is a local file
-    if (currentUser.profilePicture && currentUser.profilePicture.startsWith('/api/uploads/avatars/')) {
+    if (
+      currentUser.profilePicture &&
+      currentUser.profilePicture.startsWith('/api/uploads/avatars/')
+    ) {
       try {
-        const oldAvatarPath = path.join(process.cwd(), currentUser.profilePicture.replace('/api/', ''));
+        const oldAvatarPath = path.join(
+          process.cwd(),
+          currentUser.profilePicture.replace('/api/', ''),
+        );
         if (fs.existsSync(oldAvatarPath)) {
           fs.unlinkSync(oldAvatarPath);
         }
@@ -98,10 +117,10 @@ export class UserController {
 
     // Generate URL for the uploaded file
     const avatarUrl = `/api/uploads/avatars/${req.user.id}/${file.filename}`;
-    
+
     // Update user's profile picture in database
-    await this.userService.updateProfile(req.user.id, { 
-      profilePicture: avatarUrl 
+    await this.userService.updateProfile(req.user.id, {
+      profilePicture: avatarUrl,
     });
 
     return {

@@ -28,7 +28,8 @@ export class CreateSocialAccountDto {
 
   @IsOptional()
   @IsString()
-  accountType?: string;  @IsString()
+  accountType?: string;
+  @IsString()
   @IsNotEmpty()
   accessToken: string;
 

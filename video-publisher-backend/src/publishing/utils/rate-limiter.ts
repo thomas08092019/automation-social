@@ -1,4 +1,3 @@
-
 import { Logger } from '@nestjs/common';
 import { RateLimitError } from './errors';
 
@@ -37,7 +36,10 @@ export class RateLimiter {
     },
   };
 
-  static async checkRateLimit(platform: string, operation: string = 'default'): Promise<void> {
+  static async checkRateLimit(
+    platform: string,
+    operation: string = 'default',
+  ): Promise<void> {
     const key = `${platform}:${operation}`;
     const limits = this.PLATFORM_LIMITS[platform.toLowerCase()];
 
@@ -62,11 +64,11 @@ export class RateLimiter {
     if (currentCount >= limits.maxRequests) {
       const resetTime = new Date(windowStart + limits.windowMs);
       const retryAfter = Math.ceil((resetTime.getTime() - now) / 1000);
-      
+
       this.logger.warn(
         `Rate limit exceeded for ${key}. Reset at ${resetTime.toISOString()}`,
       );
-      
+
       throw new RateLimitError(platform, resetTime, retryAfter);
     }
 
@@ -77,7 +79,10 @@ export class RateLimiter {
     );
   }
 
-  static async waitForRateLimit(platform: string, operation: string = 'default'): Promise<void> {
+  static async waitForRateLimit(
+    platform: string,
+    operation: string = 'default',
+  ): Promise<void> {
     try {
       await this.checkRateLimit(platform, operation);
     } catch (error) {
@@ -94,7 +99,10 @@ export class RateLimiter {
     }
   }
 
-  static getUsage(platform: string, operation: string = 'default'): {
+  static getUsage(
+    platform: string,
+    operation: string = 'default',
+  ): {
     current: number;
     max: number;
     windowResetTime: Date | null;
@@ -102,15 +110,17 @@ export class RateLimiter {
     const key = `${platform}:${operation}`;
     const limits = this.PLATFORM_LIMITS[platform.toLowerCase()];
     const windowStart = this.windowStartTimes.get(key);
-    
+
     return {
       current: this.requestCounts.get(key) || 0,
       max: limits?.maxRequests || 0,
-      windowResetTime: windowStart ? new Date(windowStart + (limits?.windowMs || 0)) : null,
+      windowResetTime: windowStart
+        ? new Date(windowStart + (limits?.windowMs || 0))
+        : null,
     };
   }
 
   private static sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

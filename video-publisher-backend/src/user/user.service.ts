@@ -25,7 +25,7 @@ export class UserService {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);    // Create user
+    const hashedPassword = await bcrypt.hash(password, 12); // Create user
     const user = await this.prisma.user.create({
       data: {
         email,
@@ -111,7 +111,10 @@ export class UserService {
     });
   }
 
-  async updateProfile(userId: string, updates: Partial<{ username: string; profilePicture: string }>): Promise<UserResponseDto> {
+  async updateProfile(
+    userId: string,
+    updates: Partial<{ username: string; profilePicture: string }>,
+  ): Promise<UserResponseDto> {
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: updates,

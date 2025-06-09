@@ -10,13 +10,13 @@ import { EnhancedSocialAppService } from '../../auth/enhanced-social-app.service
 import { RetryUtil, RetryOptions } from '../utils/retry';
 import { RateLimiter } from '../utils/rate-limiter';
 import { VideoValidator } from '../utils/video-validator';
-import { 
-  PublishingError, 
-  TokenExpiredError, 
-  RateLimitError, 
+import {
+  PublishingError,
+  TokenExpiredError,
+  RateLimitError,
   VideoValidationError,
   NetworkError,
-  PlatformAPIError 
+  PlatformAPIError,
 } from '../utils/errors';
 import axios from 'axios';
 import * as FormData from 'form-data';
@@ -42,7 +42,7 @@ export class TiktokUploadService extends BasePlatformUploadService {
 
   async uploadVideo(context: UploadContext): Promise<UploadResult> {
     const platform = 'tiktok';
-    
+
     try {
       this.logger.log(`Starting TikTok upload for video ${context.video.id}`);
 
@@ -60,10 +60,12 @@ export class TiktokUploadService extends BasePlatformUploadService {
         this.RETRY_OPTIONS,
         `TikTok upload for video ${context.video.id}`,
       );
-
     } catch (error) {
-      this.logger.error(`TikTok upload failed for video ${context.video.id}:`, error);
-      
+      this.logger.error(
+        `TikTok upload failed for video ${context.video.id}:`,
+        error,
+      );
+
       if (error instanceof VideoValidationError) {
         return {
           success: false,
@@ -81,13 +83,15 @@ export class TiktokUploadService extends BasePlatformUploadService {
       if (error instanceof TokenExpiredError) {
         return {
           success: false,
-          errorMessage: 'Authentication failed. Please reconnect your TikTok account.',
+          errorMessage:
+            'Authentication failed. Please reconnect your TikTok account.',
         };
       }
 
       return {
         success: false,
-        errorMessage: error.message || 'Unknown error occurred during TikTok upload',
+        errorMessage:
+          error.message || 'Unknown error occurred during TikTok upload',
       };
     }
   }
@@ -95,7 +99,9 @@ export class TiktokUploadService extends BasePlatformUploadService {
   private async performUpload(context: UploadContext): Promise<UploadResult> {
     try {
       // Refresh token if needed
-      const tokenResult = await this.tokenManager.refreshTokenIfNeeded(context.socialAccount.id);
+      const tokenResult = await this.tokenManager.refreshTokenIfNeeded(
+        context.socialAccount.id,
+      );
       if (!tokenResult.success) {
         throw new TokenExpiredError('tiktok');
       }
@@ -120,7 +126,10 @@ export class TiktokUploadService extends BasePlatformUploadService {
       );
 
       if (!uploadInitResponse.success) {
-        throw new PlatformAPIError('tiktok', uploadInitResponse.errorMessage || 'Failed to initialize upload');
+        throw new PlatformAPIError(
+          'tiktok',
+          uploadInitResponse.errorMessage || 'Failed to initialize upload',
+        );
       }
 
       this.logger.log('Step 2: Uploading video file...');
@@ -132,13 +141,17 @@ export class TiktokUploadService extends BasePlatformUploadService {
       );
 
       if (!videoUploadResponse.success) {
-        throw new PlatformAPIError('tiktok', videoUploadResponse.errorMessage || 'Failed to upload video file');
+        throw new PlatformAPIError(
+          'tiktok',
+          videoUploadResponse.errorMessage || 'Failed to upload video file',
+        );
       }
 
       this.logger.log('Step 3: Creating TikTok post...');
       // Step 3: Create post
       const title = context.customTitle || context.video.title;
-      const description = context.customDescription || context.video.description || '';
+      const description =
+        context.customDescription || context.video.description || '';
 
       const postResponse = await this.createTikTokPost(
         context.socialAccount.accountId,
@@ -150,29 +163,39 @@ export class TiktokUploadService extends BasePlatformUploadService {
       );
 
       if (!postResponse.success) {
-        throw new PlatformAPIError('tiktok', postResponse.errorMessage || 'Failed to create TikTok post');
+        throw new PlatformAPIError(
+          'tiktok',
+          postResponse.errorMessage || 'Failed to create TikTok post',
+        );
       }
 
-      this.logger.log(`Successfully uploaded to TikTok: ${postResponse.platformPostId}`);
+      this.logger.log(
+        `Successfully uploaded to TikTok: ${postResponse.platformPostId}`,
+      );
       return {
         success: true,
         platformPostId: postResponse.platformPostId,
       };
-
     } catch (error) {
       // Convert API errors to our error types
       if (error.response?.status === 401) {
         throw new TokenExpiredError('tiktok');
       }
-      
+
       if (error.response?.status === 429) {
-        const retryAfter = error.response.headers['retry-after'] ? 
-          parseInt(error.response.headers['retry-after']) : undefined;
+        const retryAfter = error.response.headers['retry-after']
+          ? parseInt(error.response.headers['retry-after'])
+          : undefined;
         throw new RateLimitError('tiktok', undefined, retryAfter);
       }
 
       if (error.response?.status >= 500) {
-        throw new PlatformAPIError('tiktok', error.message, error.response.status.toString(), error.response.status);
+        throw new PlatformAPIError(
+          'tiktok',
+          error.message,
+          error.response.status.toString(),
+          error.response.status,
+        );
       }
 
       if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
@@ -187,7 +210,10 @@ export class TiktokUploadService extends BasePlatformUploadService {
     }
   }
 
-  private async initializeTikTokUpload(openId: string, accessToken: string): Promise<{
+  private async initializeTikTokUpload(
+    openId: string,
+    accessToken: string,
+  ): Promise<{
     success: boolean;
     uploadUrl?: string;
     videoId?: string;
@@ -196,7 +222,7 @@ export class TiktokUploadService extends BasePlatformUploadService {
   }> {
     try {
       this.logger.debug(`Initializing TikTok upload for open ID: ${openId}`);
-      
+
       const response = await axios.post(
         'https://business-api.tiktok.com/open_api/v1.3/tt_video/upload/init/',
         {
@@ -212,7 +238,9 @@ export class TiktokUploadService extends BasePlatformUploadService {
       );
 
       if (response.data.code !== 0) {
-        throw new Error(response.data.message || 'TikTok API returned error code');
+        throw new Error(
+          response.data.message || 'TikTok API returned error code',
+        );
       }
 
       return {
@@ -223,11 +251,11 @@ export class TiktokUploadService extends BasePlatformUploadService {
       };
     } catch (error) {
       this.logger.error(`TikTok upload initialization failed:`, error);
-      
+
       if (error.response?.status === 401) {
         throw new TokenExpiredError('tiktok');
       }
-      
+
       if (error.response?.status === 429) {
         throw new RateLimitError('tiktok');
       }
@@ -250,7 +278,7 @@ export class TiktokUploadService extends BasePlatformUploadService {
   }> {
     try {
       this.logger.debug(`Uploading video file to TikTok: ${videoPath}`);
-      
+
       const videoBuffer = fs.readFileSync(videoPath);
 
       const response = await axios.put(uploadUrl, videoBuffer, {
@@ -268,7 +296,7 @@ export class TiktokUploadService extends BasePlatformUploadService {
       };
     } catch (error) {
       this.logger.error(`TikTok video upload failed:`, error);
-      
+
       if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
         throw new NetworkError('tiktok', error);
       }
@@ -290,7 +318,7 @@ export class TiktokUploadService extends BasePlatformUploadService {
   ): Promise<UploadResult> {
     try {
       this.logger.debug(`Creating TikTok post with video ID: ${videoId}`);
-      
+
       const text = `${title}\n\n${description}`.substring(0, 2200); // TikTok text limit
       const payload: any = {
         open_id: openId,
@@ -305,7 +333,9 @@ export class TiktokUploadService extends BasePlatformUploadService {
       // Handle scheduled publishing
       if (scheduledAt && scheduledAt > new Date()) {
         payload.schedule_time = Math.floor(scheduledAt.getTime() / 1000);
-        this.logger.log(`Scheduling TikTok post for: ${scheduledAt.toISOString()}`);
+        this.logger.log(
+          `Scheduling TikTok post for: ${scheduledAt.toISOString()}`,
+        );
       }
 
       const response = await axios.post(
@@ -321,20 +351,23 @@ export class TiktokUploadService extends BasePlatformUploadService {
       );
 
       if (response.data.code !== 0) {
-        throw new Error(response.data.message || 'TikTok API returned error code');
+        throw new Error(
+          response.data.message || 'TikTok API returned error code',
+        );
       }
 
       return {
         success: true,
-        platformPostId: response.data.data.share_id || response.data.data.video_id,
+        platformPostId:
+          response.data.data.share_id || response.data.data.video_id,
       };
     } catch (error) {
       this.logger.error(`TikTok post creation failed:`, error);
-      
+
       if (error.response?.status === 401) {
         throw new TokenExpiredError('tiktok');
       }
-      
+
       if (error.response?.status === 429) {
         throw new RateLimitError('tiktok');
       }

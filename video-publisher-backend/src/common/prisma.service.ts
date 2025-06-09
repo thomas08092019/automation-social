@@ -18,12 +18,13 @@ export class PrismaService
 
   async onModuleDestroy() {
     await this.$disconnect();
-  }  private setupAuditTrailMiddleware() {
+  }
+  private setupAuditTrailMiddleware() {
     // Middleware for CREATE operations
     this.$use(async (params, next) => {
       if (params.action === 'create' || params.action === 'createMany') {
         const userId = UserContextService.getCurrentUserId();
-        
+
         if (userId) {
           if (params.action === 'create' && params.args.data) {
             params.args.data.createdBy = userId;
@@ -38,7 +39,7 @@ export class PrismaService
         }
       }
       return next(params);
-    });    // Middleware for UPDATE operations
+    }); // Middleware for UPDATE operations
     this.$use(async (params, next) => {
       if (params.action === 'update' || params.action === 'updateMany') {
         const userId = UserContextService.getCurrentUserId();
@@ -66,7 +67,7 @@ export class PrismaService
         }
       }
       return next(params);
-    });    // Middleware for soft DELETE operations
+    }); // Middleware for soft DELETE operations
     this.$use(async (params, next) => {
       if (params.action === 'delete') {
         const userId = UserContextService.getCurrentUserId();
@@ -77,7 +78,7 @@ export class PrismaService
           deletedBy: userId,
         };
       }
-      
+
       if (params.action === 'deleteMany') {
         const userId = UserContextService.getCurrentUserId();
         // Convert DELETE to UPDATE with soft delete
@@ -87,7 +88,7 @@ export class PrismaService
           deletedBy: userId,
         };
       }
-      
+
       return next(params);
     });
 
@@ -100,7 +101,7 @@ export class PrismaService
           deletedAt: null,
         };
       }
-      
+
       if (params.action === 'findMany') {
         // Add deletedAt filter to where clause
         if (params.args.where) {
@@ -111,7 +112,7 @@ export class PrismaService
           params.args.where = { deletedAt: null };
         }
       }
-      
+
       if (params.action === 'count') {
         // Add deletedAt filter to count
         if (params.args.where) {
@@ -122,7 +123,7 @@ export class PrismaService
           params.args.where = { deletedAt: null };
         }
       }
-      
+
       return next(params);
     });
   }
@@ -130,7 +131,7 @@ export class PrismaService
   // Method to force delete (bypass soft delete)
   async forceDelete(model: string, where: any) {
     return (this as any)[model].delete({ where });
-  }  // Method to restore soft-deleted records
+  } // Method to restore soft-deleted records
   async restore(model: string, where: any) {
     const userId = UserContextService.getCurrentUserId();
     return (this as any)[model].update({

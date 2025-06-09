@@ -4,9 +4,10 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {  constructor(private configService: ConfigService) {
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(private configService: ConfigService) {
     const secret = configService.get<string>('JWT_SECRET');
-    
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -18,11 +19,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {  constructor(priva
     if (!payload.userId) {
       throw new UnauthorizedException('Invalid token - no userId');
     }
-    
-    return { 
-      id: payload.userId, 
+
+    return {
+      id: payload.userId,
       email: payload.email,
-      userId: payload.userId 
+      userId: payload.userId,
     };
   }
 }

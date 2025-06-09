@@ -14,9 +14,15 @@ import { InstagramReelsUploadService } from './services/instagram-reels-upload.s
 import { TiktokUploadService } from './services/tiktok-upload.service';
 
 @Module({
-  imports: [VideoModule, SocialAccountModule, QueueModule, PrismaModule, AuthModule],
+  imports: [
+    VideoModule,
+    SocialAccountModule,
+    QueueModule,
+    PrismaModule,
+    AuthModule,
+  ],
   providers: [
-    PublishingService, 
+    PublishingService,
     BatchPublishingService,
     YoutubeUploadService,
     FacebookReelsUploadService,
@@ -25,7 +31,7 @@ import { TiktokUploadService } from './services/tiktok-upload.service';
   ],
   controllers: [PublishingController, ApiTestController],
   exports: [
-    PublishingService, 
+    PublishingService,
     BatchPublishingService,
     YoutubeUploadService,
     FacebookReelsUploadService,

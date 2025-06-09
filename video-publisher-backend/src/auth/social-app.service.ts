@@ -35,7 +35,7 @@ export class SocialAppService {
 
       if (!socialAccount) {
         return null;
-      }      // 1. Check if account references a SocialApp (priority since schema has socialApp relation)
+      } // 1. Check if account references a SocialApp (priority since schema has socialApp relation)
       if (socialAccount.socialApp) {
         return {
           id: socialAccount.socialApp.id,
@@ -82,9 +82,11 @@ export class SocialAppService {
 
       // 4. Fallback to system default
       return this.getSystemDefaultConfig(socialAccount.platform);
-
     } catch (error) {
-      this.logger.error(`Failed to get app config for social account ${socialAccountId}:`, error);
+      this.logger.error(
+        `Failed to get app config for social account ${socialAccountId}:`,
+        error,
+      );
       return null;
     }
   }
@@ -92,7 +94,10 @@ export class SocialAppService {
   /**
    * Create a new app configuration for a user
    */
-  async createUserApp(userId: string, config: Omit<SocialAppConfig, 'id'>): Promise<SocialAppConfig> {
+  async createUserApp(
+    userId: string,
+    config: Omit<SocialAppConfig, 'id'>,
+  ): Promise<SocialAppConfig> {
     // If this is set as default, unset other defaults for this platform
     if (config.isDefault) {
       await this.prisma.socialApp.updateMany({
@@ -132,19 +137,19 @@ export class SocialAppService {
   /**
    * Get all app configurations for a user
    */
-  async getUserApps(userId: string, platform?: SocialPlatform): Promise<SocialAppConfig[]> {
+  async getUserApps(
+    userId: string,
+    platform?: SocialPlatform,
+  ): Promise<SocialAppConfig[]> {
     const apps = await this.prisma.socialApp.findMany({
       where: {
         userId,
         ...(platform && { platform }),
       },
-      orderBy: [
-        { isDefault: 'desc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
     });
 
-    return apps.map(app => ({
+    return apps.map((app) => ({
       id: app.id,
       name: app.name,
       platform: app.platform,
@@ -158,7 +163,11 @@ export class SocialAppService {
   /**
    * Update an app configuration
    */
-  async updateUserApp(userId: string, appId: string, updates: Partial<SocialAppConfig>): Promise<SocialAppConfig> {
+  async updateUserApp(
+    userId: string,
+    appId: string,
+    updates: Partial<SocialAppConfig>,
+  ): Promise<SocialAppConfig> {
     // If setting as default, unset other defaults for this platform
     if (updates.isDefault) {
       const app = await this.prisma.socialApp.findUnique({
@@ -186,7 +195,9 @@ export class SocialAppService {
         ...(updates.appId && { appId: updates.appId }),
         ...(updates.appSecret && { appSecret: updates.appSecret }),
         ...(updates.redirectUri && { redirectUri: updates.redirectUri }),
-        ...(updates.isDefault !== undefined && { isDefault: updates.isDefault }),
+        ...(updates.isDefault !== undefined && {
+          isDefault: updates.isDefault,
+        }),
       },
     });
 
@@ -212,27 +223,34 @@ export class SocialAppService {
   /**
    * Get system default configuration (no longer supported)
    */
-  private getSystemDefaultConfig(platform: SocialPlatform): SocialAppConfig | null {
+  private getSystemDefaultConfig(
+    platform: SocialPlatform,
+  ): SocialAppConfig | null {
     // System default configs are no longer supported
     // Users must configure their own app credentials
     return null;
-  }  /**
+  }
+  /**
    * Get default redirect URI for a platform
-   */  private getDefaultRedirectUri(platform: SocialPlatform): string {
+   */ private getDefaultRedirectUri(platform: SocialPlatform): string {
     // Only use ngrok URL for TikTok, other platforms use local URL
     let baseUrl: string;
-    
+
     if (platform === SocialPlatform.TIKTOK) {
       // For TikTok Sandbox mode, prefer localhost, for production use ngrok
       const tiktokMode = this.configService.get('TIKTOK_MODE', 'sandbox'); // sandbox or production
-      
+
       if (tiktokMode === 'sandbox') {
         // Sandbox mode: use localhost
-        baseUrl = this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+        baseUrl = this.configService.get(
+          'FRONTEND_URL',
+          'http://localhost:3000',
+        );
       } else {
         // Production mode: prefer ngrok URL if available
-        baseUrl = this.configService.get('FRONTEND_NGROK_URL') || 
-                  this.configService.get('FRONTEND_URL', 'http://localhost:3000');
+        baseUrl =
+          this.configService.get('FRONTEND_NGROK_URL') ||
+          this.configService.get('FRONTEND_URL', 'http://localhost:3000');
       }
     } else {
       // For other platforms, use local URL only
@@ -243,7 +261,8 @@ export class SocialAppService {
       case SocialPlatform.FACEBOOK:
       case SocialPlatform.INSTAGRAM:
         return `${baseUrl}/auth/facebook/callback`;
-      case SocialPlatform.YOUTUBE:        return `${baseUrl}/auth/google/callback`;
+      case SocialPlatform.YOUTUBE:
+        return `${baseUrl}/auth/google/callback`;
       case SocialPlatform.TIKTOK:
         return `${baseUrl}/auth/callback`; // Use generic callback for TikTok
       default:

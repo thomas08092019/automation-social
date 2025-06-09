@@ -16,9 +16,12 @@ export class EmailService {
     });
   }
 
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
+  async sendPasswordResetEmail(
+    email: string,
+    resetToken: string,
+  ): Promise<void> {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    
+
     const mailOptions = {
       from: process.env.GMAIL_USER,
       to: email,

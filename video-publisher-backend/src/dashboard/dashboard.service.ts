@@ -76,14 +76,17 @@ export class DashboardService {
     });
 
     // Process recent activity data
-    const activityMap = new Map<string, { completed: number; failed: number }>();
-    
+    const activityMap = new Map<
+      string,
+      { completed: number; failed: number }
+    >();
+
     recentJobs.forEach((job) => {
       const date = job.createdAt.toISOString().split('T')[0];
       if (!activityMap.has(date)) {
         activityMap.set(date, { completed: 0, failed: 0 });
       }
-      
+
       const activity = activityMap.get(date)!;
       if (job.status === 'COMPLETED') {
         activity.completed++;

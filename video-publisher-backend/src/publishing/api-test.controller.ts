@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, HttpStatus, HttpException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  HttpStatus,
+  HttpException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 interface PlatformConfig {
@@ -22,9 +30,7 @@ interface HealthCheckResponse {
 export class ApiTestController {
   private readonly logger = new Logger(ApiTestController.name);
 
-  constructor(
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly configService: ConfigService) {}
   @Get('health')
   async healthCheck(): Promise<HealthCheckResponse> {
     this.logger.log('Health check requested');
@@ -62,7 +68,7 @@ export class ApiTestController {
   @Post('validate-platform')
   async validatePlatform(@Body() body: { platform: string }) {
     const { platform } = body;
-    
+
     if (!['youtube', 'instagram', 'tiktok', 'facebook'].includes(platform)) {
       throw new HttpException('Invalid platform', HttpStatus.BAD_REQUEST);
     }
@@ -70,7 +76,7 @@ export class ApiTestController {
     this.logger.log(`Platform validation requested for: ${platform}`);
 
     const config = this.getPlatformConfig(platform);
-    
+
     return {
       platform,
       configured: config.configured,
@@ -82,8 +88,8 @@ export class ApiTestController {
 
   private checkPlatformConfigurations(): PlatformConfig[] {
     const platforms = ['youtube', 'instagram', 'tiktok', 'facebook'];
-    
-    return platforms.map(platform => this.getPlatformConfig(platform));
+
+    return platforms.map((platform) => this.getPlatformConfig(platform));
   }
 
   private getPlatformConfig(platform: string): PlatformConfig {
@@ -112,7 +118,7 @@ export class ApiTestController {
 
     const requiredEnvVars = configMap[platform] || [];
     const missingVars = requiredEnvVars.filter(
-      varName => !this.configService.get(varName)
+      (varName) => !this.configService.get(varName),
     );
 
     return {
@@ -123,7 +129,10 @@ export class ApiTestController {
     };
   }
 
-  private async checkDatabaseConnection(): Promise<{ connected: boolean; error?: string }> {
+  private async checkDatabaseConnection(): Promise<{
+    connected: boolean;
+    error?: string;
+  }> {
     try {
       // Simple database check - this would be expanded with actual Prisma connection test
       const databaseUrl = this.configService.get('DATABASE_URL');
@@ -147,13 +156,13 @@ export class ApiTestController {
 
   private determineOverallHealth(
     platforms: PlatformConfig[],
-    database: { connected: boolean }
+    database: { connected: boolean },
   ): 'healthy' | 'degraded' | 'unhealthy' {
     if (!database.connected) {
       return 'unhealthy';
     }
 
-    const configuredPlatforms = platforms.filter(p => p.configured).length;
+    const configuredPlatforms = platforms.filter((p) => p.configured).length;
     const totalPlatforms = platforms.length;
 
     if (configuredPlatforms === totalPlatforms) {

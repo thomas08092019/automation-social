@@ -30,7 +30,8 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
     maxDelayMs: 60000,
     backoffMultiplier: 2,
     retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
-  };  constructor(
+  };
+  constructor(
     private readonly prisma: PrismaService,
     private readonly tokenManager: TokenManagerService,
     private readonly enhancedSocialAppService: EnhancedSocialAppService,
@@ -40,22 +41,27 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
 
   async uploadVideo(context: UploadContext): Promise<UploadResult> {
     const platform = 'instagram';
-    
+
     try {
-      this.logger.log(`Starting Instagram Reels upload for video ${context.video.id}`);      // Validate video against Instagram requirements
+      this.logger.log(
+        `Starting Instagram Reels upload for video ${context.video.id}`,
+      ); // Validate video against Instagram requirements
       await VideoValidator.validateVideo(platform, context.video.filePath, {
         duration: context.video.duration || undefined,
       });
 
       // Check rate limits
-      await RateLimiter.checkRateLimit(platform, context.socialAccount.id);      // Use retry mechanism for the upload
+      await RateLimiter.checkRateLimit(platform, context.socialAccount.id); // Use retry mechanism for the upload
       return await RetryUtil.withRetry(
         () => this.performUpload(context),
         this.RETRY_OPTIONS,
         `Instagram upload for video ${context.video.id}`,
       );
     } catch (error) {
-      this.logger.error(`Instagram upload failed for video ${context.video.id}:`, error);
+      this.logger.error(
+        `Instagram upload failed for video ${context.video.id}:`,
+        error,
+      );
 
       if (error instanceof VideoValidationError) {
         return {
@@ -74,42 +80,56 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
       if (error instanceof TokenExpiredError) {
         return {
           success: false,
-          errorMessage: 'Authentication failed. Please reconnect your Instagram account.',
+          errorMessage:
+            'Authentication failed. Please reconnect your Instagram account.',
         };
       }
 
       return {
         success: false,
-        errorMessage: error.message || 'Unknown error occurred during Instagram upload',
+        errorMessage:
+          error.message || 'Unknown error occurred during Instagram upload',
       };
     }
   }
   private async performUpload(context: UploadContext): Promise<UploadResult> {
-    try {      // Get Instagram-specific token and business account ID
+    try {
+      // Get Instagram-specific token and business account ID
       const tokenResult = await this.tokenManager.getValidTokenForPlatform(
-        context.socialAccount.id, 
-        'instagram', 
-        context.socialAccount.accountId // Facebook Page/Account ID linked to Instagram
+        context.socialAccount.id,
+        'instagram',
+        context.socialAccount.accountId, // Facebook Page/Account ID linked to Instagram
       );
-      
+
       if (!tokenResult.success) {
         throw new TokenExpiredError('instagram');
       }
 
       const accessToken = tokenResult.token;
       const instagramUserId = tokenResult.additionalData?.igUserId;
-      
+
       if (!instagramUserId) {
-        throw new PlatformAPIError('instagram', 'Instagram Business Account ID not found');
+        throw new PlatformAPIError(
+          'instagram',
+          'Instagram Business Account ID not found',
+        );
       }
-      
+
       // Step 1: Initialize Upload Session
-      this.logger.log(`Initializing upload session for Instagram user ${instagramUserId}`);
-      const { uploadUrl, uploadId } = await this.initializeUploadSession(instagramUserId, accessToken);
-        // Step 2: Upload Video File
+      this.logger.log(
+        `Initializing upload session for Instagram user ${instagramUserId}`,
+      );
+      const { uploadUrl, uploadId } = await this.initializeUploadSession(
+        instagramUserId,
+        accessToken,
+      );
+      // Step 2: Upload Video File
       this.logger.log(`Uploading video file to ${uploadUrl}`);
-      const { videoId } = await this.uploadVideoFile(uploadUrl, context.video.filePath);
-        // Step 3: Create Media Container
+      const { videoId } = await this.uploadVideoFile(
+        uploadUrl,
+        context.video.filePath,
+      );
+      // Step 3: Create Media Container
       this.logger.log(`Creating media container for video ${videoId}`);
       const { containerId } = await this.createMediaContainer(
         instagramUserId,
@@ -118,36 +138,43 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
         accessToken,
         undefined, // No scheduled time support for now
       );
-        // Step 4: Publish Reel
+      // Step 4: Publish Reel
       this.logger.log(`Publishing reel with container ${containerId}`);
-      const { postId } = await this.publishReel(instagramUserId, containerId, accessToken);
-      
-      this.logger.log(`Successfully published Instagram Reel with ID: ${postId}`);
-      
+      const { postId } = await this.publishReel(
+        instagramUserId,
+        containerId,
+        accessToken,
+      );
+
+      this.logger.log(
+        `Successfully published Instagram Reel with ID: ${postId}`,
+      );
+
       return {
         success: true,
         platformPostId: postId,
       };
     } catch (error) {
       this.logger.error('Instagram upload error:', error);
-      
+
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
           throw new TokenExpiredError('instagram');
         }
-        
+
         if (error.response?.status === 429) {
           throw new RateLimitError('instagram');
         }
-        
-        const errorMessage = error.response?.data?.error?.message || error.message;
+
+        const errorMessage =
+          error.response?.data?.error?.message || error.message;
         throw new PlatformAPIError('instagram', `API Error: ${errorMessage}`);
       }
-      
+
       if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT') {
         throw new NetworkError('instagram', error.message);
       }
-      
+
       throw new PublishingError('instagram', error.message);
     }
   }
@@ -161,22 +188,33 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
             access_token: accessToken,
             fields: 'instagram_business_account',
           },
-        }
+        },
       );
 
-      const page = response.data.data.find((page: any) => page.instagram_business_account);
+      const page = response.data.data.find(
+        (page: any) => page.instagram_business_account,
+      );
       if (!page?.instagram_business_account?.id) {
-        throw new PlatformAPIError('instagram', 'No Instagram Business Account found');
+        throw new PlatformAPIError(
+          'instagram',
+          'No Instagram Business Account found',
+        );
       }
 
       return page.instagram_business_account.id;
     } catch (error) {
       this.logger.error('Failed to get Instagram User ID:', error);
-      throw new PlatformAPIError('instagram', 'Failed to retrieve Instagram Business Account ID');
+      throw new PlatformAPIError(
+        'instagram',
+        'Failed to retrieve Instagram Business Account ID',
+      );
     }
   }
 
-  private async initializeUploadSession(instagramUserId: string, accessToken: string): Promise<{
+  private async initializeUploadSession(
+    instagramUserId: string,
+    accessToken: string,
+  ): Promise<{
     uploadUrl: string;
     uploadId: string;
   }> {
@@ -190,13 +228,16 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
           params: {
             access_token: accessToken,
           },
-        }
+        },
       );
 
       const { video_id: uploadId, upload_url: uploadUrl } = response.data;
-      
+
       if (!uploadUrl || !uploadId) {
-        throw new PlatformAPIError('instagram', 'Failed to initialize upload session');
+        throw new PlatformAPIError(
+          'instagram',
+          'Failed to initialize upload session',
+        );
       }
 
       return {
@@ -204,21 +245,31 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
         uploadId,
       };
     } catch (error) {
-      this.logger.error('Failed to initialize Instagram upload session:', error);
+      this.logger.error(
+        'Failed to initialize Instagram upload session:',
+        error,
+      );
       if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.error?.message || error.message;
-        throw new PlatformAPIError('instagram', `Upload initialization failed: ${errorMessage}`);
+        const errorMessage =
+          error.response?.data?.error?.message || error.message;
+        throw new PlatformAPIError(
+          'instagram',
+          `Upload initialization failed: ${errorMessage}`,
+        );
       }
       throw error;
     }
   }
 
-  private async uploadVideoFile(uploadUrl: string, videoPath: string): Promise<{
+  private async uploadVideoFile(
+    uploadUrl: string,
+    videoPath: string,
+  ): Promise<{
     videoId: string;
   }> {
     try {
       const videoBuffer = fs.readFileSync(videoPath);
-      
+
       const response = await axios.post(uploadUrl, videoBuffer, {
         headers: {
           'Content-Type': 'video/mp4',
@@ -230,17 +281,24 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
 
       // Extract video ID from response or URL
       const videoId = response.data?.video_id || uploadUrl.split('/').pop();
-      
+
       if (!videoId) {
-        throw new PlatformAPIError('instagram', 'Failed to get video ID after upload');
+        throw new PlatformAPIError(
+          'instagram',
+          'Failed to get video ID after upload',
+        );
       }
 
       return { videoId };
     } catch (error) {
       this.logger.error('Failed to upload video file to Instagram:', error);
       if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.error?.message || error.message;
-        throw new PlatformAPIError('instagram', `Video upload failed: ${errorMessage}`);
+        const errorMessage =
+          error.response?.data?.error?.message || error.message;
+        throw new PlatformAPIError(
+          'instagram',
+          `Video upload failed: ${errorMessage}`,
+        );
       }
       throw error;
     }
@@ -273,21 +331,28 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
       const response = await axios.post(
         `https://graph.facebook.com/v18.0/${instagramUserId}/media`,
         null,
-        { params }
+        { params },
       );
 
       const containerId = response.data.id;
-      
+
       if (!containerId) {
-        throw new PlatformAPIError('instagram', 'Failed to create media container');
+        throw new PlatformAPIError(
+          'instagram',
+          'Failed to create media container',
+        );
       }
 
       return { containerId };
     } catch (error) {
       this.logger.error('Failed to create Instagram media container:', error);
       if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.error?.message || error.message;
-        throw new PlatformAPIError('instagram', `Media container creation failed: ${errorMessage}`);
+        const errorMessage =
+          error.response?.data?.error?.message || error.message;
+        throw new PlatformAPIError(
+          'instagram',
+          `Media container creation failed: ${errorMessage}`,
+        );
       }
       throw error;
     }
@@ -310,11 +375,11 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
           params: {
             access_token: accessToken,
           },
-        }
+        },
       );
 
       const postId = response.data.id;
-      
+
       if (!postId) {
         throw new PlatformAPIError('instagram', 'Failed to publish reel');
       }
@@ -322,20 +387,24 @@ export class InstagramReelsUploadService extends BasePlatformUploadService {
       return { postId };
     } catch (error) {
       this.logger.error('Failed to publish Instagram reel:', error);
-      
+
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
           throw new TokenExpiredError('instagram');
         }
-        
+
         if (error.response?.status === 429) {
           throw new RateLimitError('instagram');
         }
 
-        const errorMessage = error.response?.data?.error?.message || error.message;
-        throw new PlatformAPIError('instagram', `Failed to publish reel: ${errorMessage}`);
+        const errorMessage =
+          error.response?.data?.error?.message || error.message;
+        throw new PlatformAPIError(
+          'instagram',
+          `Failed to publish reel: ${errorMessage}`,
+        );
       }
-      
+
       throw error;
     }
   }

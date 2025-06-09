@@ -11,7 +11,8 @@ import { VideoModule } from './video/video.module';
 import { PublishingModule } from './publishing/publishing.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 
-@Module({  imports: [
+@Module({
+  imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -21,8 +22,10 @@ import { DashboardModule } from './dashboard/dashboard.module';
     SocialAccountModule,
     VideoModule,
     PublishingModule,
-    DashboardModule,],
-  controllers: [AppController],  providers: [
+    DashboardModule,
+  ],
+  controllers: [AppController],
+  providers: [
     AppService,
     {
       provide: APP_INTERCEPTOR,

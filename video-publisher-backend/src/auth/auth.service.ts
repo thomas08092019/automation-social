@@ -1,7 +1,20 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
-import { LoginDto, CreateUserDto, UserResponseDto, SocialLoginDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from '../user/dto/user.dto';
+import {
+  LoginDto,
+  CreateUserDto,
+  UserResponseDto,
+  SocialLoginDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ChangePasswordDto,
+} from '../user/dto/user.dto';
 import { OAuthService } from '../services/oauth.service';
 import { EmailService } from '../services/email.service';
 import * as crypto from 'crypto';
@@ -71,8 +84,20 @@ export class AuthService {
       user: userWithoutPassword,
       accessToken,
     };
-  }  async socialLogin(socialLoginDto: any): Promise<AuthResponse> {
-    const { email, name, providerId, profilePicture, youtubeChannels, youtubeAccessToken, youtubeRefreshToken, facebookPages, facebookAccessToken, metadata } = socialLoginDto;
+  }
+  async socialLogin(socialLoginDto: any): Promise<AuthResponse> {
+    const {
+      email,
+      name,
+      providerId,
+      profilePicture,
+      youtubeChannels,
+      youtubeAccessToken,
+      youtubeRefreshToken,
+      facebookPages,
+      facebookAccessToken,
+      metadata,
+    } = socialLoginDto;
 
     try {
       // Use the data already provided from OAuth callback instead of verifying token again
@@ -84,9 +109,11 @@ export class AuthService {
 
       if (!userData.email) {
         throw new UnauthorizedException('Email is required for social login');
-      }      // Check if user already exists
-      let user: UserResponseDto = await this.userService.findByEmail(userData.email);
-      
+      } // Check if user already exists
+      let user: UserResponseDto = await this.userService.findByEmail(
+        userData.email,
+      );
+
       if (!user) {
         // Create new user for social login
         const createUserDto: CreateUserDto = {
@@ -95,31 +122,50 @@ export class AuthService {
           password: crypto.randomBytes(32).toString('hex'),
         };
         user = await this.userService.create(createUserDto);
-      }      // Only update user profile picture if user doesn't have one already
+      } // Only update user profile picture if user doesn't have one already
       if (profilePicture && !user.profilePicture) {
         console.log('Updating user profile picture from OAuth provider');
-        user = await this.userService.updateProfile(user.id, { profilePicture });
+        user = await this.userService.updateProfile(user.id, {
+          profilePicture,
+        });
       } else if (user.profilePicture) {
         console.log('User already has profile picture, skipping update');
-      }// If user has YouTube channels, automatically create social accounts for each channel
+      } // If user has YouTube channels, automatically create social accounts for each channel
       if (youtubeChannels && youtubeChannels.length > 0 && youtubeAccessToken) {
         for (let i = 0; i < youtubeChannels.length; i++) {
           const channel = youtubeChannels[i];
           try {
-            await this.createYoutubeSocialAccount(user.id, channel, youtubeAccessToken, youtubeRefreshToken, metadata);
+            await this.createYoutubeSocialAccount(
+              user.id,
+              channel,
+              youtubeAccessToken,
+              youtubeRefreshToken,
+              metadata,
+            );
           } catch (youtubeError) {
-            console.error(`Failed to create social account for YouTube channel: ${channel.snippet.title}`, youtubeError);
+            console.error(
+              `Failed to create social account for YouTube channel: ${channel.snippet.title}`,
+              youtubeError,
+            );
             // Continue with other channels even if one fails
           }
         }
-      }      // If user has Facebook pages, automatically create social accounts for each page
+      } // If user has Facebook pages, automatically create social accounts for each page
       if (facebookPages && facebookPages.length > 0 && facebookAccessToken) {
         for (let i = 0; i < facebookPages.length; i++) {
           const page = facebookPages[i];
           try {
-            await this.createFacebookSocialAccount(user.id, page, page.access_token || facebookAccessToken, metadata);
+            await this.createFacebookSocialAccount(
+              user.id,
+              page,
+              page.access_token || facebookAccessToken,
+              metadata,
+            );
           } catch (facebookError) {
-            console.error(`Failed to create social account for Facebook page: ${page.name}`, facebookError);
+            console.error(
+              `Failed to create social account for Facebook page: ${page.name}`,
+              facebookError,
+            );
             // Continue with other pages even if one fails
           }
         }
@@ -141,14 +187,19 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
     const { email } = forgotPasswordDto;
 
     // Check if user exists
     const user = await this.userService.findByEmail(email);
     if (!user) {
       // Don't reveal if email exists or not for security
-      return { message: 'If an account with that email exists, a password reset link has been sent.' };
+      return {
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
+      };
     }
 
     // Generate reset token
@@ -156,14 +207,23 @@ export class AuthService {
     const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
     // Save reset token to user
-    await this.userService.savePasswordResetToken(user.id, resetToken, resetTokenExpiry);
+    await this.userService.savePasswordResetToken(
+      user.id,
+      resetToken,
+      resetTokenExpiry,
+    );
 
     // Send reset email
     await this.emailService.sendPasswordResetEmail(email, resetToken);
 
-    return { message: 'If an account with that email exists, a password reset link has been sent.' };
+    return {
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
+    };
   }
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<AuthResponse> {
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<AuthResponse> {
     const { token, newPassword } = resetPasswordDto;
 
     // Find user by reset token and check if it's still valid
@@ -193,11 +253,16 @@ export class AuthService {
     };
   }
 
-  async changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<{ message: string }> {
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
     const { currentPassword, newPassword } = changePasswordDto;
 
     // Find user and verify current password
-    const user = await this.userService.findByEmail(await this.getUserEmail(userId));
+    const user = await this.userService.findByEmail(
+      await this.getUserEmail(userId),
+    );
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -222,7 +287,8 @@ export class AuthService {
     return user.email;
   }
   async validateUser(payload: JwtPayload): Promise<UserResponseDto> {
-    console.log('🔍 AuthService validateUser called with payload:', payload);    try {
+    console.log('🔍 AuthService validateUser called with payload:', payload);
+    try {
       const user = await this.userService.findById(payload.userId);
       return user;
     } catch (error) {
@@ -248,7 +314,7 @@ export class AuthService {
       return {
         message: 'Social account connection feature needs OAuth configuration',
         provider,
-        userId
+        userId,
       };
     } catch (error) {
       throw new BadRequestException('Failed to connect social account');
@@ -280,8 +346,15 @@ export class AuthService {
     });
   }
 
-  private async createYoutubeSocialAccount(userId: string, youtubeChannel: any, accessToken: string, refreshToken?: string, metadata?: any) {
-    try {      // Check if YouTube account already exists for this user
+  private async createYoutubeSocialAccount(
+    userId: string,
+    youtubeChannel: any,
+    accessToken: string,
+    refreshToken?: string,
+    metadata?: any,
+  ) {
+    try {
+      // Check if YouTube account already exists for this user
       const existingAccount = await this.prisma.socialAccount.findFirst({
         where: {
           userId,
@@ -297,8 +370,12 @@ export class AuthService {
           data: {
             accessToken,
             refreshToken,
-            metadata: metadata || youtubeChannel.metadata || existingAccount.metadata,
-            profilePicture: youtubeChannel.snippet.thumbnails?.high?.url || youtubeChannel.snippet.thumbnails?.default?.url,          },
+            metadata:
+              metadata || youtubeChannel.metadata || existingAccount.metadata,
+            profilePicture:
+              youtubeChannel.snippet.thumbnails?.high?.url ||
+              youtubeChannel.snippet.thumbnails?.default?.url,
+          },
         });
       }
 
@@ -323,7 +400,7 @@ export class AuthService {
             redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
           },
         });
-      }      // Create new YouTube social account with enhanced metadata
+      } // Create new YouTube social account with enhanced metadata
       const socialAccount = await this.prisma.socialAccount.create({
         data: {
           userId,
@@ -334,17 +411,20 @@ export class AuthService {
           accessToken,
           refreshToken,
           socialAppId: youtubeApp.id,
-          profilePicture: youtubeChannel.snippet.thumbnails?.high?.url || youtubeChannel.snippet.thumbnails?.default?.url,
-          metadata: metadata || youtubeChannel.metadata || {
-            // Fallback if enhanced metadata not available
-            channelId: youtubeChannel.id,
-            channelTitle: youtubeChannel.snippet.title,
-            channelDescription: youtubeChannel.snippet.description,
-            subscriberCount: youtubeChannel.statistics?.subscriberCount,
-            videoCount: youtubeChannel.statistics?.videoCount,
-            viewCount: youtubeChannel.statistics?.viewCount,
-            thumbnails: youtubeChannel.snippet.thumbnails,
-          },
+          profilePicture:
+            youtubeChannel.snippet.thumbnails?.high?.url ||
+            youtubeChannel.snippet.thumbnails?.default?.url,
+          metadata: metadata ||
+            youtubeChannel.metadata || {
+              // Fallback if enhanced metadata not available
+              channelId: youtubeChannel.id,
+              channelTitle: youtubeChannel.snippet.title,
+              channelDescription: youtubeChannel.snippet.description,
+              subscriberCount: youtubeChannel.statistics?.subscriberCount,
+              videoCount: youtubeChannel.statistics?.videoCount,
+              viewCount: youtubeChannel.statistics?.viewCount,
+              thumbnails: youtubeChannel.snippet.thumbnails,
+            },
         },
       });
 
@@ -355,8 +435,14 @@ export class AuthService {
     }
   }
 
-  private async createFacebookSocialAccount(userId: string, facebookPage: any, accessToken: string, metadata?: any) {
-    try {      // Check if Facebook page account already exists for this user
+  private async createFacebookSocialAccount(
+    userId: string,
+    facebookPage: any,
+    accessToken: string,
+    metadata?: any,
+  ) {
+    try {
+      // Check if Facebook page account already exists for this user
       const existingAccount = await this.prisma.socialAccount.findFirst({
         where: {
           userId,
@@ -371,7 +457,8 @@ export class AuthService {
           where: { id: existingAccount.id },
           data: {
             accessToken,
-            metadata: metadata || facebookPage.metadata || existingAccount.metadata,
+            metadata:
+              metadata || facebookPage.metadata || existingAccount.metadata,
             profilePicture: facebookPage.picture?.data?.url,
           },
         });
@@ -395,7 +482,8 @@ export class AuthService {
             appSecret: process.env.FACEBOOK_APP_SECRET || '',
             userId,
             isDefault: true,
-            redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,          },
+            redirectUri: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`,
+          },
         });
       }
 
@@ -410,16 +498,17 @@ export class AuthService {
           accessToken,
           socialAppId: facebookApp.id,
           profilePicture: facebookPage.picture?.data?.url,
-          metadata: metadata || facebookPage.metadata || {
-            // Fallback if enhanced metadata not available
-            pageId: facebookPage.id,
-            pageName: facebookPage.name,
-            pageCategory: facebookPage.category,
-            fanCount: facebookPage.fan_count || 0,
-            about: facebookPage.about,
-            description: facebookPage.description,
-            picture: facebookPage.picture?.data?.url,
-          },
+          metadata: metadata ||
+            facebookPage.metadata || {
+              // Fallback if enhanced metadata not available
+              pageId: facebookPage.id,
+              pageName: facebookPage.name,
+              pageCategory: facebookPage.category,
+              fanCount: facebookPage.fan_count || 0,
+              about: facebookPage.about,
+              description: facebookPage.description,
+              picture: facebookPage.picture?.data?.url,
+            },
         },
       });
 
