@@ -27,9 +27,6 @@ async function bootstrap() {
   // Add ngrok URL if configured (mainly for TikTok OAuth)
   if (process.env.FRONTEND_NGROK_URL) {
     allowedOrigins.push(process.env.FRONTEND_NGROK_URL);
-    console.log(
-      `CORS: Added ngrok URL for TikTok OAuth: ${process.env.FRONTEND_NGROK_URL}`,
-    );
   }
 
   app.enableCors({

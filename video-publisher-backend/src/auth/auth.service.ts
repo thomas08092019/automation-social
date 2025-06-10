@@ -15,10 +15,10 @@ import {
   ResetPasswordDto,
   ChangePasswordDto,
 } from '../user/dto/user.dto';
-import { OAuthService } from '../services/oauth.service';
-import { EmailService } from '../services/email.service';
 import * as crypto from 'crypto';
 import { PrismaService } from '../common/prisma.service';
+import { OAuthService } from 'src/common/services/oauth.service';
+import { EmailService } from 'src/common/services/email.service';
 
 export interface JwtPayload {
   userId: string;
@@ -122,15 +122,12 @@ export class AuthService {
           password: crypto.randomBytes(32).toString('hex'),
         };
         user = await this.userService.create(createUserDto);
-      } // Only update user profile picture if user doesn't have one already
+      }      // Only update user profile picture if user doesn't have one already
       if (profilePicture && !user.profilePicture) {
-        console.log('Updating user profile picture from OAuth provider');
         user = await this.userService.updateProfile(user.id, {
           profilePicture,
         });
-      } else if (user.profilePicture) {
-        console.log('User already has profile picture, skipping update');
-      } // If user has YouTube channels, automatically create social accounts for each channel
+      }// If user has YouTube channels, automatically create social accounts for each channel
       if (youtubeChannels && youtubeChannels.length > 0 && youtubeAccessToken) {
         for (let i = 0; i < youtubeChannels.length; i++) {
           const channel = youtubeChannels[i];
@@ -140,13 +137,8 @@ export class AuthService {
               channel,
               youtubeAccessToken,
               youtubeRefreshToken,
-              metadata,
-            );
+              metadata,            );
           } catch (youtubeError) {
-            console.error(
-              `Failed to create social account for YouTube channel: ${channel.snippet.title}`,
-              youtubeError,
-            );
             // Continue with other channels even if one fails
           }
         }
@@ -159,13 +151,8 @@ export class AuthService {
               user.id,
               page,
               page.access_token || facebookAccessToken,
-              metadata,
-            );
+              metadata,            );
           } catch (facebookError) {
-            console.error(
-              `Failed to create social account for Facebook page: ${page.name}`,
-              facebookError,
-            );
             // Continue with other pages even if one fails
           }
         }
@@ -179,10 +166,8 @@ export class AuthService {
 
       return {
         user,
-        accessToken: accessTokenJwt,
-      };
+        accessToken: accessTokenJwt,      };
     } catch (error) {
-      console.error('Social login error:', error);
       throw new UnauthorizedException('Social login failed');
     }
   }
@@ -285,9 +270,7 @@ export class AuthService {
   private async getUserEmail(userId: string): Promise<string> {
     const user = await this.userService.findById(userId);
     return user.email;
-  }
-  async validateUser(payload: JwtPayload): Promise<UserResponseDto> {
-    console.log('🔍 AuthService validateUser called with payload:', payload);
+  }  async validateUser(payload: JwtPayload): Promise<UserResponseDto> {
     try {
       const user = await this.userService.findById(payload.userId);
       return user;
@@ -426,11 +409,8 @@ export class AuthService {
               thumbnails: youtubeChannel.snippet.thumbnails,
             },
         },
-      });
-
-      return socialAccount;
+      });      return socialAccount;
     } catch (error) {
-      console.error('Error creating YouTube social account:', error);
       throw error;
     }
   }
@@ -510,11 +490,8 @@ export class AuthService {
               picture: facebookPage.picture?.data?.url,
             },
         },
-      });
-
-      return socialAccount;
+      });      return socialAccount;
     } catch (error) {
-      console.error('Error creating Facebook social account:', error);
       throw error;
     }
   }

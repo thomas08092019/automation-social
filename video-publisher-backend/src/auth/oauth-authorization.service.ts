@@ -204,59 +204,9 @@ export class OAuthAuthorizationService {
           rand: Math.random().toString(36).substring(2, 15), // Longer random string
           _: Date.now().toString(), // jQuery-style cache buster
           session_invalidate: 'true', // Invalidate existing session
-          cache_buster: Math.random().toString(36).substring(7), // Additional cache buster
-          force_interactive: 'true', // Force interactive mode
+          cache_buster: Math.random().toString(36).substring(7), // Additional cache buster          force_interactive: 'true', // Force interactive mode
         });
         const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${tiktokParams.toString()}`;
-        // Debug logging for TikTok OAuth URL        console.log('=== TikTok OAuth URL Debug ===');
-        console.log(`Client Key: ${config.clientId}`);
-        console.log(`Redirect URI: ${config.redirectUri}`);
-        console.log(`Scopes: ${config.scopes.join(',')}`);
-        console.log(`State: ${tiktokState}`);
-        console.log(
-          `Code Challenge: ${pkce.codeChallenge.substring(0, 20)}...`,
-        );
-        console.log(`🔒 ULTIMATE FORCE PARAMETERS ENABLED:`);
-        console.log(`   - force_reauth: true (Forces re-authentication)`);
-        console.log(`   - force_verify: true (Forces permission verification)`);
-        console.log(`   - approval_prompt: force (Forces approval screens)`);
-        console.log(`   - prompt: consent (Alternative force consent)`);
-        console.log(`   - force_login: true (Forces login screen)`);
-        console.log(`   - force_approval: true (Forces approval screen)`);
-        console.log(`   - force_consent: true (Additional force consent)`);
-        console.log(`   - force_permissions: true (Force permission review)`);
-        console.log(`   - auth_type: rerequest (Force permission re-request)`);
-        console.log(`   - display: popup (Prevent auto-redirect)`);
-        console.log(`   - force_show_permission: true (TikTok-specific force)`);
-        console.log(
-          `   - force_authorization: true (Force authorization screens)`,
-        );
-        console.log(`   - disable_auto_login: true (Disable automatic login)`);
-        console.log(`   - always_prompt: true (Always show prompts)`);
-        console.log(
-          `   - require_interaction: true (Require user interaction)`,
-        );
-        console.log(
-          `   - include_granted_scopes: false (No cached permissions)`,
-        );
-        console.log(`   - fresh: true (Forces fresh authorization)`);
-        console.log(`   - no_cache: true (Prevents caching)`);
-        console.log(
-          `   - session_invalidate: true (Invalidates existing session)`,
-        );
-        console.log(`   - force_interactive: true (Force interactive mode)`);
-        console.log(`Generated URL: ${authUrl}`);
-        console.log('==============================');
-
-        // Additional debug info for troubleshooting
-        console.log('=== TikTok OAuth Configuration Check ===');
-        console.log(`Full Client Key: ${config.clientId}`);
-        console.log(`Expected Redirect URI: ${config.redirectUri}`);
-        console.log(`Expected Scopes: ${config.scopes.join(',')}`);
-        console.log(
-          'Make sure these match EXACTLY in your TikTok Developer Console',
-        );
-        console.log('==========================================');
 
         return authUrl;
 
@@ -336,19 +286,13 @@ export class OAuthAuthorizationService {
     code: string,
     appConfig: any,
     state?: string,
-  ): Promise<TokenExchangeResult> {
-    const tokenEndpoint = this.getTokenEndpoint(platform);
+  ): Promise<TokenExchangeResult> {    const tokenEndpoint = this.getTokenEndpoint(platform);
     const params = this.buildTokenRequestParams(
       platform,
       appConfig,
       code,
       state,
     );
-
-    console.log(`=== ${platform} Token Exchange Debug ===`);
-    console.log('Token Endpoint:', tokenEndpoint);
-    console.log('Request Params:', Object.fromEntries(params.entries()));
-    console.log('==========================================');
 
     try {
       // Add timeout and retry logic to handle authorization code expiration
@@ -360,26 +304,16 @@ export class OAuthAuthorizationService {
         timeout: 5000, // Reduced to 5 seconds for faster processing
         maxRedirects: 0, // Prevent redirect delays
         validateStatus: (status) => status < 500, // Accept 4xx errors for better error handling
-      });
-
-      const data = response.data;
-
-      console.log(`=== ${platform} Token Response Debug ===`);
-      console.log('Raw Response Data:', JSON.stringify(data, null, 2));
-      console.log('Response Status:', response.status);
-      console.log('Response Headers:', response.headers);
-      console.log('=========================================');
+      });      const data = response.data;
 
       // Handle platform-specific response structures
       if (platform === SocialPlatform.TIKTOK) {
         // TikTok API response structure validation
-        if (data.error || data.error_code) {
-          const errorMsg =
+        if (data.error || data.error_code) {          const errorMsg =
             data.error_description ||
             data.message ||
             data.error ||
             'TikTok token exchange failed';
-          console.error('TikTok API Error:', data);
           return {
             success: false,
             errorMessage: `TikTok token exchange failed: ${errorMsg}`,
@@ -387,36 +321,10 @@ export class OAuthAuthorizationService {
         }
 
         // TikTok returns data in nested structure or flat structure depending on endpoint version
-        const tokenData = data.data || data;
-        const accessToken = tokenData.access_token || data.access_token;
+        const tokenData = data.data || data;        const accessToken = tokenData.access_token || data.access_token;
         const refreshToken = tokenData.refresh_token || data.refresh_token;
         const expiresIn = tokenData.expires_in || data.expires_in;
-        const scope = tokenData.scope || data.scope;
-
-        console.log('=== TikTok Token Extraction Debug ===');
-        console.log('Has data.data:', !!data.data);
-        console.log(
-          'Extracted access_token:',
-          accessToken ? `${accessToken.substring(0, 10)}...` : 'MISSING',
-        );
-        console.log(
-          'Extracted refresh_token:',
-          refreshToken ? 'Present' : 'Missing',
-        );
-        console.log('Extracted expires_in:', expiresIn);
-        console.log('Extracted scope:', scope);
-        console.log('=====================================');
-
-        if (!accessToken) {
-          console.error('=== TikTok Access Token Missing ===');
-          console.error(
-            'Full response structure:',
-            JSON.stringify(data, null, 2),
-          );
-          console.error('Expected paths checked:');
-          console.error('- data.access_token:', data.access_token);
-          console.error('- data.data.access_token:', data.data?.access_token);
-          console.error('===================================');
+        const scope = tokenData.scope || data.scope;        if (!accessToken) {
           return {
             success: false,
             errorMessage: 'TikTok access token not found in response',
@@ -441,18 +349,7 @@ export class OAuthAuthorizationService {
         expiresIn: data.expires_in,
         tokenType: data.token_type || 'Bearer',
         scope: data.scope,
-      };
-    } catch (error) {
-      console.error(`=== ${platform} Token Exchange Error ===`);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        headers: error.response?.headers,
-      });
-      console.error('=======================================');
-
+      };    } catch (error) {
       return {
         success: false,
         errorMessage: `Token exchange failed: ${error.response?.data?.error_description || error.response?.data?.message || error.message}`,
