@@ -10,6 +10,9 @@ import { SocialConnectService } from './social-connect.service';
 import { OAuthService } from './oauth.service';
 import { OAuthConfigService } from './oauth-config.service';
 import { UserInfoService } from './user-info.service';
+import { TokenService } from './token.service';
+import { PasswordService } from './password.service';
+import { SocialAuthService } from './social-auth.service';
 import { SharedModule } from '../../shared/shared.module';
 
 @Module({
@@ -27,19 +30,23 @@ import { SharedModule } from '../../shared/shared.module';
       }),
       inject: [ConfigService],
     }),
-  ],
-  providers: [
+  ],  providers: [
     AuthService,
     JwtStrategy,
+    TokenService,
+    PasswordService,
+    SocialAuthService,
     SocialConnectService,
     OAuthService,
     OAuthConfigService,
     UserInfoService,
   ],
-  controllers: [AuthController],
-  exports: [
+  controllers: [AuthController],  exports: [
     AuthService,
     JwtStrategy,
+    TokenService,
+    PasswordService,
+    SocialAuthService,
     SocialConnectService,
     OAuthService,
     OAuthConfigService,
