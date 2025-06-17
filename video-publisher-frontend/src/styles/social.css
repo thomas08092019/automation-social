@@ -349,13 +349,14 @@ body.dark .tiktok-badge {
   color: #ffffff;
 }
 
-.twitter-badge {
-  background: rgba(29, 161, 242, 0.1);
-  color: #1da1f2;
+.x-badge {
+  background: rgba(0, 0, 0, 0.1);
+  color: #000000;
 }
 
-body.dark .twitter-badge {
-  background: rgba(29, 161, 242, 0.2);
+body.dark .x-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
 /* Account Type Badge Styles */

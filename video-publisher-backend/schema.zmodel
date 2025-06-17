@@ -16,7 +16,9 @@ enum SocialPlatform {
   INSTAGRAM
   TIKTOK
   YOUTUBE
-  TWITTER
+  ZALO
+  X
+  TELEGRAM
 }
 
 enum AccountType {
@@ -25,29 +27,6 @@ enum AccountType {
   PROFILE
   BUSINESS
   CREATOR
-}
-
-enum VideoStatus {
-  PENDING
-  PROCESSING
-  READY
-  FAILED_PROCESSING
-}
-
-enum PublishingJobStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-  PARTIALLY_COMPLETED
-}
-
-enum PublishingTaskStatus {
-  PENDING
-  UPLOADING
-  PUBLISHED
-  FAILED
-  RETRYING
 }
 
 // Models with ZenStack access control
@@ -70,8 +49,6 @@ model User {
   
   // Relations
   socialAccounts   SocialAccount[]
-  videos           Video[]
-  publishingJobs   PublishingJob[]
 
   // Access control
   @@allow('all', auth() == this)
@@ -109,7 +86,6 @@ model SocialAccount {
   
   // Relations
   user            User             @relation(fields: [userId], references: [id])
-  publishingTasks PublishingTask[]
 
   // Access control
   @@allow('all', auth() == user)
@@ -117,86 +93,3 @@ model SocialAccount {
   @@map("social_accounts")
 }
 
-model Video {
-  id              String           @id @default(uuid())
-  title           String
-  description     String?
-  filePath        String           @map("file_path")
-  thumbnailPath   String?          @map("thumbnail_path")
-  duration        Int?
-  status          VideoStatus      @default(PENDING)
-  
-  // Foreign keys with snake_case mapping
-  userId          String           @map("user_id")
-  
-  // Audit trail fields
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-  deletedAt       DateTime?        @map("deleted_at")
-  createdBy       String?          @map("created_by")
-  updatedBy       String?          @map("updated_by")
-  deletedBy       String?          @map("deleted_by")
-  
-  // Relations
-  user            User             @relation(fields: [userId], references: [id])
-  publishingTasks PublishingTask[]
-
-  // Access control
-  @@allow('all', auth() == user)
-  @@map("videos")
-}
-
-model PublishingJob {
-  id           String               @id @default(uuid())
-  name         String
-  description  String?
-  status       PublishingJobStatus  @default(PENDING)
-  scheduleTime DateTime?            @map("schedule_time")
-  
-  // Foreign keys with snake_case mapping
-  userId       String               @map("user_id")
-  
-  // Audit trail fields
-  createdAt    DateTime             @default(now()) @map("created_at")
-  updatedAt    DateTime             @updatedAt @map("updated_at")
-  deletedAt    DateTime?            @map("deleted_at")
-  createdBy    String?              @map("created_by")
-  updatedBy    String?              @map("updated_by")
-  deletedBy    String?              @map("deleted_by")
-  
-  // Relations
-  user         User                 @relation(fields: [userId], references: [id])
-  tasks        PublishingTask[]
-
-  // Access control
-  @@allow('all', auth() == user)
-  @@map("publishing_jobs")
-}
-
-model PublishingTask {
-  id              String               @id @default(uuid())
-  status          PublishingTaskStatus @default(PENDING)
-  error           String?
-  
-  // Foreign keys with snake_case mapping
-  jobId           String               @map("job_id")
-  videoId         String               @map("video_id")
-  socialAccountId String               @map("social_account_id")
-  
-  // Audit trail fields
-  createdAt       DateTime             @default(now()) @map("created_at")
-  updatedAt       DateTime             @updatedAt @map("updated_at")
-  deletedAt       DateTime?            @map("deleted_at")
-  createdBy       String?              @map("created_by")
-  updatedBy       String?              @map("updated_by")
-  deletedBy       String?              @map("deleted_by")
-  
-  // Relations
-  job             PublishingJob        @relation(fields: [jobId], references: [id])
-  video           Video                @relation(fields: [videoId], references: [id])
-  socialAccount   SocialAccount        @relation(fields: [socialAccountId], references: [id])
-
-  // Access control
-  @@allow('all', auth() == job.user)
-  @@map("publishing_tasks")
-}

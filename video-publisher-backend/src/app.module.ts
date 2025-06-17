@@ -7,9 +7,6 @@ import { PrismaModule, UserContextInterceptor } from './common';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { SocialAccountModule } from './social-account/social-account.module';
-import { VideoModule } from './video/video.module';
-import { PublishingModule } from './publishing/publishing.module';
-import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -20,9 +17,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
     PrismaModule,
     UserModule,
     SocialAccountModule,
-    VideoModule,
-    PublishingModule,
-    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

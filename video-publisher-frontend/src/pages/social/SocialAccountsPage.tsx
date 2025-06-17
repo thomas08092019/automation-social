@@ -12,10 +12,9 @@ import { Pagination } from '../../components/ui/Pagination';
 import { MetadataModal } from '../../components/ui/MetadataModal';
 import { 
   YouTubeIcon, 
-  FacebookIcon, 
-  InstagramIcon, 
+  FacebookIcon,   InstagramIcon, 
   TikTokIcon, 
-  TwitterIcon,
+  TwitterIcon as XIcon,
   RefreshIcon,
   DeleteIcon,
   SearchIcon
@@ -376,7 +375,7 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       case SocialPlatform.INSTAGRAM: return `${baseClass} instagram-badge`;
       case SocialPlatform.YOUTUBE: return `${baseClass} youtube-badge`;
       case SocialPlatform.TIKTOK: return `${baseClass} tiktok-badge`;
-      case SocialPlatform.TWITTER: return `${baseClass} twitter-badge`;
+      case SocialPlatform.X: return `${baseClass} x-badge`;
       default: return baseClass;
     }
   };
@@ -424,7 +423,7 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       case SocialPlatform.INSTAGRAM: return <InstagramIcon />;
       case SocialPlatform.YOUTUBE: return <YouTubeIcon />;
       case SocialPlatform.TIKTOK: return <TikTokIcon />;
-      case SocialPlatform.TWITTER: return <TwitterIcon />;
+      case SocialPlatform.X: return <XIcon />;
       default: return null;
     }
   };
@@ -476,7 +475,7 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
               { value: SocialPlatform.INSTAGRAM, label: 'Instagram' },
               { value: SocialPlatform.TIKTOK, label: 'TikTok' },
               { value: SocialPlatform.YOUTUBE, label: 'YouTube' },
-              { value: SocialPlatform.TWITTER, label: 'Twitter' },
+              { value: SocialPlatform.X, label: 'X (Twitter)' },
             ],            onChange: (value) => {
               setPlatformFilter(value as SocialPlatform | '');
               setCurrentPage(1); // Reset to first page when filtering

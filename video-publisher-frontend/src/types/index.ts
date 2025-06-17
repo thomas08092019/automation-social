@@ -4,7 +4,9 @@ export enum SocialPlatform {
   INSTAGRAM = 'INSTAGRAM',
   TIKTOK = 'TIKTOK',
   YOUTUBE = 'YOUTUBE',
-  TWITTER = 'TWITTER'
+  ZALO = 'ZALO',
+  X = 'X',
+  TELEGRAM = 'TELEGRAM'
 }
 
 export enum AccountType {

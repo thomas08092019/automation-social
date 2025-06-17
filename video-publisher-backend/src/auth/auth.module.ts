@@ -6,14 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { TokenManagerService } from './token-manager.service';
-import { SocialAppService } from './social-app.service';
-import { EnhancedSocialAppService } from './enhanced-social-app.service';
-import { OAuthAuthorizationService } from './oauth-authorization.service';
-import { PlatformUserInfoService } from './platform-user-info.service';
-import { SocialAppsController } from './social-apps.controller';
+import { SocialConnectService } from './social-connect.service';
 import { PrismaModule } from '../common/prisma.module';
-import { OAuthService } from 'src/common/services/oauth.service';
 import { EmailService } from 'src/common/services/email.service';
 
 @Module({
@@ -35,25 +29,14 @@ import { EmailService } from 'src/common/services/email.service';
   providers: [
     AuthService,
     JwtStrategy,
-    TokenManagerService,
-    SocialAppService,
-    EnhancedSocialAppService,
-    OAuthAuthorizationService,
-    PlatformUserInfoService,
-    OAuthService,
+    SocialConnectService,
     EmailService,
   ],
-  controllers: [AuthController, SocialAppsController],
+  controllers: [AuthController],
   exports: [
     AuthService,
     JwtStrategy,
-    TokenManagerService,
-    SocialAppService,
-    EnhancedSocialAppService,
-    OAuthAuthorizationService,
-    PlatformUserInfoService,
-    OAuthService,
-    EmailService,
+    SocialConnectService,
   ],
 })
 export class AuthModule {}

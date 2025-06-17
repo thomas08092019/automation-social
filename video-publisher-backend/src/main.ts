@@ -22,7 +22,7 @@ async function bootstrap() {
   });
 
   // Enable CORS
-  const allowedOrigins = ['http://localhost:3000'];
+  const allowedOrigins = [process.env.FRONTEND_URL];
 
   // Add ngrok URL if configured (mainly for TikTok OAuth)
   if (process.env.FRONTEND_NGROK_URL) {

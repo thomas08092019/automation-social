@@ -1,81 +1,112 @@
 import { IsEmail, IsString, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { BaseDto } from '../../common';
 
 export class CreateUserDto {
+  @ApiProperty({ description: 'User email address' })
   @IsEmail()
   email: string;
 
+  @ApiProperty({ description: 'Username' })
   @IsString()
   username: string;
 
+  @ApiProperty({ description: 'Password (minimum 6 characters)' })
   @IsString()
   @MinLength(6)
   password: string;
 }
 
 export class LoginDto {
+  @ApiProperty({ description: 'User email address' })
   @IsEmail()
   email: string;
 
+  @ApiProperty({ description: 'User password' })
   @IsString()
   password: string;
 }
 
-export class UserResponseDto {
-  id: string;
+export class UserResponseDto extends BaseDto {
+  @ApiProperty({ description: 'User email address' })
   email: string;
+
+  @ApiProperty({ description: 'Username', required: false })
   username?: string;
+
+  @ApiProperty({ description: 'Profile picture URL', required: false })
   profilePicture?: string;
-  createdAt: Date;
-  updatedAt: Date;
+
+  @ApiProperty({ description: 'Password reset token', required: false })
+  resetToken?: string;
+
+  @ApiProperty({ description: 'Password reset token expiry', required: false })
+  resetTokenExpiry?: Date;
 }
 
 export class SocialLoginDto {
+  @ApiProperty({ description: 'OAuth provider', enum: ['google', 'facebook'] })
   @IsString()
   provider: string; // 'google' | 'facebook'
 
+  @ApiProperty({ description: 'OAuth access token' })
   @IsString()
   accessToken: string;
 
+  @ApiProperty({ description: 'User email from OAuth provider' })
   @IsEmail()
   email: string;
 
+  @ApiProperty({ description: 'User name from OAuth provider' })
   @IsString()
   name: string;
 
+  @ApiProperty({ description: 'Provider-specific user ID' })
   @IsString()
   providerId: string;
 
-  // Profile picture from OAuth provider
+  @ApiProperty({ description: 'Profile picture URL from OAuth provider', required: false })
   profilePicture?: string;
 
-  // Optional YouTube data - now supports multiple channels
+  @ApiProperty({ description: 'YouTube channels data', required: false })
   youtubeChannels?: any[];
+
+  @ApiProperty({ description: 'YouTube access token', required: false })
   youtubeAccessToken?: string;
+
+  @ApiProperty({ description: 'YouTube refresh token', required: false })
   youtubeRefreshToken?: string;
 
-  // Optional Facebook data - now supports multiple pages
+  @ApiProperty({ description: 'Facebook pages data', required: false })
   facebookPages?: any[];
+
+  @ApiProperty({ description: 'Facebook access token', required: false })
   facebookAccessToken?: string;
 }
 
 export class ForgotPasswordDto {
+  @ApiProperty({ description: 'User email address' })
   @IsEmail()
   email: string;
 }
 
 export class ResetPasswordDto {
+  @ApiProperty({ description: 'Password reset token' })
   @IsString()
   token: string;
 
+  @ApiProperty({ description: 'New password (minimum 6 characters)' })
   @IsString()
   @MinLength(6)
   newPassword: string;
 }
 
 export class ChangePasswordDto {
+  @ApiProperty({ description: 'Current password' })
   @IsString()
   currentPassword: string;
 
+  @ApiProperty({ description: 'New password (minimum 6 characters)' })
   @IsString()
   @MinLength(6)
   newPassword: string;
