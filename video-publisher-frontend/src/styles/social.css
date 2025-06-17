@@ -359,6 +359,24 @@ body.dark .x-badge {
   color: #ffffff;
 }
 
+.zalo-badge {
+  background: rgba(0, 104, 255, 0.1);
+  color: #0068ff;
+}
+
+body.dark .zalo-badge {
+  background: rgba(0, 104, 255, 0.2);
+}
+
+.telegram-badge {
+  background: rgba(0, 136, 204, 0.1);
+  color: #0088cc;
+}
+
+body.dark .telegram-badge {
+  background: rgba(0, 136, 204, 0.2);
+}
+
 /* Account Type Badge Styles */
 .account-type-badge {
   padding: 4px 8px;

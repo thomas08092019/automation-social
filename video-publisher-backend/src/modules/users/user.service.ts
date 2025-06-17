@@ -1,0 +1,129 @@
+import { Injectable } from '@nestjs/common';
+import {
+  CreateUserDto,
+  UserResponseDto,
+  LoginDto,
+} from './dto/user.dto';
+import * as bcrypt from 'bcrypt';
+import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { PrismaService } from '../../shared/database/prisma.service';
+import { SocialPlatform } from '@prisma/client';
+
+@Injectable()
+export class UserService {
+  constructor(private prisma: PrismaService) {}
+
+  async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+    const hashedPassword = createUserDto.password 
+      ? await this.hashPassword(createUserDto.password)
+      : null;
+
+    const user = await this.prisma.user.create({
+      data: {
+        ...createUserDto,
+        password: hashedPassword,
+      },
+    });
+
+    return this.mapToResponseDto(user);
+  }
+
+  async findByEmail(email: string): Promise<UserResponseDto | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    return user ? this.mapToResponseDto(user) : null;
+  }
+
+  async findById(id: string): Promise<UserResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.mapToResponseDto(user);
+  }
+
+  // Internal method that includes password - for authentication purposes only
+  async findByIdWithPassword(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  async findByPlatformUserId(
+    platform: SocialPlatform,
+    platformUserId: string,
+  ): Promise<UserResponseDto | null> {
+    const socialAccount = await this.prisma.socialAccount.findFirst({
+      where: {
+        platform,
+        accountId: platformUserId,
+        deletedAt: null,
+      },
+      include: { user: true },
+    });
+
+    return socialAccount?.user ? this.mapToResponseDto(socialAccount.user) : null;
+  }
+
+  async validateUser(email: string, password: string): Promise<UserResponseDto | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user || !user.password) {
+      return null;
+    }
+
+    const isPasswordValid = await this.validatePassword(password, user.password);
+    if (!isPasswordValid) {
+      return null;
+    }
+
+    return this.mapToResponseDto(user);
+  }
+
+  async updateProfile(
+    userId: string,
+    updates: Partial<{ username: string; profilePicture: string }>,
+  ): Promise<UserResponseDto> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: updates,
+    });
+
+    return this.mapToResponseDto(user);
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    const saltRounds = 12;
+    return bcrypt.hash(password, saltRounds);
+  }
+
+  async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(plainPassword, hashedPassword);
+  }
+
+  private mapToResponseDto(user: any): UserResponseDto {
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      profilePicture: user.profilePicture,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      // Don't include password in response
+    };
+  }
+}

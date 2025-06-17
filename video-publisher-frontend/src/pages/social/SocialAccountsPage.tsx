@@ -43,13 +43,33 @@ const PLATFORM_CONFIGS: PlatformButtonConfig[] = [
     icon: <InstagramIcon className="platform-icon instagram-icon" />,
     color: '#e4405f',
     hoverColor: '#e4405f'
-  },
-  {
+  },  {
     platform: SocialPlatform.TIKTOK,
     name: 'TikTok',
     icon: <TikTokIcon className="platform-icon tiktok-icon" />,
     color: '#000000',
     hoverColor: '#000000'
+  },
+  {
+    platform: SocialPlatform.X,
+    name: 'X (Twitter)',
+    icon: <XIcon className="platform-icon x-icon" />,
+    color: '#000000',
+    hoverColor: '#000000'
+  },
+  {
+    platform: SocialPlatform.ZALO,
+    name: 'Zalo',
+    icon: <div className="platform-icon">Z</div>,
+    color: '#0068ff',
+    hoverColor: '#0068ff'
+  },
+  {
+    platform: SocialPlatform.TELEGRAM,
+    name: 'Telegram',
+    icon: <div className="platform-icon">T</div>,
+    color: '#0088cc',
+    hoverColor: '#0088cc'
   }
 ];
 
@@ -367,7 +387,6 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
   // Pagination logic
   const showingStart = accounts.length > 0 ? ((currentPage - 1) * pagination.limit) + 1 : 0;
   const showingEnd = Math.min(currentPage * pagination.limit, pagination.total);
-
   const getPlatformBadgeClass = (platform: SocialPlatform) => {
     const baseClass = 'platform-badge';
     switch (platform) {
@@ -376,6 +395,8 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       case SocialPlatform.YOUTUBE: return `${baseClass} youtube-badge`;
       case SocialPlatform.TIKTOK: return `${baseClass} tiktok-badge`;
       case SocialPlatform.X: return `${baseClass} x-badge`;
+      case SocialPlatform.ZALO: return `${baseClass} zalo-badge`;
+      case SocialPlatform.TELEGRAM: return `${baseClass} telegram-badge`;
       default: return baseClass;
     }
   };
@@ -416,7 +437,6 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
     
     return 'Active';
   };
-
   const getPlatformIcon = (platform: SocialPlatform) => {
     switch (platform) {
       case SocialPlatform.FACEBOOK: return <FacebookIcon />;
@@ -424,6 +444,8 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       case SocialPlatform.YOUTUBE: return <YouTubeIcon />;
       case SocialPlatform.TIKTOK: return <TikTokIcon />;
       case SocialPlatform.X: return <XIcon />;
+      case SocialPlatform.ZALO: return <div className="platform-icon">Z</div>;
+      case SocialPlatform.TELEGRAM: return <div className="platform-icon">T</div>;
       default: return null;
     }
   };
@@ -469,14 +491,15 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
           {
             key: 'platform',
             label: 'All Platforms',
-            value: platformFilter,
-            options: [
+            value: platformFilter,            options: [
               { value: SocialPlatform.FACEBOOK, label: 'Facebook' },
               { value: SocialPlatform.INSTAGRAM, label: 'Instagram' },
               { value: SocialPlatform.TIKTOK, label: 'TikTok' },
               { value: SocialPlatform.YOUTUBE, label: 'YouTube' },
               { value: SocialPlatform.X, label: 'X (Twitter)' },
-            ],            onChange: (value) => {
+              { value: SocialPlatform.ZALO, label: 'Zalo' },
+              { value: SocialPlatform.TELEGRAM, label: 'Telegram' },
+            ],onChange: (value) => {
               setPlatformFilter(value as SocialPlatform | '');
               setCurrentPage(1); // Reset to first page when filtering
             }
