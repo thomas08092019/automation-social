@@ -72,7 +72,6 @@ model User {
   socialAccounts   SocialAccount[]
   videos           Video[]
   publishingJobs   PublishingJob[]
-  socialApps       SocialApp[]
 
   // Access control
   @@allow('all', auth() == this)
@@ -92,9 +91,13 @@ model SocialAccount {
   isActive        Boolean          @default(true) @map("is_active")
   metadata        Json?            // For storing platform-specific data like YouTube channel info
   
-  // Foreign keys with snake_case mapping
+  // OAuth App Configuration (moved from SocialApp)
+  appId           String?          @map("app_id")          // OAuth Client ID
+  appSecret       String?          @map("app_secret")      // OAuth Client Secret
+  redirectUri     String?          @map("redirect_uri")    // OAuth Redirect URI
+  
+  // Foreign keys
   userId          String           @map("user_id")
-  socialAppId     String           @map("social_app_id")
   
   // Audit trail fields
   createdAt       DateTime         @default(now()) @map("created_at")
@@ -106,7 +109,6 @@ model SocialAccount {
   
   // Relations
   user            User             @relation(fields: [userId], references: [id])
-  socialApp       SocialApp        @relation(fields: [socialAppId], references: [id])
   publishingTasks PublishingTask[]
 
   // Access control
@@ -197,33 +199,4 @@ model PublishingTask {
   // Access control
   @@allow('all', auth() == job.user)
   @@map("publishing_tasks")
-}
-
-model SocialApp {
-  id          String         @id @default(cuid())
-  name        String
-  platform    SocialPlatform
-  appId       String         @map("app_id")
-  appSecret   String         @map("app_secret")
-  redirectUri String         @map("redirect_uri")
-  isDefault   Boolean        @default(false) @map("is_default")
-  
-  // Foreign keys with snake_case mapping
-  userId      String         @map("user_id")
-  
-  // Audit trail fields
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  deletedAt   DateTime?      @map("deleted_at")
-  createdBy   String?        @map("created_by")
-  updatedBy   String?        @map("updated_by")
-  deletedBy   String?        @map("deleted_by")
-  
-  // Relations
-  user            User            @relation(fields: [userId], references: [id])
-  socialAccounts  SocialAccount[]
-
-  // Access control
-  @@allow('all', auth() == user)
-  @@map("social_apps")
 }
