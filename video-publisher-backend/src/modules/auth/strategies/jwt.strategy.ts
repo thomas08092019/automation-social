@@ -1,7 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+// Phase 5: Custom exceptions
+import { InvalidTokenException } from '../../../shared/exceptions/custom.exceptions';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,11 +16,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       secretOrKey: secret,
     });
   }
-
   async validate(payload: any) {
     // Simple validation - just return the payload
     if (!payload.userId) {
-      throw new UnauthorizedException('Invalid token - no userId');
+      throw new InvalidTokenException('Invalid token - no userId');
     }
 
     return {

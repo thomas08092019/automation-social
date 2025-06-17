@@ -12,10 +12,12 @@ import { SocialAccountMapper } from './mappers/social-account.mapper';
 import { UserMapper } from './mappers/user.mapper';
 import { ApiResponseMapper } from './mappers/api-response.mapper';
 import { PlatformConfigMapper } from './mappers/platform-config.mapper';
+// Phase 5: Error Handling Middleware
+import { AppLoggerService } from './services/logger.service';
+import { RequestContextInterceptor } from './interceptors/request-context.interceptor';
 
 @Global()
-@Module({
-  providers: [
+@Module({  providers: [
     PrismaService,
     UserContextService,
     UserContextInterceptor,
@@ -25,12 +27,15 @@ import { PlatformConfigMapper } from './mappers/platform-config.mapper';
     PlatformIntegrationService,
     PlatformManagementService,
     ContentOptimizationService,
-    // Mappers    SocialAccountMapper,
+    // Mappers
+    SocialAccountMapper,
     UserMapper,
     ApiResponseMapper,
     PlatformConfigMapper,
-  ],
-  exports: [
+    // Phase 5: Error Handling Middleware
+    AppLoggerService,
+    RequestContextInterceptor,
+  ],  exports: [
     PrismaService,
     UserContextService,
     UserContextInterceptor,
@@ -40,10 +45,14 @@ import { PlatformConfigMapper } from './mappers/platform-config.mapper';
     PlatformIntegrationService,
     PlatformManagementService,
     ContentOptimizationService,
-    // Mappers    SocialAccountMapper,
+    // Mappers
+    SocialAccountMapper,
     UserMapper,
     ApiResponseMapper,
     PlatformConfigMapper,
+    // Phase 5: Error Handling Middleware
+    AppLoggerService,
+    RequestContextInterceptor,
   ],
 })
 export class SharedModule {}

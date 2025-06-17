@@ -3,9 +3,24 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as path from 'path';
+// Phase 5: Error Handling Middleware
+import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
+import { RequestContextInterceptor } from './shared/interceptors/request-context.interceptor';
+import { AppLoggerService } from './shared/services/logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Phase 5: Setup enhanced logging
+  const logger = app.get(AppLoggerService);
+  app.useLogger(logger);
+
+  // Phase 5: Setup global exception filter
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // Phase 5: Setup request context interceptor
+  const requestContextInterceptor = app.get(RequestContextInterceptor);
+  app.useGlobalInterceptors(requestContextInterceptor);
 
   // Enable validation pipes globally (but allow query params for OAuth)
   app.useGlobalPipes(

@@ -5,16 +5,23 @@ import {
   LoginDto,
 } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { UserMapper } from '../../shared/mappers/user.mapper';
 import { SocialPlatform } from '@prisma/client';
+// Phase 5: Custom exceptions
+import { 
+  UserNotFoundException, 
+  UserAlreadyExistsException,
+  InvalidCredentialsException 
+} from '../../shared/exceptions/custom.exceptions';
+import { AppLoggerService } from '../../shared/services/logger.service';
 
 @Injectable()
 export class UserService {
   constructor(
     private prisma: PrismaService,
     private userMapper: UserMapper,
+    private logger: AppLoggerService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
@@ -38,17 +45,24 @@ export class UserService {
 
     return user ? this.userMapper.mapToDto(user) : null;
   }
-
   async findById(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });    if (!user) {
-      throw new NotFoundException('User not found');
+      this.logger.error('User not found by ID', {
+        operation: 'findById',
+        resource: 'user',
+        metadata: { userId: id },
+      });
+      throw new UserNotFoundException(id, {
+        operation: 'findById',
+        resource: 'user',
+        metadata: { userId: id },
+      });
     }
 
     return this.userMapper.mapToDto(user);
   }
-
   // Internal method that includes password - for authentication purposes only
   async findByIdWithPassword(id: string) {
     const user = await this.prisma.user.findUnique({
@@ -56,7 +70,16 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      this.logger.error('User not found by ID (with password)', {
+        operation: 'findByIdWithPassword',
+        resource: 'user',
+        metadata: { userId: id },
+      });
+      throw new UserNotFoundException(id, {
+        operation: 'findByIdWithPassword',
+        resource: 'user',
+        metadata: { userId: id },
+      });
     }
 
     return user;

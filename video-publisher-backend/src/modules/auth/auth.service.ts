@@ -1,6 +1,5 @@
 import {
   Injectable,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from '../users/user.service';
 import {
@@ -16,6 +15,9 @@ import { SocialAccountData } from './social-connect.service';
 import { TokenService, AuthResponse, JwtPayload } from './token.service';
 import { PasswordService } from './password.service';
 import { SocialAuthService } from './social-auth.service';
+// Phase 5: Custom exceptions
+import { InvalidCredentialsException } from '../../shared/exceptions/custom.exceptions';
+import { AppLoggerService } from '../../shared/services/logger.service';
 
 // Re-export types for backward compatibility
 export { JwtPayload, AuthResponse } from './token.service';
@@ -27,12 +29,12 @@ export class AuthService {
     private tokenService: TokenService,
     private passwordService: PasswordService,
     private socialAuthService: SocialAuthService,
+    private logger: AppLoggerService,
   ) {}
   async register(createUserDto: CreateUserDto): Promise<AuthResponse> {
     const user = await this.userService.create(createUserDto);
     return this.tokenService.createAuthResponse(user);
   }
-
   async login(loginDto: LoginDto): Promise<AuthResponse> {
     const user = await this.userService.validateUser(
       loginDto.email,
@@ -40,11 +42,27 @@ export class AuthService {
     );
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      this.logger.logAuth('login', {
+        email: loginDto.email,
+        success: false,
+        operation: 'login',
+      });
+      throw new InvalidCredentialsException({
+        operation: 'login',
+        resource: 'user',
+        metadata: { email: loginDto.email },
+      });
     }
 
+    this.logger.logAuth('login', {
+      userId: user.id,
+      email: loginDto.email,
+      success: true,
+      operation: 'login',
+    });
+
     return this.tokenService.createAuthResponse(user);
-  }  async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
+  }async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
     return this.socialAuthService.socialLogin(socialLoginDto);
   }
 

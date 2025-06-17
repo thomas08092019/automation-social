@@ -25,6 +25,10 @@ import {
   ChangePasswordDto,
 } from '../users/dto/user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { 
+  ValidationException,
+  OAuthException
+} from '../../shared/exceptions/custom.exceptions';
 
 @Controller('auth')
 export class AuthController {
@@ -79,84 +83,58 @@ export class AuthController {
   ): Promise<{ message: string }> {
     return this.authService.changePassword(req.user.id, changePasswordDto);
   }
-
   @Get('oauth/:provider')
   async initiateOAuth(@Param('provider') provider: string, @Res() res: any) {
-    try {
-      const platform = this.validatePlatform(provider);
-      const state = this.generateOAuthState(provider);
+    const platform = this.validatePlatform(provider);
+    const state = this.generateOAuthState(provider);
 
-      const result = await this.oauthService.generateAuthorizationUrl({
-        userId: 'anonymous',
-        platform,
-        state,
-      });
-
-      if (!result.success) {
-        return res.status(400).json({ error: result.errorMessage });
-      }
-
-      res.redirect(result.authorizationUrl);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
+    const result = await this.oauthService.generateAuthorizationUrl({
+      userId: 'anonymous',
+      platform,
+      state,
+    });    res.redirect(result.authorizationUrl);
   }
 
-  @Get('oauth/callback')
-  async handleOAuthCallback(
+  @Get('oauth/callback')  async handleOAuthCallback(
     @Query('code') code: string,
     @Query('state') state: string,
     @Query('error') error: string,
     @Res() res: any,
-  ) {
-    try {
-      if (error) {
-        throw new Error(`OAuth error: ${error}`);
-      }
+  ) {    if (error) {
+      throw new OAuthException('unknown', `OAuth error: ${error}`);
+    }
 
-      if (!code || !state) {
-        throw new Error('Missing authorization code or state parameter');
-      }
+    if (!code || !state) {
+      throw new ValidationException('Missing authorization code or state parameter');
+    }
 
-      const { provider, isLoginFlow } = this.parseOAuthState(state);
-      const platform = this.validatePlatform(provider);
+    const { provider, isLoginFlow } = this.parseOAuthState(state);
+    const platform = this.validatePlatform(provider);
 
-      const tokenResult = await this.oauthService.exchangeCodeForToken(platform, code, state);
-      if (!tokenResult.success) {
-        throw new Error(tokenResult.errorMessage);
-      }
+    const tokenResult = await this.oauthService.exchangeCodeForToken(platform, code, state);
+    const userInfoResult = await this.userInfoService.fetchUserInfo(platform, tokenResult.accessToken);
 
-      const userInfoResult = await this.userInfoService.fetchUserInfo(platform, tokenResult.accessToken);
-      if (!userInfoResult.success) {
-        throw new Error(userInfoResult.errorMessage);
-      }
+    if (isLoginFlow) {
+      const authResult = await this.authService.socialLogin({
+        platform,
+        platformUserId: userInfoResult.userInfo.id,
+        email: userInfoResult.userInfo.email,
+        name: userInfoResult.userInfo.name,
+        profilePicture: userInfoResult.userInfo.profilePicture,
+        accessToken: tokenResult.accessToken,
+        refreshToken: tokenResult.refreshToken,
+        expiresAt: tokenResult.expiresIn ? new Date(Date.now() + tokenResult.expiresIn * 1000) : null,
+        metadata: userInfoResult.userInfo.metadata,
+      });
 
-      if (isLoginFlow) {
-        const authResult = await this.authService.socialLogin({
-          platform,
-          platformUserId: userInfoResult.userInfo.id,
-          email: userInfoResult.userInfo.email,
-          name: userInfoResult.userInfo.name,
-          profilePicture: userInfoResult.userInfo.profilePicture,
-          accessToken: tokenResult.accessToken,
-          refreshToken: tokenResult.refreshToken,
-          expiresAt: tokenResult.expiresIn ? new Date(Date.now() + tokenResult.expiresIn * 1000) : null,
-          metadata: userInfoResult.userInfo.metadata,
-        });
-
-        const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-        const redirectUrl = `${frontendUrl}/auth/callback?success=true&token=${authResult.accessToken}`;
-        return res.redirect(redirectUrl);
-      } else {
-        // Handle social account connection
-        const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-        const redirectUrl = `${frontendUrl}/auth/callback?social_connection=success&platform=${platform}`;
-        return res.redirect(redirectUrl);
-      }
-    } catch (error) {
       const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-      const errorUrl = `${frontendUrl}/auth/callback?error=${encodeURIComponent(error.message)}`;
-      res.redirect(errorUrl);
+      const redirectUrl = `${frontendUrl}/auth/callback?success=true&token=${authResult.accessToken}`;
+      return res.redirect(redirectUrl);
+    } else {
+      // Handle social account connection
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+      const redirectUrl = `${frontendUrl}/auth/callback?social_connection=success&platform=${platform}`;
+      return res.redirect(redirectUrl);
     }
   }
 

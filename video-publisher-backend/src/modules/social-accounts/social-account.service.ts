@@ -13,10 +13,13 @@ import {
 } from './dto/social-account.dto';
 import {
   Injectable as InjectableDecorator,
-  NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { SocialPlatform, AccountType } from '@prisma/client';
+import { 
+  SocialAccountNotFoundException,
+  SocialAccountAlreadyExistsException,
+  SocialAccountException
+} from '../../shared/exceptions/custom.exceptions';
 
 @Injectable()
 export class SocialAccountService {
@@ -35,10 +38,8 @@ export class SocialAccountService {
         accountId: createDto.accountId,
         deletedAt: null,
       },
-    });
-
-    if (existingAccount) {
-      throw new BadRequestException('Social account already exists');
+    });    if (existingAccount) {
+      throw new SocialAccountAlreadyExistsException(createDto.platform);
     }
 
     const socialAccount = await this.prisma.socialAccount.create({
@@ -85,7 +86,7 @@ export class SocialAccountService {
       },
       select: this.getSelectFields(),
     });    if (!socialAccount) {
-      throw new NotFoundException('Social account not found');
+      throw new SocialAccountNotFoundException();
     }
 
     return this.socialAccountMapper.mapToDto(socialAccount);
@@ -105,7 +106,7 @@ export class SocialAccountService {
     });
 
     if (!existingAccount) {
-      throw new NotFoundException('Social account not found');
+      throw new SocialAccountNotFoundException();
     }
 
     const updatedAccount = await this.prisma.socialAccount.update({
@@ -126,7 +127,7 @@ export class SocialAccountService {
     });
 
     if (!socialAccount) {
-      throw new NotFoundException('Social account not found');
+      throw new SocialAccountNotFoundException();
     }
 
     await this.prisma.socialAccount.update({
@@ -162,7 +163,7 @@ export class SocialAccountService {
     });
 
     if (!socialAccount) {
-      throw new NotFoundException('Social account not found');
+      throw new SocialAccountNotFoundException();
     }
 
     // Implementation would involve calling the respective platform's token refresh endpoint
