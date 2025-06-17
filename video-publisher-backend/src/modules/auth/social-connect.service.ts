@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { SocialAccountMapper } from '../../shared/mappers/social-account.mapper';
 import { SocialPlatform, AccountType } from '@prisma/client';
 import { SocialAccountResponseDto } from '../social-accounts/dto/social-account.dto';
 
@@ -28,7 +29,10 @@ export interface SocialAccountData {
 export class SocialConnectService {
   private readonly logger = new Logger(SocialConnectService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private socialAccountMapper: SocialAccountMapper,
+  ) {}
 
   async connectAccount(userId: string, accountData: SocialAccountData): Promise<SocialAccountResponseDto> {
     // Check if account already exists
@@ -56,7 +60,7 @@ export class SocialConnectService {
         },
       });
 
-      return this.mapToResponseDto(updatedAccount);
+      return this.socialAccountMapper.mapToDto(updatedAccount);
     } else {
       // Create new account
       const newAccount = await this.prisma.socialAccount.create({
@@ -78,7 +82,7 @@ export class SocialConnectService {
         },
       });
 
-      return this.mapToResponseDto(newAccount);
+      return this.socialAccountMapper.mapToDto(newAccount);
     }
   }
 
@@ -119,30 +123,6 @@ export class SocialConnectService {
 
     // Here you would implement platform-specific token refresh logic
     // For now, we'll just return the existing account
-    this.logger.log(`Token refresh requested for account ${accountId} on ${account.platform}`);
-
-    return this.mapToResponseDto(account);
-  }
-  private mapToResponseDto(account: any): SocialAccountResponseDto {
-    return {
-      id: account.id,
-      platform: account.platform,
-      accountType: account.accountType,
-      accountId: account.accountId,
-      accountName: account.accountName,
-      platformAccountId: account.accountId, // Using accountId as platformAccountId
-      username: account.accountName, // Using accountName as username
-      scopes: [], // Default empty array
-      profilePictureUrl: account.profilePicture,
-      isActive: account.isActive,
-      expiresAt: account.expiresAt,
-      metadata: account.metadata,
-      createdAt: account.createdAt,
-      updatedAt: account.updatedAt,
-      isExpired: account.expiresAt ? new Date() > new Date(account.expiresAt) : false,
-      daysUntilExpiry: account.expiresAt 
-        ? Math.max(0, Math.ceil((new Date(account.expiresAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))
-        : null,
-    };
+    this.logger.log(`Token refresh requested for account ${accountId} on ${account.platform}`);    return this.socialAccountMapper.mapToDto(account);
   }
 }

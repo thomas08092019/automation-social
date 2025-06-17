@@ -7,6 +7,7 @@ import { SharedModule } from './shared/shared.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/users/user.module';
 import { SocialAccountModule } from './modules/social-accounts/social-account.module';
+import { MultiPlatformModule } from './modules/multi-platform/multi-platform.module';
 import { UserContextInterceptor } from './shared/interceptors/user-context.interceptor';
 
 @Module({
@@ -18,6 +19,7 @@ import { UserContextInterceptor } from './shared/interceptors/user-context.inter
     AuthModule,
     UserModule,
     SocialAccountModule,
+    MultiPlatformModule,
   ],
   controllers: [AppController],
   providers: [

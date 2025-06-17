@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SocialPlatform } from '@prisma/client';
-import { SOCIAL_PLATFORM_CONFIGS } from '../../shared/constants/platform.constants';
+import { OAuthUtils } from '../../shared/utils/oauth.utils';
 
 @Injectable()
 export class OAuthConfigService {
@@ -25,20 +25,16 @@ export class OAuthConfigService {
     return this.configService.get('OAUTH_REDIRECT_URI') || 
            `${this.configService.get('APP_URL')}/auth/oauth/callback`;
   }
-
   getDefaultScopes(platform: SocialPlatform): string[] {
-    const config = SOCIAL_PLATFORM_CONFIGS[platform];
-    return config?.scopes || [];
+    return OAuthUtils.getDefaultScopes(platform);
   }
-
   getPlatformConfig(platform: SocialPlatform) {
-    const config = SOCIAL_PLATFORM_CONFIGS[platform];
+    const config = OAuthUtils.getOAuthConfig(platform);
     if (!config) {
       throw new Error(`Unsupported platform: ${platform}`);
     }
     return config;
   }
-
   generateAuthUrl(platform: SocialPlatform, params: Record<string, string>): string {
     const config = this.getPlatformConfig(platform);
     const url = new URL(config.authUrl);

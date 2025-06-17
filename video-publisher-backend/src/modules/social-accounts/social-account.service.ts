@@ -3,6 +3,7 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { PaginationService } from '../../shared/utils/pagination.service';
 import { SocialConnectService, SocialAccountData } from '../auth/social-connect.service';
 import { DateUtils } from '../../shared/utils/date.utils';
+import { SocialAccountMapper } from '../../shared/mappers/social-account.mapper';
 import {
   CreateSocialAccountDto,
   UpdateSocialAccountDto,
@@ -23,6 +24,7 @@ export class SocialAccountService {
     private prisma: PrismaService,
     private paginationService: PaginationService,
     private socialConnectService: SocialConnectService,
+    private socialAccountMapper: SocialAccountMapper,
   ) {}
   async create(userId: string, createDto: CreateSocialAccountDto): Promise<SocialAccountResponseDto> {
     // Check if account already exists
@@ -49,13 +51,12 @@ export class SocialAccountService {
         accessToken: createDto.accessToken,
         refreshToken: createDto.refreshToken,
         expiresAt: createDto.expiresAt,
-        profilePicture: createDto.profilePicture,
-        metadata: createDto.metadata,
+        profilePicture: createDto.profilePicture,        metadata: createDto.metadata,
       },
       select: this.getSelectFields(),
     });
 
-    return this.mapToResponseDto(socialAccount);
+    return this.socialAccountMapper.mapToDto(socialAccount);
   }
 
   async findAll(userId: string, query: SocialAccountQueryDto): Promise<SocialAccountsResponseDto> {
@@ -70,7 +71,7 @@ export class SocialAccountService {
       limit: query.limit,
       select: this.getSelectFields(),
     });    return {
-      data: result.data.map(this.mapToResponseDto),
+      data: result.data.map(account => this.socialAccountMapper.mapToDto(account)),
       meta: result.pagination,
     };
   }
@@ -83,13 +84,11 @@ export class SocialAccountService {
         deletedAt: null,
       },
       select: this.getSelectFields(),
-    });
-
-    if (!socialAccount) {
+    });    if (!socialAccount) {
       throw new NotFoundException('Social account not found');
     }
 
-    return this.mapToResponseDto(socialAccount);
+    return this.socialAccountMapper.mapToDto(socialAccount);
   }
 
   async update(
@@ -112,10 +111,9 @@ export class SocialAccountService {
     const updatedAccount = await this.prisma.socialAccount.update({
       where: { id },
       data: updateDto,
-      select: this.getSelectFields(),
-    });
+      select: this.getSelectFields(),    });
 
-    return this.mapToResponseDto(updatedAccount);
+    return this.socialAccountMapper.mapToDto(updatedAccount);
   }
 
   async delete(userId: string, id: string): Promise<void> {
@@ -169,7 +167,7 @@ export class SocialAccountService {
 
     // Implementation would involve calling the respective platform's token refresh endpoint
     // For now, we'll just return the account as-is
-    return this.mapToResponseDto(socialAccount);
+    return this.socialAccountMapper.mapToDto(socialAccount);
   }
 
   async refreshTokensBulk(userId: string, accountIds: string[]) {
@@ -215,7 +213,7 @@ export class SocialAccountService {
       select: this.getSelectFields(),
     });
 
-    return expiredAccounts.map(this.mapToResponseDto);
+    return expiredAccounts.map(account => this.socialAccountMapper.mapToDto(account));
   }
 
   private buildWhereClause(userId: string, query: SocialAccountQueryDto) {
@@ -268,26 +266,6 @@ export class SocialAccountService {
       deletedAt: true,
       createdBy: true,
       updatedBy: true,
-      deletedBy: true,
-    };
-  }  private mapToResponseDto = (data: any): SocialAccountResponseDto => {
-    return {
-      id: data.id,
-      platform: data.platform,
-      accountType: data.accountType,
-      accountId: data.accountId,
-      accountName: data.accountName,
-      platformAccountId: data.accountId, // Map accountId to platformAccountId
-      username: data.accountName, // Map accountName to username
-      scopes: [], // Default empty array since not in schema
-      profilePictureUrl: data.profilePicture,
-      isActive: data.isActive,
-      expiresAt: data.expiresAt,
-      metadata: data.metadata,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-      isExpired: data.expiresAt ? DateUtils.isExpired(data.expiresAt) : false,
-      daysUntilExpiry: data.expiresAt ? DateUtils.getDaysUntilExpiry(data.expiresAt) : null,
-    };
-  };
+      deletedBy: true,    };
+  }
 }

@@ -7,11 +7,15 @@ import {
 import * as bcrypt from 'bcrypt';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { UserMapper } from '../../shared/mappers/user.mapper';
 import { SocialPlatform } from '@prisma/client';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private userMapper: UserMapper,
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const hashedPassword = createUserDto.password 
@@ -20,12 +24,11 @@ export class UserService {
 
     const user = await this.prisma.user.create({
       data: {
-        ...createUserDto,
-        password: hashedPassword,
+        ...createUserDto,        password: hashedPassword,
       },
     });
 
-    return this.mapToResponseDto(user);
+    return this.userMapper.mapToDto(user);
   }
 
   async findByEmail(email: string): Promise<UserResponseDto | null> {
@@ -33,19 +36,17 @@ export class UserService {
       where: { email },
     });
 
-    return user ? this.mapToResponseDto(user) : null;
+    return user ? this.userMapper.mapToDto(user) : null;
   }
 
   async findById(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
-    });
-
-    if (!user) {
+    });    if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    return this.mapToResponseDto(user);
+    return this.userMapper.mapToDto(user);
   }
 
   // Internal method that includes password - for authentication purposes only
@@ -74,7 +75,7 @@ export class UserService {
       include: { user: true },
     });
 
-    return socialAccount?.user ? this.mapToResponseDto(socialAccount.user) : null;
+    return socialAccount?.user ? this.userMapper.mapToDto(socialAccount.user) : null;
   }
 
   async validateUser(email: string, password: string): Promise<UserResponseDto | null> {
@@ -87,11 +88,10 @@ export class UserService {
     }
 
     const isPasswordValid = await this.validatePassword(password, user.password);
-    if (!isPasswordValid) {
-      return null;
+    if (!isPasswordValid) {      return null;
     }
 
-    return this.mapToResponseDto(user);
+    return this.userMapper.mapToDto(user);
   }
 
   async updateProfile(
@@ -100,10 +100,9 @@ export class UserService {
   ): Promise<UserResponseDto> {
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: updates,
-    });
+      data: updates,    });
 
-    return this.mapToResponseDto(user);
+    return this.userMapper.mapToDto(user);
   }
 
   async hashPassword(password: string): Promise<string> {
@@ -112,18 +111,5 @@ export class UserService {
   }
 
   async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
-    return bcrypt.compare(plainPassword, hashedPassword);
-  }
-
-  private mapToResponseDto(user: any): UserResponseDto {
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      profilePicture: user.profilePicture,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      // Don't include password in response
-    };
-  }
+    return bcrypt.compare(plainPassword, hashedPassword);  }
 }
