@@ -3,9 +3,9 @@ import {
   SocialPlatform, 
   SocialAccount, 
   AccountType,
-  SocialAccountResponse, 
-  ConnectPlatformResponse 
-} from '../types/social';
+  SocialAccountQuery,
+  SocialAccountsResponse
+} from '../types';
 
 export interface SocialAccountsQuery {
   search?: string;
@@ -28,102 +28,81 @@ export interface SocialAccountsApiResponse {
   hasPrevPage: boolean;
 }
 
+export interface ConnectPlatformResponse {
+  success: boolean;
+  data?: {
+    authUrl: string;
+    platform: string;
+  };
+  message?: string;
+  error?: string;
+}
+
 export const socialAccountsApi = {
   // Get all social accounts for the user with search/filter/pagination
   getAllAccounts: async (query?: SocialAccountsQuery): Promise<SocialAccountsApiResponse> => {
     try {
-      // Build query string
-      const queryParams = new URLSearchParams();
-      if (query?.search) queryParams.append('search', query.search);
-      if (query?.platform) queryParams.append('platform', query.platform);
-      if (query?.accountType) queryParams.append('accountType', query.accountType);
-      if (query?.status) queryParams.append('status', query.status);
-      if (query?.page) queryParams.append('page', query.page.toString());
-      if (query?.limit) queryParams.append('limit', query.limit.toString());
-      if (query?.sortBy) queryParams.append('sortBy', query.sortBy);
-      if (query?.sortOrder) queryParams.append('sortOrder', query.sortOrder);
-
-      const response = await apiService.getSocialAccountsWithQuery(queryParams.toString());
-      console.log('Raw API Response:', response); // Debug log
-        
-      // Handle different response structures from backend
-      let result: any;
+      const response = await apiService.getSocialAccounts(query);
+      console.log('Social Accounts API Response:', response); // Debug log
       
-      if (response && typeof response === 'object') {
-        // If response has pagination structure
-        if ('data' in response && Array.isArray((response as any).data)) {
-          result = response;
-        }
-        // If response is directly an array (fallback for old API)
-        else if (Array.isArray(response)) {
-          result = {
-            data: response,
-            total: response.length,
-            page: 1,
-            limit: response.length,
-            totalPages: 1,
-            hasNextPage: false,
-            hasPrevPage: false,
-          };
-        }
-      }
-      
-      // Map backend DTO fields to frontend types
-      const mappedAccounts = (result.data || []).map((account: any) => ({
-        id: account.id,
-        platform: account.platform,
-        accountType: account.accountType || 'PROFILE', // Use backend value or default
-        accountId: account.accountId || account.platformAccountId || account.id,
-        accountName: account.accountName || account.username || account.displayName || 'Unknown',
-        accessToken: '', // Not returned for security
-        refreshToken: '', // Not returned for security  
-        expiresAt: account.expiresAt || null,
-        profilePicture: account.profilePicture || account.profilePictureUrl || null,
-        isActive: account.isActive !== undefined ? account.isActive : true,
-        metadata: account.metadata || {}, // Use backend metadata or empty object
-      }));
-      
-      console.log('Mapped accounts:', mappedAccounts); // Debug log
-      
+      // Map backend response to frontend expected format
       return {
-        data: mappedAccounts,
-        total: result.total || mappedAccounts.length,
-        page: result.page || 1,
-        limit: result.limit || mappedAccounts.length,
-        totalPages: result.totalPages || 1,
-        hasNextPage: result.hasNextPage || false,
-        hasPrevPage: result.hasPrevPage || false,
+        data: response.data,
+        total: response.total,
+        page: response.currentPage,
+        limit: response.limit,
+        totalPages: response.totalPages,
+        hasNextPage: response.hasNextPage,
+        hasPrevPage: response.hasPrevPage,
       };
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching social accounts:', error);
-      // Return empty response instead of throwing
-      return {
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 10,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPrevPage: false,
-      };
+      throw error;
     }
   },
 
-  // Backward compatibility method for simple account fetching
-  getAllAccountsSimple: async (): Promise<SocialAccount[]> => {
-    const response = await socialAccountsApi.getAllAccounts();
-    return response.data;
+  // Get a single social account by ID
+  getAccount: async (id: string): Promise<SocialAccount> => {
+    try {
+      return await apiService.getSocialAccount(id);
+    } catch (error: any) {
+      console.error('Error fetching social account:', error);
+      throw error;
+    }
   },
 
-  // Get accounts by platform
-  getAccountsByPlatform: async (platform: SocialPlatform): Promise<SocialAccount[]> => {
+  // Update a social account
+  updateAccount: async (id: string, updates: {
+    accountName?: string;
+    accountType?: AccountType;
+    isActive?: boolean;
+    metadata?: any;
+  }): Promise<SocialAccount> => {
     try {
-      const accounts = await apiService.getSocialAccounts();
-      return accounts.filter(account => account.platform === platform);
-    } catch (error) {
-      console.error('Error fetching accounts by platform:', error);
-      return [];
+      return await apiService.updateSocialAccount(id, updates);
+    } catch (error: any) {
+      console.error('Error updating social account:', error);
+      throw error;
+    }
+  },
+
+  // Delete a social account
+  deleteAccount: async (id: string): Promise<void> => {
+    try {
+      await apiService.deleteSocialAccount(id);
+    } catch (error: any) {
+      console.error('Error deleting social account:', error);
+      throw error;
+    }
+  },
+
+  // Refresh account token
+  refreshToken: async (id: string): Promise<SocialAccount> => {
+    try {
+      return await apiService.refreshSocialAccountToken(id);
+    } catch (error: any) {
+      console.error('Error refreshing social account token:', error);
+      throw error;
     }
   },
 
@@ -159,38 +138,37 @@ export const socialAccountsApi = {
     }
   },
 
-  // Delete a social account
-  deleteAccount: async (accountId: string): Promise<void> => {
-    await apiService.disconnectSocialAccount(accountId);
-  },
-
-  // Delete multiple social accounts
-  deleteAccounts: async (accountIds: string[]): Promise<{
+  // Bulk delete social accounts
+  deleteBulk: async (accountIds: string[]): Promise<{
     success: boolean;
     deletedCount: number;
     errors?: Array<{ accountId: string; error: string }>;
   }> => {
-    const response = await apiService.deleteSocialAccountsBulk(accountIds);
-    return response;
+    try {
+      return await apiService.deleteSocialAccountsBulk(accountIds);
+    } catch (error: any) {
+      console.error('Error bulk deleting social accounts:', error);
+      return {
+        success: false,
+        deletedCount: 0,
+        errors: [{ accountId: 'all', error: error.message }],
+      };
+    }
   },
 
-  // Refresh account token
-  refreshAccount: async (accountId: string): Promise<SocialAccount> => {
-    return await apiService.refreshSocialAccountToken(accountId);
-  },
-
-  // Refresh multiple account tokens
-  refreshAccounts: async (accountIds: string[]): Promise<{
-    successCount: number;
-    failureCount: number;
-    results: Array<{
-      accountId: string;
-      success: boolean;
-      account?: SocialAccount;
-      error?: string;
-    }>;
+  // Bulk refresh social account tokens
+  refreshBulk: async (accountIds: string[]): Promise<{
+    successful: SocialAccount[];
+    failed: Array<{ accountId: string; error: string }>;
   }> => {
-    const response = await apiService.refreshSocialAccountsBulk(accountIds);
-    return response;
+    try {
+      return await apiService.refreshSocialAccountsBulk(accountIds);
+    } catch (error: any) {
+      console.error('Error bulk refreshing social accounts:', error);
+      return {
+        successful: [],
+        failed: [{ accountId: 'all', error: error.message }],
+      };
+    }
   },
 };

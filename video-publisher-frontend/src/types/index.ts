@@ -1,4 +1,4 @@
-// Enums matching backend
+// Enums matching backend exactly
 export enum SocialPlatform {
   FACEBOOK = 'FACEBOOK',
   INSTAGRAM = 'INSTAGRAM',
@@ -40,7 +40,7 @@ export enum PublishingTaskStatus {
   RETRYING = 'RETRYING'
 }
 
-// User and Authentication Types
+// User and Authentication Types (matching backend DTOs)
 export interface User {
   id: string;
   email: string;
@@ -67,11 +67,15 @@ export interface RegisterRequest {
 }
 
 export interface SocialLoginRequest {
-  provider: string;
-  accessToken: string;
+  platform: SocialPlatform;
+  platformUserId: string;
   email: string;
-  username: string;
-  providerId: string;
+  name: string;
+  profilePicture?: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: string;
+  metadata?: any;
 }
 
 export interface ForgotPasswordRequest {
@@ -86,6 +90,68 @@ export interface ResetPasswordRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+// Social Account Types (matching backend DTOs)
+export interface SocialAccount {
+  id: string;
+  platform: SocialPlatform;
+  accountType: AccountType;
+  accountId: string;
+  accountName: string;
+  profilePicture?: string;
+  isActive: boolean;
+  expiresAt?: string;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+  deletedBy?: string;
+}
+
+export interface CreateSocialAccountDto {
+  platform: SocialPlatform;
+  accountType: AccountType;
+  accountId: string;
+  accountName: string;
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: string;
+  profilePicture?: string;
+  metadata?: any;
+  appId?: string;
+  appSecret?: string;
+  redirectUri?: string;
+}
+
+export interface UpdateSocialAccountDto {
+  accountName?: string;
+  accountType?: AccountType;
+  isActive?: boolean;
+  metadata?: any;
+}
+
+export interface SocialAccountQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  platform?: SocialPlatform;
+  accountType?: AccountType;
+  status?: 'active' | 'inactive' | 'expired';
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface SocialAccountsResponse {
+  data: SocialAccount[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  limit: number;
 }
 
 // Video Types

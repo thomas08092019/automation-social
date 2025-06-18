@@ -10,11 +10,7 @@ import { OAuthCallbackPage } from './pages/auth/OAuthCallbackPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { SocialAccountsPage } from './pages/social/SocialAccountsPage';
-import { VideosPage } from './pages/videos/VideosPage';
-import { JobsPage } from './pages/upload/JobsPage';
-import { PromptsPage } from './pages/prompts/PromptsPage';
-import { TrendsPage } from './pages/trends/TrendsPage';
-import { TtsPage } from './pages/tts/TtsPage';
+import { PublishingPage } from './pages/publishing/PublishingPage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 import { Loading } from './components/ui/Loading';
 
@@ -93,8 +89,7 @@ function AppRoutes() {
             <ProfilePage />
           </ProtectedRoute>
         } 
-      />
-      <Route 
+      />      <Route 
         path="/social-accounts" 
         element={
           <ProtectedRoute>
@@ -103,49 +98,10 @@ function AppRoutes() {
         } 
       />
       <Route 
-        path="/videos" 
+        path="/publishing" 
         element={
           <ProtectedRoute>
-            <VideosPage />
-          </ProtectedRoute>
-        } 
-      />      <Route 
-        path="/upload" 
-        element={
-          <ProtectedRoute>
-            <JobsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/prompts" 
-        element={
-          <ProtectedRoute>
-            <PromptsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/trends" 
-        element={
-          <ProtectedRoute>
-            <TrendsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/tts" 
-        element={
-          <ProtectedRoute>
-            <TtsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/jobs" 
-        element={
-          <ProtectedRoute>
-            <JobsPage />
+            <PublishingPage />
           </ProtectedRoute>
         } 
       />
@@ -157,6 +113,14 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+
+      {/* Legacy routes - redirect to main features */}
+      <Route path="/videos" element={<Navigate to="/publishing" replace />} />
+      <Route path="/upload" element={<Navigate to="/publishing" replace />} />
+      <Route path="/jobs" element={<Navigate to="/publishing" replace />} />
+      <Route path="/prompts" element={<Navigate to="/publishing" replace />} />
+      <Route path="/trends" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/tts" element={<Navigate to="/publishing" replace />} />
 
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

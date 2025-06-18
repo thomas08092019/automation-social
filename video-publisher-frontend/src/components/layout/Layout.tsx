@@ -27,41 +27,18 @@ const navigationItems: NavigationItem[] = [
     href: '/profile',
     dataPage: 'profile',
     icon: 'M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z'
-  },  {
-    name: 'Manage Social',
+  },
+  {
+    name: 'Social Accounts',
     href: '/social-accounts',
     dataPage: 'social',
     icon: 'M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84'
   },
   {
-    name: 'Manage Video',
-    href: '/videos',
-    dataPage: 'videos',
-    icon: 'M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm3 2h6v4H7V5zm8 8v2h1v-2h-1zm-2-2H7v4h6v-4z'
-  },
-  {
-    name: 'Upload',
-    href: '/jobs',
-    dataPage: 'upload',
+    name: 'Multi-Platform Publishing',
+    href: '/publishing',
+    dataPage: 'publishing',
     icon: 'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z'
-  },
-  {
-    name: 'Manage Prompt',
-    href: '/prompts',
-    dataPage: 'prompts',
-    icon: 'M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z'
-  },
-  {
-    name: 'Google Trends',
-    href: '/trends',
-    dataPage: 'trends',
-    icon: 'M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z'
-  },
-  {
-    name: 'Text to Speech',
-    href: '/tts',
-    dataPage: 'tts',
-    icon: 'M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.824L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.797-3.824a1 1 0 011.617.824zM14 5a1 1 0 011 1v8a1 1 0 11-2 0V6a1 1 0 011-1z'
   },
   {
     name: 'Settings',

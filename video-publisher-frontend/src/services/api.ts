@@ -1,34 +1,42 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { 
-  User, 
-  AuthResponse, 
-  LoginRequest, 
+import { API_BASE_URL } from '../config';
+import {
+  AuthResponse,
+  LoginRequest,
   RegisterRequest,
   SocialLoginRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
   ChangePasswordRequest,
+  User,
+  SocialAccount,
+  CreateSocialAccountDto,
+  UpdateSocialAccountDto,
+  SocialAccountQuery,
+  SocialAccountsResponse,
+  SocialPlatform,
   Video,
   VideoUploadRequest,
   CreateVideoDto,
-  UpdateVideoDto,
-  SocialAccount,
-  ConnectSocialAccountDto,
-  SocialApp,
-  CreateSocialAppDto,
-  PublishingTask,
-  PublishingJob,
-  CreatePublishingJobDto,
-  CreateBatchJobDto,
-  ApiResponse,
-  PaginatedResponse,
-  DashboardStats,
-  OAuthAuthorizationUrl,
-  OAuthCallbackDto,
-  ErrorResponse,
-  SocialPlatform
+  UpdateVideoDto
 } from '../types';
-import { API_BASE_URL } from '../config';
+
+// API Response Types
+export interface ErrorResponse {
+  success: false;
+  message: string;
+  error?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  limit: number;
+}
 
 class ApiService {
   private api: AxiosInstance;
@@ -39,43 +47,35 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 30000,
     });
 
-    // Add request interceptor to include auth token
-    this.api.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
+    // Request interceptor to add token
+    this.api.interceptors.request.use((config) => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
-    );
+      return config;
+    });
 
-    // Add response interceptor to handle auth errors
+    // Response interceptor to handle auth errors
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
           this.clearAuthData();
-          window.location.href = '/auth/login';
+          window.location.href = '/login';
         }
-        return Promise.reject(this.handleError(error));
+        return Promise.reject(error);
       }
     );
   }
 
   private handleError(error: any): ErrorResponse {
-    if (error.response?.data) {
-      return error.response.data;
-    }
     return {
-      message: error.message || 'An unexpected error occurred',
-      statusCode: error.response?.status || 500,
+      success: false,
+      message: error.response?.data?.message || error.message || 'An error occurred',
+      error: error.response?.data?.error || 'UNKNOWN_ERROR',
     };
   }
 
@@ -104,6 +104,7 @@ class ApiService {
     const response = await this.api.post('/auth/forgot-password', data);
     return response.data;
   }
+
   async resetPassword(data: ResetPasswordRequest): Promise<AuthResponse> {
     const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/reset-password', data);
     return response.data;
@@ -113,11 +114,28 @@ class ApiService {
     const response = await this.api.post('/auth/change-password', data);
     return response.data;
   }
-
   async getProfile(): Promise<User> {
     const response: AxiosResponse<User> = await this.api.get('/auth/me');
     return response.data;
   }
+
+  // OAuth endpoints - /auth/oauth/*
+  async getAuthorizationUrl(platform: SocialPlatform): Promise<{ authorizationUrl: string }> {
+    const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
+    return response.data;
+  }
+
+  async connectPlatform(platform: string): Promise<{ success: boolean; data?: { authUrl: string; platform: string }; message?: string; error?: string }> {
+    const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
+    return {
+      success: true,
+      data: {
+        authUrl: response.data.authorizationUrl,
+        platform: platform
+      }
+    };
+  }
+
   // User endpoints - /users/*
   async updateProfile(updates: Partial<User>): Promise<User> {
     const response: AxiosResponse<User> = await this.api.patch('/users/profile', updates);
@@ -136,7 +154,178 @@ class ApiService {
     return response.data;
   }
 
-  // Video endpoints - /videos/*
+  // Social Account endpoints - /social-accounts/*
+  async getSocialAccounts(query?: SocialAccountQuery): Promise<SocialAccountsResponse> {
+    const params = new URLSearchParams();
+    
+    if (query) {
+      if (query.page) params.append('page', query.page.toString());
+      if (query.limit) params.append('limit', query.limit.toString());
+      if (query.search) params.append('search', query.search);
+      if (query.platform) params.append('platform', query.platform);
+      if (query.accountType) params.append('accountType', query.accountType);
+      if (query.status) params.append('status', query.status);
+      if (query.sortBy) params.append('sortBy', query.sortBy);
+      if (query.sortOrder) params.append('sortOrder', query.sortOrder);
+    }
+
+    const response: AxiosResponse<SocialAccountsResponse> = await this.api.get(
+      `/social-accounts${params.toString() ? '?' + params.toString() : ''}`
+    );
+    return response.data;
+  }
+
+  async getSocialAccount(id: string): Promise<SocialAccount> {
+    const response: AxiosResponse<SocialAccount> = await this.api.get(`/social-accounts/${id}`);
+    return response.data;
+  }
+
+  async createSocialAccount(data: CreateSocialAccountDto): Promise<SocialAccount> {
+    const response: AxiosResponse<SocialAccount> = await this.api.post('/social-accounts', data);
+    return response.data;
+  }
+
+  async updateSocialAccount(id: string, updates: UpdateSocialAccountDto): Promise<SocialAccount> {
+    const response: AxiosResponse<SocialAccount> = await this.api.put(`/social-accounts/${id}`, updates);
+    return response.data;
+  }
+
+  async deleteSocialAccount(id: string): Promise<void> {
+    await this.api.delete(`/social-accounts/${id}`);
+  }
+
+  async refreshSocialAccountToken(id: string): Promise<SocialAccount> {
+    const response: AxiosResponse<SocialAccount> = await this.api.post(`/social-accounts/${id}/refresh`);
+    return response.data;
+  }
+
+  // Bulk operations for social accounts
+  async deleteSocialAccountsBulk(accountIds: string[]): Promise<{
+    success: boolean;
+    deletedCount: number;
+    errors?: Array<{ accountId: string; error: string }>;
+  }> {
+    const response = await this.api.delete('/social-accounts/bulk/delete', {
+      data: { accountIds }
+    });
+    return response.data;
+  }
+
+  async refreshSocialAccountsBulk(accountIds: string[]): Promise<{
+    successful: SocialAccount[];
+    failed: Array<{ accountId: string; error: string }>;
+  }> {
+    const response = await this.api.post('/social-accounts/bulk/refresh', {
+      accountIds
+    });
+    return response.data.data;
+  }
+  // Multi-Platform endpoints - /multi-platform/*
+  async createMultiPlatformPost(data: {
+    platforms: SocialPlatform[];
+    content: {
+      text?: string;
+      mediaUrls?: string[];
+      mediaType?: 'image' | 'video';
+      scheduledTime?: Date;
+    };
+    options?: {
+      skipValidation?: boolean;
+      continueOnError?: boolean;
+      optimizeContent?: boolean;
+    };
+    preferences?: {
+      preserveHashtags?: boolean;
+      maxHashtags?: number;
+      tone?: 'professional' | 'casual' | 'friendly';
+      includeEmojis?: boolean;
+    };
+  }): Promise<{
+    success: boolean;
+    results: any[];
+    summary: any;
+    message: string;
+  }> {
+    const response = await this.api.post('/multi-platform/post', data);
+    return response.data;
+  }
+
+  async optimizeContent(data: {
+    platforms: SocialPlatform[];
+    content: {
+      text?: string;
+      mediaUrls?: string[];
+      mediaType?: 'image' | 'video';
+      hashtags?: string[];
+    };
+    preferences?: {
+      preserveHashtags?: boolean;
+      maxHashtags?: number;
+      tone?: 'professional' | 'casual' | 'friendly';
+      includeEmojis?: boolean;
+    };
+  }): Promise<{
+    success: boolean;
+    optimizedContent: Record<string, any>;
+    message: string;
+  }> {
+    const response = await this.api.post('/multi-platform/optimize', data);
+    return response.data;
+  }
+  async validateContent(data: {
+    platforms: SocialPlatform[];
+    content: {
+      text?: string;
+      mediaUrls?: string[];
+      mediaType?: 'image' | 'video';
+    };
+  }): Promise<{
+    success: boolean;
+    validations: any[];
+    summary: { total: number; valid: number; invalid: number };
+    message: string;
+  }> {
+    const response = await this.api.post('/multi-platform/validate', data);
+    return response.data;
+  }
+
+  async getPlatformCapabilities(): Promise<{
+    success: boolean;
+    capabilities: Record<string, any>;
+    message: string;
+  }> {
+    const response = await this.api.get('/multi-platform/capabilities');
+    return response.data;
+  }
+
+  async getPostingStrategy(platforms: SocialPlatform[]): Promise<{
+    success: boolean;
+    strategy: any;
+    message: string;
+  }> {
+    const params = new URLSearchParams();
+    params.append('platforms', platforms.join(','));
+    
+    const response = await this.api.get(`/multi-platform/strategy?${params.toString()}`);
+    return response.data;
+  }
+
+  async getPlatformAnalytics(platforms: SocialPlatform[], dateRange: { start: string; end: string }): Promise<{
+    success: boolean;
+    analytics: any;
+    dateRange: any;
+    message: string;
+  }> {
+    const params = new URLSearchParams();
+    params.append('platforms', platforms.join(','));
+    params.append('startDate', dateRange.start);
+    params.append('endDate', dateRange.end);
+    
+    const response = await this.api.get(`/multi-platform/analytics?${params.toString()}`);
+    return response.data;
+  }
+
+  // Video endpoints (future implementation)
   async getVideos(page = 1, limit = 20): Promise<PaginatedResponse<Video>> {
     const response: AxiosResponse<PaginatedResponse<Video>> = await this.api.get(
       `/videos?page=${page}&limit=${limit}`
@@ -149,24 +338,8 @@ class ApiService {
     return response.data;
   }
 
-  async uploadVideo(videoData: VideoUploadRequest): Promise<Video> {
-    const formData = new FormData();
-    formData.append('title', videoData.title);
-    if (videoData.description) {
-      formData.append('description', videoData.description);
-    }
-    formData.append('file', videoData.file);
-
-    const response: AxiosResponse<Video> = await this.api.post('/videos/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
-
-  async createVideo(videoData: CreateVideoDto): Promise<Video> {
-    const response: AxiosResponse<Video> = await this.api.post('/videos', videoData);
+  async createVideo(data: CreateVideoDto): Promise<Video> {
+    const response: AxiosResponse<Video> = await this.api.post('/videos', data);
     return response.data;
   }
 
@@ -178,213 +351,20 @@ class ApiService {
   async deleteVideo(id: string): Promise<void> {
     await this.api.delete(`/videos/${id}`);
   }
-  // Social Account endpoints - /social-accounts/*
-  async getSocialAccounts(): Promise<SocialAccount[]> {
-    const response: AxiosResponse<SocialAccount[]> = await this.api.get('/social-accounts');
-    return response.data;
-  }
 
-  async getSocialAccountsWithQuery(queryString: string): Promise<any> {
-    const url = queryString ? `/social-accounts?${queryString}` : '/social-accounts';
-    const response: AxiosResponse<any> = await this.api.get(url);
-    return response.data;
-  }
-
-  async getSocialAccount(id: string): Promise<SocialAccount> {
-    const response: AxiosResponse<SocialAccount> = await this.api.get(`/social-accounts/${id}`);
-    return response.data;
-  }
-
-  async connectSocialAccount(data: ConnectSocialAccountDto): Promise<SocialAccount> {
-    const response: AxiosResponse<SocialAccount> = await this.api.post('/social-accounts/connect', data);
-    return response.data;
-  }
-
-  async disconnectSocialAccount(id: string): Promise<void> {
-    await this.api.delete(`/social-accounts/${id}`);
-  }
-
-  async refreshSocialAccountToken(id: string): Promise<SocialAccount> {
-    const response: AxiosResponse<SocialAccount> = await this.api.post(`/social-accounts/${id}/refresh`);
-    return response.data;
-  }
-  async connectPlatform(platform: string): Promise<any> {
-    const response = await this.api.post(`/social-accounts/connect/${platform.toLowerCase()}`);
-    return response.data;
-  }  // Bulk operations for social accounts
-  async deleteSocialAccountsBulk(accountIds: string[]): Promise<{
-    success: boolean;
-    deletedCount: number;
-    errors?: Array<{ accountId: string; error: string }>;
-  }> {
-    const response = await this.api.delete('/social-accounts/bulk/delete', {
-      data: { accountIds }
-    });
-    // Backend returns { success: boolean, deletedCount: number, errors?: any[] } directly
-    return response.data;
-  }
-  async refreshSocialAccountsBulk(accountIds: string[]): Promise<{
-    successCount: number;
-    failureCount: number;
-    results: Array<{
-      accountId: string;
-      success: boolean;
-      account?: SocialAccount;
-      error?: string;
-    }>;
-  }> {
-    const response = await this.api.post('/social-accounts/bulk/refresh', {
-      accountIds
-    });
-    // Backend returns { success: true, data: { successCount, failureCount, results }, message: "..." }
-    return response.data.data;
-  }
-
-  // Social App endpoints - /api/social-apps/*
-  async getSocialApps(): Promise<SocialApp[]> {
-    const response: AxiosResponse<SocialApp[]> = await this.api.get('/api/social-apps');
-    return response.data;
-  }
-
-  async getSocialApp(id: string): Promise<SocialApp> {
-    const response: AxiosResponse<SocialApp> = await this.api.get(`/api/social-apps/${id}`);
-    return response.data;
-  }
-
-  async createSocialApp(data: CreateSocialAppDto): Promise<SocialApp> {
-    const response: AxiosResponse<SocialApp> = await this.api.post('/api/social-apps', data);
-    return response.data;
-  }
-
-  async updateSocialApp(id: string, updates: Partial<CreateSocialAppDto>): Promise<SocialApp> {
-    const response: AxiosResponse<SocialApp> = await this.api.patch(`/api/social-apps/${id}`, updates);
-    return response.data;
-  }
-  async deleteSocialApp(id: string): Promise<void> {
-    await this.api.delete(`/api/social-apps/${id}`);
-  }
-
-  // OAuth methods for login
-  async getAuthorizationUrl(platform: SocialPlatform): Promise<OAuthAuthorizationUrl> {
-    // For login, use the auth OAuth endpoint
-    const provider = platform === SocialPlatform.YOUTUBE ? 'google' : 'facebook';
-    const authUrl = `${API_BASE_URL}/auth/oauth/${provider}`;
-    
-    // Generate state for security
-    const state = `login-${Date.now()}`;
-    
-    return {
-      authorizationUrl: authUrl,
-      state,
-      platform
-    };
-  }
-
-  // OAuth methods for social account connection
-  async getSocialAccountAuthUrl(platform: SocialPlatform, socialAppId: string): Promise<OAuthAuthorizationUrl> {
-    // Convert platform enum to lowercase for API
-    const platformName = platform.toLowerCase();
-    const response: AxiosResponse<any> = await this.api.post(`/social-accounts/connect/${platformName}`, {}, {
-      params: { appId: socialAppId }
-    });
-    
-    // Extract authorization URL and state from response
-    if (response.data.success && response.data.data?.authUrl) {
-      // The backend generates the state in the format: userId:platform:timestamp
-      // We'll extract it from the authorization URL or use a default
-      const urlParams = new URLSearchParams(response.data.data.authUrl.split('?')[1]);
-      const state = urlParams.get('state') || `auth-${Date.now()}`;
-      
-      return {
-        authorizationUrl: response.data.data.authUrl,
-        state: state,
-        platform: platform
-      };
-    } else {
-      throw new Error(response.data.message || 'Failed to get authorization URL');
+  async uploadVideo(data: VideoUploadRequest): Promise<Video> {
+    const formData = new FormData();
+    formData.append('file', data.file);
+    formData.append('title', data.title);
+    if (data.description) {
+      formData.append('description', data.description);
     }
-  }
 
-  async handleOAuthCallback(data: OAuthCallbackDto): Promise<any> {
-    // Check if this is a login flow or social account connection flow
-    const isLoginFlow = data.state.startsWith('login-');
-    
-    if (isLoginFlow) {
-      // For login flow, use auth social-login endpoint
-      const provider = data.platform === SocialPlatform.YOUTUBE ? 'google' : 'facebook';
-      
-      // This is a simplified implementation. In a real app, you'd exchange the code for tokens
-      // For now, we'll return mock data that matches what the auth context expects
-      return {
-        accessToken: 'oauth-token',
-        accountId: `${provider}-user-${Date.now()}`,
-        accountName: `${provider} User`,
-        platform: data.platform
-      };
-    } else {
-      // For social account connection, use social-accounts OAuth callback
-      const response: AxiosResponse<any> = await this.api.post('/social-accounts/oauth/callback', {
-        code: data.code,
-        state: data.state,
-        platform: data.platform,
-        appId: data.socialAppId
-      });
-      
-      // Extract social account from response
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || 'OAuth callback failed');
-      }
-    }
-  }
-
-  // Publishing endpoints - /publishing/*
-  async getPublishingJobs(page = 1, limit = 20): Promise<PaginatedResponse<PublishingJob>> {
-    const response: AxiosResponse<PaginatedResponse<PublishingJob>> = await this.api.get(
-      `/publishing/jobs?page=${page}&limit=${limit}`
-    );
-    return response.data;
-  }
-
-  async getPublishingJob(id: string): Promise<PublishingJob> {
-    const response: AxiosResponse<PublishingJob> = await this.api.get(`/publishing/jobs/${id}`);
-    return response.data;
-  }
-
-  async createPublishingJob(jobData: CreatePublishingJobDto): Promise<PublishingJob> {
-    const response: AxiosResponse<PublishingJob> = await this.api.post('/publishing/jobs', jobData);
-    return response.data;
-  }
-
-  async createBatchJob(jobData: CreateBatchJobDto): Promise<PublishingJob> {
-    const response: AxiosResponse<PublishingJob> = await this.api.post('/publishing/batch-jobs', jobData);
-    return response.data;
-  }
-
-  async cancelPublishingJob(id: string): Promise<PublishingJob> {
-    const response: AxiosResponse<PublishingJob> = await this.api.post(`/publishing/jobs/${id}/cancel`);
-    return response.data;
-  }
-
-  async retryPublishingJob(id: string): Promise<PublishingJob> {
-    const response: AxiosResponse<PublishingJob> = await this.api.post(`/publishing/jobs/${id}/retry`);
-    return response.data;
-  }
-
-  async getPublishingTask(id: string): Promise<PublishingTask> {
-    const response: AxiosResponse<PublishingTask> = await this.api.get(`/publishing/tasks/${id}`);
-    return response.data;
-  }
-
-  async retryPublishingTask(id: string): Promise<PublishingTask> {
-    const response: AxiosResponse<PublishingTask> = await this.api.post(`/publishing/tasks/${id}/retry`);
-    return response.data;
-  }
-
-  // Dashboard endpoints - /dashboard/*
-  async getDashboardStats(): Promise<DashboardStats> {
-    const response: AxiosResponse<DashboardStats> = await this.api.get('/dashboard/stats');
+    const response: AxiosResponse<Video> = await this.api.post('/videos/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 }
