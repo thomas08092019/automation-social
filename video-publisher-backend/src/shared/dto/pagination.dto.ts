@@ -3,12 +3,12 @@ import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, Min, Max } from 'class-validator';
 
 export class PaginationQueryDto {
-  @ApiProperty({ 
-    description: 'Page number (starting from 1)', 
-    example: 1, 
+  @ApiProperty({
+    description: 'Page number (starting from 1)',
+    example: 1,
     minimum: 1,
     required: false,
-    default: 1 
+    default: 1,
   })
   @IsOptional()
   @Type(() => Number)
@@ -16,13 +16,13 @@ export class PaginationQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiProperty({ 
-    description: 'Number of items per page', 
-    example: 10, 
+  @ApiProperty({
+    description: 'Number of items per page',
+    example: 10,
     minimum: 1,
     maximum: 100,
     required: false,
-    default: 10 
+    default: 10,
   })
   @IsOptional()
   @Type(() => Number)
@@ -31,26 +31,26 @@ export class PaginationQueryDto {
   @Max(100)
   limit?: number = 10;
 
-  @ApiProperty({ 
-    description: 'Search term', 
-    required: false 
+  @ApiProperty({
+    description: 'Search term',
+    required: false,
   })
   @IsOptional()
   search?: string;
 
-  @ApiProperty({ 
-    description: 'Sort field', 
+  @ApiProperty({
+    description: 'Sort field',
     required: false,
-    default: 'createdAt' 
+    default: 'createdAt',
   })
   @IsOptional()
   sortBy?: string = 'createdAt';
 
-  @ApiProperty({ 
-    description: 'Sort order', 
+  @ApiProperty({
+    description: 'Sort order',
     enum: ['asc', 'desc'],
     required: false,
-    default: 'desc' 
+    default: 'desc',
   })
   @IsOptional()
   sortOrder?: 'asc' | 'desc' = 'desc';
@@ -71,13 +71,20 @@ export class PaginationMetaDto {
   @ApiProperty({ description: 'Whether there is a next page', example: true })
   hasNext: boolean;
 
-  @ApiProperty({ description: 'Whether there is a previous page', example: false })
+  @ApiProperty({
+    description: 'Whether there is a previous page',
+    example: false,
+  })
   hasPrev: boolean;
 
   @ApiProperty({ description: 'Next page number', example: 2, required: false })
   nextPage?: number;
 
-  @ApiProperty({ description: 'Previous page number', example: null, required: false })
+  @ApiProperty({
+    description: 'Previous page number',
+    example: null,
+    required: false,
+  })
   prevPage?: number;
 }
 

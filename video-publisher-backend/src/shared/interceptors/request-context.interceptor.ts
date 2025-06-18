@@ -73,14 +73,14 @@ export class RequestContextInterceptor implements NestInterceptor {
 
   private logIncomingRequest(request: Request, context: RequestContext): void {
     const { method, url, requestId, userId, userAgent, ip } = context;
-    
+
     // Skip logging for health checks and static files
     if (this.shouldSkipLogging(url)) {
       return;
     }
 
     const message = `Incoming ${method} ${url}`;
-    
+
     this.logger.log(message, {
       requestId,
       userId,
@@ -91,8 +91,10 @@ export class RequestContextInterceptor implements NestInterceptor {
         method,
         url,
         body: this.sanitizeRequestBody(request.body),
-        query: Object.keys(request.query).length > 0 ? request.query : undefined,
-        params: Object.keys(request.params).length > 0 ? request.params : undefined,
+        query:
+          Object.keys(request.query).length > 0 ? request.query : undefined,
+        params:
+          Object.keys(request.params).length > 0 ? request.params : undefined,
       },
     });
   }
@@ -113,7 +115,7 @@ export class RequestContextInterceptor implements NestInterceptor {
     }
 
     const message = `${method} ${url} - ${statusCode} (${duration}ms)`;
-    
+
     const logContext = {
       requestId,
       userId,
@@ -154,12 +156,13 @@ export class RequestContextInterceptor implements NestInterceptor {
     context: RequestContext,
     error: any,
   ): void {
-    const { method, url, requestId, userId, startTime, userAgent, ip } = context;
+    const { method, url, requestId, userId, startTime, userAgent, ip } =
+      context;
     const duration = Date.now() - startTime;
     const statusCode = error.status || error.statusCode || 500;
 
     const message = `${method} ${url} - ERROR ${statusCode} (${duration}ms)`;
-    
+
     this.logger.error(message, {
       requestId,
       userId,
@@ -187,7 +190,7 @@ export class RequestContextInterceptor implements NestInterceptor {
       '/api/uploads',
     ];
 
-    return skipPatterns.some(pattern => url.includes(pattern));
+    return skipPatterns.some((pattern) => url.includes(pattern));
   }
 
   private sanitizeRequestBody(body: any): any {

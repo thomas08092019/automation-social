@@ -43,9 +43,7 @@ export interface BatchPostResult {
 export class PlatformManagementService {
   private readonly logger = new Logger(PlatformManagementService.name);
 
-  constructor(
-    private readonly adapterFactory: PlatformAdapterFactory,
-  ) {}
+  constructor(private readonly adapterFactory: PlatformAdapterFactory) {}
 
   /**
    * Validate content across multiple platforms
@@ -56,13 +54,16 @@ export class PlatformManagementService {
       text?: string;
       mediaUrls?: string[];
       mediaType?: 'image' | 'video';
-    }
+    },
   ): Promise<ContentValidationResult[]> {
     const results: ContentValidationResult[] = [];
 
     for (const platform of platforms) {
       try {
-        const validation = this.adapterFactory.validateContent(platform, content);
+        const validation = this.adapterFactory.validateContent(
+          platform,
+          content,
+        );
         const warnings = this.generateContentWarnings(platform, content);
 
         results.push({
@@ -94,13 +95,16 @@ export class PlatformManagementService {
 
     // Validate content first unless skipped
     if (!options.skipValidation) {
-      const validations = await this.validateContentForPlatforms(platforms, content);
-      const invalidPlatforms = validations.filter(v => !v.valid);
-      
+      const validations = await this.validateContentForPlatforms(
+        platforms,
+        content,
+      );
+      const invalidPlatforms = validations.filter((v) => !v.valid);
+
       if (invalidPlatforms.length > 0 && !options.continueOnError) {
         return {
           success: false,
-          results: invalidPlatforms.map(v => ({
+          results: invalidPlatforms.map((v) => ({
             platform: v.platform,
             success: false,
             error: v.errors.join(', '),
@@ -118,11 +122,11 @@ export class PlatformManagementService {
     for (const platform of platforms) {
       try {
         const adapter = this.adapterFactory.getAdapter(platform);
-        
+
         // Transform content for the specific platform
         const transformedContent = await this.transformContentForPlatform(
           adapter,
-          content
+          content,
         );
 
         const postId = await adapter.createPost(transformedContent);
@@ -136,7 +140,7 @@ export class PlatformManagementService {
         this.logger.log(`Successfully posted to ${platform}: ${postId}`);
       } catch (error) {
         this.logger.error(`Failed to post to ${platform}`, error);
-        
+
         results.push({
           platform,
           success: false,
@@ -152,8 +156,8 @@ export class PlatformManagementService {
 
     const summary = {
       total: platforms.length,
-      successful: results.filter(r => r.success).length,
-      failed: results.filter(r => !r.success).length,
+      successful: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length,
     };
 
     return {
@@ -174,9 +178,9 @@ export class PlatformManagementService {
       hashtagStrategy: string;
     }>;
   } {
-    const recommendations = platforms.map(platform => {
+    const recommendations = platforms.map((platform) => {
       const adapter = this.adapterFactory.getAdapter(platform);
-      
+
       return {
         platform,
         bestTimes: this.getBestPostingTimes(platform),
@@ -193,14 +197,14 @@ export class PlatformManagementService {
    */
   async getPlatformAnalytics(
     platforms: SocialPlatform[],
-    dateRange: { start: Date; end: Date }
+    dateRange: { start: Date; end: Date },
   ): Promise<Record<SocialPlatform, any>> {
     const analytics: Record<string, any> = {};
 
     for (const platform of platforms) {
       try {
         const adapter = this.adapterFactory.getAdapter(platform);
-        
+
         if (adapter.capabilities.supportsAnalytics) {
           analytics[platform] = await adapter.getAnalytics(dateRange);
         } else {
@@ -225,14 +229,16 @@ export class PlatformManagementService {
    */
   private async transformContentForPlatform(
     adapter: PlatformAdapter,
-    content: any
+    content: any,
   ): Promise<any> {
     const transformed = { ...content };
 
     // Truncate text if needed
     if (content.text && adapter.capabilities.maxTextLength) {
       if (content.text.length > adapter.capabilities.maxTextLength) {
-        transformed.text = content.text.substring(0, adapter.capabilities.maxTextLength - 3) + '...';
+        transformed.text =
+          content.text.substring(0, adapter.capabilities.maxTextLength - 3) +
+          '...';
       }
     }
 
@@ -249,7 +255,7 @@ export class PlatformManagementService {
    */
   private generateContentWarnings(
     platform: SocialPlatform,
-    content: any
+    content: any,
   ): string[] {
     const warnings: string[] = [];
     const adapter = this.adapterFactory.getAdapter(platform);
@@ -263,8 +269,14 @@ export class PlatformManagementService {
     }
 
     // Check for platform-specific best practices
-    if (platform === SocialPlatform.INSTAGRAM && content.text && !content.text.includes('#')) {
-      warnings.push('Consider adding hashtags for better discoverability on Instagram');
+    if (
+      platform === SocialPlatform.INSTAGRAM &&
+      content.text &&
+      !content.text.includes('#')
+    ) {
+      warnings.push(
+        'Consider adding hashtags for better discoverability on Instagram',
+      );
     }
 
     if (platform === SocialPlatform.YOUTUBE && content.mediaType !== 'video') {
@@ -294,7 +306,10 @@ export class PlatformManagementService {
   /**
    * Get content tips for platform
    */
-  private getContentTips(platform: SocialPlatform, adapter: PlatformAdapter): string[] {
+  private getContentTips(
+    platform: SocialPlatform,
+    adapter: PlatformAdapter,
+  ): string[] {
     const tips: Record<SocialPlatform, string[]> = {
       [SocialPlatform.FACEBOOK]: [
         'Use engaging visuals',
@@ -333,13 +348,22 @@ export class PlatformManagementService {
       ],
     };
 
-    return tips[platform] || ['Create engaging content', 'Post regularly', 'Engage with audience'];
+    return (
+      tips[platform] || [
+        'Create engaging content',
+        'Post regularly',
+        'Engage with audience',
+      ]
+    );
   }
 
   /**
    * Get hashtag strategy for platform
    */
-  private getHashtagStrategy(platform: SocialPlatform, adapter: PlatformAdapter): string {
+  private getHashtagStrategy(
+    platform: SocialPlatform,
+    adapter: PlatformAdapter,
+  ): string {
     const strategies = {
       [SocialPlatform.FACEBOOK]: 'Use 1-2 relevant hashtags',
       [SocialPlatform.INSTAGRAM]: 'Use 11-30 mix of popular and niche hashtags',

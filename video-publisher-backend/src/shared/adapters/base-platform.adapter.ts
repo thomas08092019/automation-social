@@ -1,12 +1,12 @@
-import { 
-  PlatformAdapter, 
-  AuthorizationUrlParams, 
-  TokenExchangeParams, 
-  TokenResponse, 
+import {
+  PlatformAdapter,
+  AuthorizationUrlParams,
+  TokenExchangeParams,
+  TokenResponse,
   UserInfo,
   PlatformCredentials,
   PostPublishParams,
-  PostPublishResult
+  PostPublishResult,
 } from './platform-adapter.interface';
 import { SocialPlatform } from '@prisma/client';
 import { OAuthUtils } from '../utils/oauth.utils';
@@ -18,23 +18,27 @@ export abstract class BasePlatformAdapter implements PlatformAdapter {
   abstract readonly capabilities: any;
 
   // Common OAuth implementation using existing utils
-  async generateAuthorizationUrl(params: AuthorizationUrlParams): Promise<string> {
+  async generateAuthorizationUrl(
+    params: AuthorizationUrlParams,
+  ): Promise<string> {
     return OAuthUtils.buildAuthorizationUrl(
       this.platform,
       params.credentials.clientId,
       params.credentials.redirectUri,
       params.scopes,
-      params.additionalParams?.state || 'default_state'
+      params.additionalParams?.state || 'default_state',
     );
   }
 
-  async exchangeCodeForToken(params: TokenExchangeParams): Promise<TokenResponse> {
+  async exchangeCodeForToken(
+    params: TokenExchangeParams,
+  ): Promise<TokenResponse> {
     const response = await OAuthUtils.exchangeCodeForToken(
       this.platform,
       params.credentials.clientId,
       params.credentials.clientSecret,
       params.code,
-      params.credentials.redirectUri
+      params.credentials.redirectUri,
     );
 
     return {
@@ -47,7 +51,10 @@ export abstract class BasePlatformAdapter implements PlatformAdapter {
   }
 
   async fetchUserInfo(accessToken: string): Promise<UserInfo> {
-    const rawUserInfo = await UserInfoUtils.fetchUserInfo(this.platform, accessToken);
+    const rawUserInfo = await UserInfoUtils.fetchUserInfo(
+      this.platform,
+      accessToken,
+    );
     return UserInfoUtils.normalizeUserInfo(this.platform, rawUserInfo);
   }
 
@@ -64,10 +71,16 @@ export abstract class BasePlatformAdapter implements PlatformAdapter {
     return this.fetchUserInfo(accessToken);
   }
   // Abstract methods that must be implemented by each platform
-  abstract refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse>;
+  abstract refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse>;
   abstract publishPost(params: PostPublishParams): Promise<PostPublishResult>;
   abstract getAccountMetrics(accessToken: string): Promise<Record<string, any>>;
-  abstract getPlatformSpecificData(accessToken: string, dataType: string): Promise<any>;
+  abstract getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any>;
 
   // Simplified content creation method
   async createPost(content: any): Promise<string> {
@@ -117,7 +130,7 @@ export abstract class BasePlatformAdapter implements PlatformAdapter {
   // Helper method to get platform-specific headers
   protected getAuthHeaders(accessToken: string): Record<string, string> {
     return {
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     };
   }

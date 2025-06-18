@@ -20,7 +20,10 @@ export interface NormalizedUserInfo {
 }
 
 export class UserInfoUtils {
-  private static readonly PLATFORM_USER_INFO_CONFIGS: Record<SocialPlatform, UserInfoConfig> = {
+  private static readonly PLATFORM_USER_INFO_CONFIGS: Record<
+    SocialPlatform,
+    UserInfoConfig
+  > = {
     [SocialPlatform.FACEBOOK]: {
       url: 'https://graph.facebook.com/me',
       method: 'GET',
@@ -69,10 +72,15 @@ export class UserInfoUtils {
   /**
    * Fetch user info from any platform using generic approach
    */
-  static async fetchUserInfo(platform: SocialPlatform, accessToken: string): Promise<any> {
+  static async fetchUserInfo(
+    platform: SocialPlatform,
+    accessToken: string,
+  ): Promise<any> {
     const config = this.PLATFORM_USER_INFO_CONFIGS[platform];
     if (!config) {
-      throw new Error(`User info configuration not found for platform: ${platform}`);
+      throw new Error(
+        `User info configuration not found for platform: ${platform}`,
+      );
     }
 
     // Special handling for Telegram
@@ -121,14 +129,19 @@ export class UserInfoUtils {
 
       return userData;
     } catch (error) {
-      throw new Error(`Failed to fetch user info from ${platform}: ${error.message}`);
+      throw new Error(
+        `Failed to fetch user info from ${platform}: ${error.message}`,
+      );
     }
   }
 
   /**
    * Normalize user info to common format
    */
-  static normalizeUserInfo(platform: SocialPlatform, rawUserInfo: any): NormalizedUserInfo {
+  static normalizeUserInfo(
+    platform: SocialPlatform,
+    rawUserInfo: any,
+  ): NormalizedUserInfo {
     switch (platform) {
       case SocialPlatform.FACEBOOK:
         return {
@@ -197,10 +210,16 @@ export class UserInfoUtils {
         // Generic fallback
         return {
           id: rawUserInfo.id || rawUserInfo.open_id,
-          name: rawUserInfo.name || rawUserInfo.display_name || rawUserInfo.username,
+          name:
+            rawUserInfo.name ||
+            rawUserInfo.display_name ||
+            rawUserInfo.username,
           email: rawUserInfo.email,
           username: rawUserInfo.username || rawUserInfo.name,
-          profilePicture: rawUserInfo.picture || rawUserInfo.avatar_url || rawUserInfo.profile_image_url,
+          profilePicture:
+            rawUserInfo.picture ||
+            rawUserInfo.avatar_url ||
+            rawUserInfo.profile_image_url,
           metadata: rawUserInfo,
         };
     }

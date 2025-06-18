@@ -4,13 +4,15 @@ import { BaseMapper } from './base.mapper';
 import { SocialAccountResponseDto } from '../../modules/social-accounts/dto/social-account.dto';
 
 @Injectable()
-export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccountResponseDto> {
-  
+export class SocialAccountMapper extends BaseMapper<
+  SocialAccount,
+  SocialAccountResponseDto
+> {
   /**
    * Map SocialAccount entity to response DTO
-   */  mapToDto(account: any): SocialAccountResponseDto {
+   */ mapToDto(account: any): SocialAccountResponseDto {
     const expirationStatus = this.calculateExpirationStatus(account.expiresAt);
-    
+
     return {
       id: account.id,
       platform: account.platform,
@@ -18,7 +20,7 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
       accountId: account.accountId,
       accountName: account.accountName,
       platformAccountId: account.accountId, // Legacy compatibility
-      username: account.accountName, // Legacy compatibility  
+      username: account.accountName, // Legacy compatibility
       scopes: [], // Schema doesn't have scopes field
       profilePictureUrl: this.mapOptional(account.profilePicture),
       isActive: this.mapBoolean(account.isActive, true),
@@ -34,9 +36,11 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
   /**
    * Map with user relationship
    */
-  mapToDtoWithUser(account: SocialAccount & { user?: any }): SocialAccountResponseDto & { user?: any } {
+  mapToDtoWithUser(
+    account: SocialAccount & { user?: any },
+  ): SocialAccountResponseDto & { user?: any } {
     const baseDto = this.mapToDto(account);
-    
+
     if (account.user) {
       return {
         ...baseDto,
@@ -48,7 +52,7 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
         },
       };
     }
-    
+
     return baseDto;
   }
 
@@ -57,11 +61,11 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
    */
   private parseScopes(scopes: string | string[] | null): string[] {
     if (!scopes) return [];
-    
+
     if (Array.isArray(scopes)) {
       return scopes;
     }
-    
+
     if (typeof scopes === 'string') {
       try {
         // Try to parse as JSON array first
@@ -69,16 +73,18 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
         return Array.isArray(parsed) ? parsed : [scopes];
       } catch {
         // If not JSON, split by comma or space
-        return scopes.split(/[,\s]+/).filter(scope => scope.trim().length > 0);
+        return scopes
+          .split(/[,\s]+/)
+          .filter((scope) => scope.trim().length > 0);
       }
     }
-    
+
     return [];
   }
 
   /**
    * Map for connection/linking response
-   */  mapToConnectionDto(account: SocialAccount): {
+   */ mapToConnectionDto(account: SocialAccount): {
     success: boolean;
     platform: string;
     accountId: string;
@@ -98,7 +104,10 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
 
   /**
    * Map for analytics/stats response
-   */  mapToStatsDto(account: SocialAccount, stats?: any): {
+   */ mapToStatsDto(
+    account: SocialAccount,
+    stats?: any,
+  ): {
     id: string;
     platform: string;
     accountName: string;
@@ -121,17 +130,19 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
   /**
    * Map multiple accounts grouped by platform
    */
-  mapToGroupedDto(accounts: SocialAccount[]): Record<string, SocialAccountResponseDto[]> {
+  mapToGroupedDto(
+    accounts: SocialAccount[],
+  ): Record<string, SocialAccountResponseDto[]> {
     const grouped: Record<string, SocialAccountResponseDto[]> = {};
-    
-    accounts.forEach(account => {
+
+    accounts.forEach((account) => {
       const platform = account.platform;
       if (!grouped[platform]) {
         grouped[platform] = [];
       }
       grouped[platform].push(this.mapToDto(account));
     });
-    
+
     return grouped;
   }
 
@@ -147,7 +158,7 @@ export class SocialAccountMapper extends BaseMapper<SocialAccount, SocialAccount
     isExpired: boolean;
   } {
     const expirationStatus = this.calculateExpirationStatus(account.expiresAt);
-    
+
     return {
       id: account.id,
       platform: account.platform,

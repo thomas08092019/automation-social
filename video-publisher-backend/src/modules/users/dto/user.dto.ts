@@ -11,7 +11,10 @@ export class CreateUserDto {
   @IsString()
   username: string;
 
-  @ApiProperty({ description: 'Password (minimum 6 characters)', required: false })
+  @ApiProperty({
+    description: 'Password (minimum 6 characters)',
+    required: false,
+  })
   @IsString()
   @MinLength(6)
   @IsOptional()
@@ -51,7 +54,10 @@ export class UserResponseDto extends BaseDto {
 }
 
 export class SocialLoginDto {
-  @ApiProperty({ description: 'Social platform', enum: ['GOOGLE', 'FACEBOOK', 'YOUTUBE'] })
+  @ApiProperty({
+    description: 'Social platform',
+    enum: ['GOOGLE', 'FACEBOOK', 'YOUTUBE'],
+  })
   @IsString()
   platform: string;
 
@@ -80,7 +86,10 @@ export class SocialLoginDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ description: 'Profile picture URL from OAuth provider', required: false })
+  @ApiProperty({
+    description: 'Profile picture URL from OAuth provider',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   profilePicture?: string;

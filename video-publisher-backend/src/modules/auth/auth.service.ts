@@ -1,6 +1,4 @@
-import {
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { UserService } from '../users/user.service';
 import {
   LoginDto,
@@ -62,15 +60,20 @@ export class AuthService {
     });
 
     return this.tokenService.createAuthResponse(user);
-  }async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
+  }
+  async socialLogin(socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
     return this.socialAuthService.socialLogin(socialLoginDto);
   }
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
     return this.passwordService.forgotPassword(forgotPasswordDto);
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<AuthResponse> {
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<AuthResponse> {
     return this.passwordService.resetPassword(resetPasswordDto);
   }
 
@@ -90,7 +93,11 @@ export class AuthService {
     provider: string,
     accountData: SocialAccountData,
   ) {
-    return this.socialAuthService.connectSocialAccount(userId, provider, accountData);
+    return this.socialAuthService.connectSocialAccount(
+      userId,
+      provider,
+      accountData,
+    );
   }
 
   async getConnectedAccounts(userId: string) {

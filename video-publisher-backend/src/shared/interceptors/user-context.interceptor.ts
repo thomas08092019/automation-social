@@ -6,7 +6,10 @@ import {
   Scope,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { UserContextService, userContextStorage } from '../services/user-context.service';
+import {
+  UserContextService,
+  userContextStorage,
+} from '../services/user-context.service';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserContextInterceptor implements NestInterceptor {

@@ -34,7 +34,10 @@ export class SocialConnectService {
     private socialAccountMapper: SocialAccountMapper,
   ) {}
 
-  async connectAccount(userId: string, accountData: SocialAccountData): Promise<SocialAccountResponseDto> {
+  async connectAccount(
+    userId: string,
+    accountData: SocialAccountData,
+  ): Promise<SocialAccountResponseDto> {
     // Check if account already exists
     const existingAccount = await this.prisma.socialAccount.findFirst({
       where: {
@@ -108,7 +111,10 @@ export class SocialConnectService {
     });
   }
 
-  async refreshAccountToken(userId: string, accountId: string): Promise<SocialAccountResponseDto> {
+  async refreshAccountToken(
+    userId: string,
+    accountId: string,
+  ): Promise<SocialAccountResponseDto> {
     const account = await this.prisma.socialAccount.findFirst({
       where: {
         id: accountId,
@@ -123,6 +129,9 @@ export class SocialConnectService {
 
     // Here you would implement platform-specific token refresh logic
     // For now, we'll just return the existing account
-    this.logger.log(`Token refresh requested for account ${accountId} on ${account.platform}`);    return this.socialAccountMapper.mapToDto(account);
+    this.logger.log(
+      `Token refresh requested for account ${accountId} on ${account.platform}`,
+    );
+    return this.socialAccountMapper.mapToDto(account);
   }
 }

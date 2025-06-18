@@ -24,9 +24,7 @@ import {
 
 @Controller('social-accounts')
 export class SocialAccountController {
-  constructor(
-    private socialAccountService: SocialAccountService,
-  ) {}
+  constructor(private socialAccountService: SocialAccountService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)

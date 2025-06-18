@@ -42,17 +42,17 @@ export interface CrossPlatformOptimization {
 export class ContentOptimizationService {
   private readonly logger = new Logger(ContentOptimizationService.name);
 
-  constructor(
-    private readonly adapterFactory: PlatformAdapterFactory,
-  ) {}
+  constructor(private readonly adapterFactory: PlatformAdapterFactory) {}
 
   /**
    * Optimize content for a specific platform
    */
-  async optimizeForPlatform(options: ContentOptimizationOptions): Promise<OptimizedContent> {
+  async optimizeForPlatform(
+    options: ContentOptimizationOptions,
+  ): Promise<OptimizedContent> {
     const { platform, originalContent, preferences = {} } = options;
     const adapter = this.adapterFactory.getAdapter(platform);
-    
+
     const optimized: OptimizedContent = {
       platform,
       mediaUrls: originalContent.mediaUrls,
@@ -66,7 +66,7 @@ export class ContentOptimizationService {
         originalContent.text,
         platform,
         adapter.capabilities,
-        preferences
+        preferences,
       );
       optimized.optimizedText = textOptimization.text;
       optimized.recommendations.push(...textOptimization.recommendations);
@@ -76,9 +76,10 @@ export class ContentOptimizationService {
     // Optimize hashtags
     if (originalContent.hashtags || originalContent.text?.includes('#')) {
       const hashtagOptimization = await this.optimizeHashtags(
-        originalContent.hashtags || this.extractHashtags(originalContent.text || ''),
+        originalContent.hashtags ||
+          this.extractHashtags(originalContent.text || ''),
         platform,
-        preferences
+        preferences,
       );
       optimized.optimizedHashtags = hashtagOptimization.hashtags;
       optimized.recommendations.push(...hashtagOptimization.recommendations);
@@ -86,17 +87,19 @@ export class ContentOptimizationService {
     }
 
     // Add platform-specific recommendations
-    optimized.recommendations.push(...this.getPlatformSpecificRecommendations(platform, originalContent));
+    optimized.recommendations.push(
+      ...this.getPlatformSpecificRecommendations(platform, originalContent),
+    );
 
     return optimized;
   }
 
   /**
    * Optimize content for multiple platforms
-   */  async optimizeForMultiplePlatforms(
+   */ async optimizeForMultiplePlatforms(
     platforms: SocialPlatform[],
     content: any,
-    preferences?: any
+    preferences?: any,
   ): Promise<CrossPlatformOptimization> {
     const optimizedContent = {} as Record<SocialPlatform, OptimizedContent>;
     let totalOptimizations = 0;
@@ -108,20 +111,20 @@ export class ContentOptimizationService {
         originalContent: content,
         preferences,
       });
-      
+
       optimizedContent[platform] = optimization;
       totalOptimizations += optimization.changes.length;
     }
 
     // Find common hashtags across platforms
-    const allHashtags = platforms.flatMap(platform => 
-      optimizedContent[platform].optimizedHashtags || []
+    const allHashtags = platforms.flatMap(
+      (platform) => optimizedContent[platform].optimizedHashtags || [],
     );
     const commonHashtags = this.findCommonHashtags(allHashtags);
 
     // Get platform-specific tips
     const platformSpecificTips = {} as Record<SocialPlatform, string[]>;
-    platforms.forEach(platform => {
+    platforms.forEach((platform) => {
       platformSpecificTips[platform] = this.getPlatformSpecificTips(platform);
     });
 
@@ -143,10 +146,10 @@ export class ContentOptimizationService {
   async generateContentVariations(
     platform: SocialPlatform,
     content: any,
-    variationCount: number = 3
+    variationCount: number = 3,
   ): Promise<Array<OptimizedContent & { variationId: string }>> {
     const variations = [];
-    
+
     for (let i = 0; i < variationCount; i++) {
       const variation = await this.optimizeForPlatform({
         platform,
@@ -173,7 +176,7 @@ export class ContentOptimizationService {
     text: string,
     platform: SocialPlatform,
     capabilities: any,
-    preferences: any
+    preferences: any,
   ): Promise<{
     text: string;
     recommendations: string[];
@@ -184,12 +187,19 @@ export class ContentOptimizationService {
     const changes: string[] = [];
 
     // Handle text length limits
-    if (capabilities.maxTextLength && text.length > capabilities.maxTextLength) {
+    if (
+      capabilities.maxTextLength &&
+      text.length > capabilities.maxTextLength
+    ) {
       const truncated = this.truncateText(text, capabilities.maxTextLength);
       optimizedText = truncated.text;
-      changes.push(`Truncated text from ${text.length} to ${truncated.text.length} characters`);
+      changes.push(
+        `Truncated text from ${text.length} to ${truncated.text.length} characters`,
+      );
       if (truncated.removed) {
-        recommendations.push(`Consider creating a thread or splitting content: "${truncated.removed}"`);
+        recommendations.push(
+          `Consider creating a thread or splitting content: "${truncated.removed}"`,
+        );
       }
     }
 
@@ -214,7 +224,9 @@ export class ContentOptimizationService {
 
       case SocialPlatform.YOUTUBE:
         if (!text.includes('Subscribe') && !text.includes('Like')) {
-          recommendations.push('Consider adding call-to-action phrases like "Subscribe" or "Like"');
+          recommendations.push(
+            'Consider adding call-to-action phrases like "Subscribe" or "Like"',
+          );
         }
         break;
     }
@@ -241,7 +253,7 @@ export class ContentOptimizationService {
   private async optimizeHashtags(
     hashtags: string[],
     platform: SocialPlatform,
-    preferences: any
+    preferences: any,
   ): Promise<{
     hashtags: string[];
     recommendations: string[];
@@ -255,7 +267,9 @@ export class ContentOptimizationService {
     switch (platform) {
       case SocialPlatform.INSTAGRAM:
         if (optimizedHashtags.length < 11) {
-          recommendations.push('Consider adding more hashtags (11-30 is optimal for Instagram)');
+          recommendations.push(
+            'Consider adding more hashtags (11-30 is optimal for Instagram)',
+          );
         }
         if (optimizedHashtags.length > 30) {
           optimizedHashtags = optimizedHashtags.slice(0, 30);
@@ -286,9 +300,14 @@ export class ContentOptimizationService {
     }
 
     // Apply preferences
-    if (preferences.maxHashtags && optimizedHashtags.length > preferences.maxHashtags) {
+    if (
+      preferences.maxHashtags &&
+      optimizedHashtags.length > preferences.maxHashtags
+    ) {
       optimizedHashtags = optimizedHashtags.slice(0, preferences.maxHashtags);
-      changes.push(`Limited hashtags to user preference of ${preferences.maxHashtags}`);
+      changes.push(
+        `Limited hashtags to user preference of ${preferences.maxHashtags}`,
+      );
     }
 
     return {
@@ -309,7 +328,10 @@ export class ContentOptimizationService {
   /**
    * Truncate text intelligently
    */
-  private truncateText(text: string, maxLength: number): {
+  private truncateText(
+    text: string,
+    maxLength: number,
+  ): {
     text: string;
     removed?: string;
   } {
@@ -320,7 +342,7 @@ export class ContentOptimizationService {
     // Try to truncate at word boundary
     const truncated = text.substring(0, maxLength - 3);
     const lastSpace = truncated.lastIndexOf(' ');
-    
+
     if (lastSpace > maxLength * 0.8) {
       return {
         text: truncated.substring(0, lastSpace) + '...',
@@ -350,7 +372,8 @@ export class ContentOptimizationService {
    * Check if text contains emojis
    */
   private containsEmojis(text: string): boolean {
-    const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u;
+    const emojiRegex =
+      /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u;
     return emojiRegex.test(text);
   }
 
@@ -360,20 +383,23 @@ export class ContentOptimizationService {
   private addRelevantEmojis(text: string, platform: SocialPlatform): string {
     // Simple emoji addition based on keywords
     const emojiMap = {
-      'video': '🎥',
-      'photo': '📸',
-      'music': '🎵',
-      'food': '🍕',
-      'travel': '✈️',
-      'love': '❤️',
-      'happy': '😊',
-      'excited': '🎉',
+      video: '🎥',
+      photo: '📸',
+      music: '🎵',
+      food: '🍕',
+      travel: '✈️',
+      love: '❤️',
+      happy: '😊',
+      excited: '🎉',
     };
 
     let result = text;
     Object.entries(emojiMap).forEach(([keyword, emoji]) => {
       if (text.toLowerCase().includes(keyword) && !text.includes(emoji)) {
-        result = result.replace(new RegExp(keyword, 'gi'), `${keyword} ${emoji}`);
+        result = result.replace(
+          new RegExp(keyword, 'gi'),
+          `${keyword} ${emoji}`,
+        );
       }
     });
 
@@ -384,10 +410,13 @@ export class ContentOptimizationService {
    * Find common hashtags across platforms
    */
   private findCommonHashtags(allHashtags: string[]): string[] {
-    const hashtagCount = allHashtags.reduce((acc, hashtag) => {
-      acc[hashtag] = (acc[hashtag] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const hashtagCount = allHashtags.reduce(
+      (acc, hashtag) => {
+        acc[hashtag] = (acc[hashtag] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return Object.entries(hashtagCount)
       .filter(([, count]) => count > 1)
@@ -397,13 +426,18 @@ export class ContentOptimizationService {
   /**
    * Get platform-specific recommendations
    */
-  private getPlatformSpecificRecommendations(platform: SocialPlatform, content: any): string[] {
+  private getPlatformSpecificRecommendations(
+    platform: SocialPlatform,
+    content: any,
+  ): string[] {
     const recommendations = [];
 
     switch (platform) {
       case SocialPlatform.INSTAGRAM:
         if (content.mediaUrls && content.mediaUrls.length === 0) {
-          recommendations.push('Consider adding high-quality images for better engagement');
+          recommendations.push(
+            'Consider adding high-quality images for better engagement',
+          );
         }
         break;
 

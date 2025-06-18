@@ -5,7 +5,6 @@ import { UserResponseDto } from '../../modules/users/dto/user.dto';
 
 @Injectable()
 export class UserMapper extends BaseMapper<User, UserResponseDto> {
-  
   /**
    * Map User entity to response DTO
    */
@@ -23,13 +22,15 @@ export class UserMapper extends BaseMapper<User, UserResponseDto> {
   /**
    * Map User with social accounts
    */
-  mapToDtoWithSocialAccounts(user: User & { socialAccounts?: any[] }): UserResponseDto & { socialAccounts?: any[] } {
+  mapToDtoWithSocialAccounts(
+    user: User & { socialAccounts?: any[] },
+  ): UserResponseDto & { socialAccounts?: any[] } {
     const baseDto = this.mapToDto(user);
-    
+
     if (user.socialAccounts) {
       return {
         ...baseDto,
-        socialAccounts: user.socialAccounts.map(account => ({
+        socialAccounts: user.socialAccounts.map((account) => ({
           id: account.id,
           platform: account.platform,
           accountName: account.accountName,
@@ -37,7 +38,7 @@ export class UserMapper extends BaseMapper<User, UserResponseDto> {
         })),
       };
     }
-    
+
     return baseDto;
   }
 
@@ -80,7 +81,10 @@ export class UserMapper extends BaseMapper<User, UserResponseDto> {
   /**
    * Map for auth response
    */
-  mapToAuthDto(user: User, tokens: { accessToken: string; refreshToken: string }): {
+  mapToAuthDto(
+    user: User,
+    tokens: { accessToken: string; refreshToken: string },
+  ): {
     user: UserResponseDto;
     tokens: { accessToken: string; refreshToken: string };
   } {

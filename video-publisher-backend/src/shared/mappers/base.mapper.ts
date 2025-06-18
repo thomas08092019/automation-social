@@ -11,7 +11,7 @@ export abstract class BaseMapper<TEntity, TDto> {
    * Map array of entities to DTOs
    */
   mapToDtoArray(entities: TEntity[]): TDto[] {
-    return entities.map(entity => this.mapToDto(entity));
+    return entities.map((entity) => this.mapToDto(entity));
   }
 
   /**
@@ -31,7 +31,10 @@ export abstract class BaseMapper<TEntity, TDto> {
   /**
    * Map boolean with default value
    */
-  protected mapBoolean(value: boolean | null | undefined, defaultValue: boolean = false): boolean {
+  protected mapBoolean(
+    value: boolean | null | undefined,
+    defaultValue: boolean = false,
+  ): boolean {
     return value ?? defaultValue;
   }
 
@@ -67,7 +70,10 @@ export abstract class BaseMapper<TEntity, TDto> {
     const now = new Date();
     const expiration = new Date(expiresAt);
     const isExpired = now > expiration;
-    const daysUntilExpiry = Math.max(0, Math.ceil((expiration.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysUntilExpiry = Math.max(
+      0,
+      Math.ceil((expiration.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    );
 
     return {
       isExpired,

@@ -17,7 +17,8 @@ import { AppLoggerService } from './services/logger.service';
 import { RequestContextInterceptor } from './interceptors/request-context.interceptor';
 
 @Global()
-@Module({  providers: [
+@Module({
+  providers: [
     PrismaService,
     UserContextService,
     UserContextInterceptor,
@@ -35,7 +36,8 @@ import { RequestContextInterceptor } from './interceptors/request-context.interc
     // Phase 5: Error Handling Middleware
     AppLoggerService,
     RequestContextInterceptor,
-  ],  exports: [
+  ],
+  exports: [
     PrismaService,
     UserContextService,
     UserContextInterceptor,

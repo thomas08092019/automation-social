@@ -3,11 +3,13 @@ import { PaginatedResponseDto } from '../dto/pagination.dto';
 
 @Injectable()
 export class ApiResponseMapper {
-  
   /**
    * Create success response
    */
-  success<T>(data: T, message?: string): {
+  success<T>(
+    data: T,
+    message?: string,
+  ): {
     success: boolean;
     data: T;
     message?: string;
@@ -22,7 +24,10 @@ export class ApiResponseMapper {
   /**
    * Create error response
    */
-  error(message: string, errors?: any[]): {
+  error(
+    message: string,
+    errors?: any[],
+  ): {
     success: boolean;
     message: string;
     errors?: any[];
@@ -34,7 +39,7 @@ export class ApiResponseMapper {
     };
   }
   /**
-   * Create paginated response  
+   * Create paginated response
    */
   paginated<T>(
     data: T[],
@@ -44,7 +49,7 @@ export class ApiResponseMapper {
       total: number;
       totalPages: number;
     },
-    message?: string
+    message?: string,
   ): {
     success: boolean;
     data: T[];
@@ -67,11 +72,13 @@ export class ApiResponseMapper {
   /**
    * Create validation error response
    */
-  validationError(errors: Array<{
-    field: string;
-    message: string;
-    value?: any;
-  }>): {
+  validationError(
+    errors: Array<{
+      field: string;
+      message: string;
+      value?: any;
+    }>,
+  ): {
     success: boolean;
     message: string;
     validationErrors: Array<{
@@ -90,14 +97,19 @@ export class ApiResponseMapper {
   /**
    * Create not found response
    */
-  notFound(resource: string, id?: string): {
+  notFound(
+    resource: string,
+    id?: string,
+  ): {
     success: boolean;
     message: string;
     resource: string;
   } {
     return {
       success: false,
-      message: id ? `${resource} with ID ${id} not found` : `${resource} not found`,
+      message: id
+        ? `${resource} with ID ${id} not found`
+        : `${resource} not found`,
       resource,
     };
   }
@@ -131,7 +143,10 @@ export class ApiResponseMapper {
   /**
    * Create conflict response
    */
-  conflict(message: string, conflictingField?: string): {
+  conflict(
+    message: string,
+    conflictingField?: string,
+  ): {
     success: boolean;
     message: string;
     conflictingField?: string;
@@ -150,7 +165,7 @@ export class ApiResponseMapper {
     success: boolean,
     operation: string,
     data?: any,
-    message?: string
+    message?: string,
   ): {
     success: boolean;
     operation: string;
@@ -161,7 +176,11 @@ export class ApiResponseMapper {
       success,
       operation,
       ...(data && { data }),
-      message: message || (success ? `${operation} completed successfully` : `${operation} failed`),
+      message:
+        message ||
+        (success
+          ? `${operation} completed successfully`
+          : `${operation} failed`),
     };
   }
 
@@ -174,7 +193,7 @@ export class ApiResponseMapper {
       data?: T;
       error?: string;
     }>,
-    operation: string
+    operation: string,
   ): {
     success: boolean;
     operation: string;
@@ -191,8 +210,8 @@ export class ApiResponseMapper {
   } {
     const summary = {
       total: results.length,
-      successful: results.filter(r => r.success).length,
-      failed: results.filter(r => !r.success).length,
+      successful: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length,
     };
 
     return {
@@ -212,7 +231,7 @@ export class ApiResponseMapper {
       start: Date;
       end: Date;
     },
-    metrics: string[]
+    metrics: string[],
   ): {
     success: boolean;
     data: T;
@@ -245,7 +264,7 @@ export class ApiResponseMapper {
       accountId: string;
       accountName: string;
       lastSync?: Date;
-    }
+    },
   ): {
     success: boolean;
     platform: string;
@@ -264,7 +283,7 @@ export class ApiResponseMapper {
         accountInfo: {
           ...accountInfo,
           lastSync: accountInfo.lastSync?.toISOString(),
-        }
+        },
       }),
     };
   }

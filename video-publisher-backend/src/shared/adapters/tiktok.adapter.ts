@@ -1,15 +1,16 @@
 import { SocialPlatform } from '@prisma/client';
 import { BasePlatformAdapter } from './base-platform.adapter';
-import { 
-  PlatformCapabilities, 
-  PostPublishParams, 
-  PostPublishResult, 
-  TokenResponse, 
-  PlatformCredentials 
+import {
+  PlatformCapabilities,
+  PostPublishParams,
+  PostPublishResult,
+  TokenResponse,
+  PlatformCredentials,
 } from './platform-adapter.interface';
 
 export class TikTokAdapter extends BasePlatformAdapter {
-  readonly platform = SocialPlatform.TIKTOK;  readonly capabilities: PlatformCapabilities = {
+  readonly platform = SocialPlatform.TIKTOK;
+  readonly capabilities: PlatformCapabilities = {
     supportsText: true,
     supportsImages: false,
     supportsVideos: true,
@@ -24,7 +25,10 @@ export class TikTokAdapter extends BasePlatformAdapter {
     supportedImageFormats: [],
   };
 
-  async refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse> {
     const response = await this.makeRequest({
       url: 'https://open.tiktokapis.com/v2/oauth/token/',
       method: 'POST',
@@ -55,7 +59,7 @@ export class TikTokAdapter extends BasePlatformAdapter {
       }
 
       const videoUrl = params.content.mediaUrls[0];
-      
+
       // Step 1: Initialize upload
       const initResponse = await this.makeRequest({
         url: 'https://open.tiktokapis.com/v2/post/publish/inbox/video/init/',
@@ -81,7 +85,7 @@ export class TikTokAdapter extends BasePlatformAdapter {
 
       // Step 2: Upload video chunks (simplified)
       // In real implementation, you'd need to handle file chunking
-      
+
       return {
         success: true,
         postId: initResponse.data.publish_id,
@@ -102,7 +106,8 @@ export class TikTokAdapter extends BasePlatformAdapter {
         method: 'GET',
         headers: this.getAuthHeaders(accessToken),
         params: {
-          fields: 'open_id,union_id,avatar_url,display_name,bio_description,profile_deep_link,follower_count,following_count,likes_count,video_count',
+          fields:
+            'open_id,union_id,avatar_url,display_name,bio_description,profile_deep_link,follower_count,following_count,likes_count,video_count',
         },
       });
 
@@ -122,7 +127,10 @@ export class TikTokAdapter extends BasePlatformAdapter {
     }
   }
 
-  async getPlatformSpecificData(accessToken: string, dataType: string): Promise<any> {
+  async getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any> {
     switch (dataType) {
       case 'videos':
         return this.getVideos(accessToken);

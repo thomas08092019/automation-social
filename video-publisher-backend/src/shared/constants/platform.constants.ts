@@ -4,7 +4,12 @@ export const SOCIAL_PLATFORM_CONFIGS = {
   [SocialPlatform.FACEBOOK]: {
     name: 'Facebook',
     color: '#1877f2',
-    scopes: ['email', 'public_profile', 'pages_manage_posts', 'pages_read_engagement'],
+    scopes: [
+      'email',
+      'public_profile',
+      'pages_manage_posts',
+      'pages_read_engagement',
+    ],
     authUrl: 'https://www.facebook.com/v18.0/dialog/oauth',
     tokenUrl: 'https://graph.facebook.com/v18.0/oauth/access_token',
     userInfoUrl: 'https://graph.facebook.com/me',
@@ -20,7 +25,11 @@ export const SOCIAL_PLATFORM_CONFIGS = {
   [SocialPlatform.YOUTUBE]: {
     name: 'YouTube',
     color: '#ff0000',
-    scopes: ['https://www.googleapis.com/auth/youtube', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
+    scopes: [
+      'https://www.googleapis.com/auth/youtube',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ],
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
     userInfoUrl: 'https://www.googleapis.com/oauth2/v1/userinfo',
@@ -68,7 +77,13 @@ export const PAGINATION_DEFAULTS = {
 export const FILE_UPLOAD_LIMITS = {
   AVATAR: {
     MAX_SIZE: 5 * 1024 * 1024, // 5MB
-    ALLOWED_TYPES: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    ALLOWED_TYPES: [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ],
   },
 } as const;
 

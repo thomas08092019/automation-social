@@ -1,15 +1,16 @@
 import { SocialPlatform } from '@prisma/client';
 import { BasePlatformAdapter } from './base-platform.adapter';
-import { 
-  PlatformCapabilities, 
-  PostPublishParams, 
-  PostPublishResult, 
-  TokenResponse, 
-  PlatformCredentials 
+import {
+  PlatformCapabilities,
+  PostPublishParams,
+  PostPublishResult,
+  TokenResponse,
+  PlatformCredentials,
 } from './platform-adapter.interface';
 
 export class ZaloAdapter extends BasePlatformAdapter {
-  readonly platform = SocialPlatform.ZALO;  readonly capabilities: PlatformCapabilities = {
+  readonly platform = SocialPlatform.ZALO;
+  readonly capabilities: PlatformCapabilities = {
     supportsText: true,
     supportsImages: true,
     supportsVideos: false,
@@ -24,7 +25,10 @@ export class ZaloAdapter extends BasePlatformAdapter {
     supportedImageFormats: ['jpg', 'jpeg', 'png'],
   };
 
-  async refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse> {
     const response = await this.makeRequest({
       url: 'https://oauth.zaloapp.com/v4/access_token',
       method: 'POST',
@@ -53,7 +57,8 @@ export class ZaloAdapter extends BasePlatformAdapter {
       // Most operations require special permissions
       return {
         success: false,
-        errorMessage: 'Zalo posting requires special API permissions and approvals',
+        errorMessage:
+          'Zalo posting requires special API permissions and approvals',
       };
     } catch (error) {
       return {
@@ -84,7 +89,10 @@ export class ZaloAdapter extends BasePlatformAdapter {
     }
   }
 
-  async getPlatformSpecificData(accessToken: string, dataType: string): Promise<any> {
+  async getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any> {
     switch (dataType) {
       case 'profile':
         return this.getProfile(accessToken);

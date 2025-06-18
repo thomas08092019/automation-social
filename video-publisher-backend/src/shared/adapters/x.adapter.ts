@@ -1,11 +1,11 @@
 import { SocialPlatform } from '@prisma/client';
 import { BasePlatformAdapter } from './base-platform.adapter';
-import { 
-  PlatformCapabilities, 
-  PostPublishParams, 
-  PostPublishResult, 
-  TokenResponse, 
-  PlatformCredentials 
+import {
+  PlatformCapabilities,
+  PostPublishParams,
+  PostPublishResult,
+  TokenResponse,
+  PlatformCredentials,
 } from './platform-adapter.interface';
 
 export class XAdapter extends BasePlatformAdapter {
@@ -25,13 +25,16 @@ export class XAdapter extends BasePlatformAdapter {
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
   };
 
-  async refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse> {
     const response = await this.makeRequest({
       url: 'https://api.twitter.com/2/oauth2/token',
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString('base64')}`,
+        Authorization: `Basic ${Buffer.from(`${credentials.clientId}:${credentials.clientSecret}`).toString('base64')}`,
       },
       data: new URLSearchParams({
         grant_type: 'refresh_token',
@@ -60,7 +63,10 @@ export class XAdapter extends BasePlatformAdapter {
 
       // Handle media attachments
       if (params.content.mediaUrls && params.content.mediaUrls.length > 0) {
-        const mediaIds = await this.uploadMedia(params.accessToken, params.content.mediaUrls);
+        const mediaIds = await this.uploadMedia(
+          params.accessToken,
+          params.content.mediaUrls,
+        );
         tweetData.media = { media_ids: mediaIds };
       }
 
@@ -93,7 +99,8 @@ export class XAdapter extends BasePlatformAdapter {
         method: 'GET',
         headers: this.getAuthHeaders(accessToken),
         params: {
-          'user.fields': 'public_metrics,description,location,profile_image_url,verified',
+          'user.fields':
+            'public_metrics,description,location,profile_image_url,verified',
         },
       });
 
@@ -118,7 +125,10 @@ export class XAdapter extends BasePlatformAdapter {
     }
   }
 
-  async getPlatformSpecificData(accessToken: string, dataType: string): Promise<any> {
+  async getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any> {
     switch (dataType) {
       case 'tweets':
         return this.getTweets(accessToken);
@@ -133,7 +143,10 @@ export class XAdapter extends BasePlatformAdapter {
     }
   }
 
-  private async uploadMedia(accessToken: string, mediaUrls: string[]): Promise<string[]> {
+  private async uploadMedia(
+    accessToken: string,
+    mediaUrls: string[],
+  ): Promise<string[]> {
     const mediaIds: string[] = [];
 
     for (const mediaUrl of mediaUrls) {

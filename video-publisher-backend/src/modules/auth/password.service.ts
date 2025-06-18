@@ -26,7 +26,9 @@ export class PasswordService {
     private prisma: PrismaService,
   ) {}
 
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
     const user = await this.userService.findByEmail(forgotPasswordDto.email);
     if (!user) {
       throw new NotFoundException('User with this email does not exist');
@@ -48,7 +50,9 @@ export class PasswordService {
     return { message: 'Password reset email sent' };
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<AuthResponse> {
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<AuthResponse> {
     const user = await this.prisma.user.findFirst({
       where: {
         resetToken: resetPasswordDto.token,
@@ -62,7 +66,9 @@ export class PasswordService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    const hashedPassword = await this.userService.hashPassword(resetPasswordDto.newPassword);
+    const hashedPassword = await this.userService.hashPassword(
+      resetPasswordDto.newPassword,
+    );
 
     await this.prisma.user.update({
       where: { id: user.id },

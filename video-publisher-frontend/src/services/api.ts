@@ -124,16 +124,25 @@ class ApiService {
     const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
     return response.data;
   }
-
   async connectPlatform(platform: string): Promise<{ success: boolean; data?: { authUrl: string; platform: string }; message?: string; error?: string }> {
-    const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
-    return {
-      success: true,
-      data: {
-        authUrl: response.data.authorizationUrl,
-        platform: platform
-      }
-    };
+    const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}/url`);
+    
+    if (response.data.success) {
+      return {
+        success: true,
+        data: {
+          authUrl: response.data.authorizationUrl,
+          platform: response.data.platform
+        },
+        message: response.data.message
+      };
+    } else {
+      return {
+        success: false,
+        message: response.data.message || 'Failed to get OAuth URL',
+        error: response.data.error
+      };
+    }
   }
 
   // User endpoints - /users/*

@@ -77,7 +77,10 @@ export interface PlatformAdapter {
   // OAuth Flow Methods
   generateAuthorizationUrl(params: AuthorizationUrlParams): Promise<string>;
   exchangeCodeForToken(params: TokenExchangeParams): Promise<TokenResponse>;
-  refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse>;
+  refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse>;
 
   // User Info Methods
   fetchUserInfo(accessToken: string): Promise<UserInfo>;
@@ -86,7 +89,7 @@ export interface PlatformAdapter {
   // Content Publishing Methods
   publishPost(params: PostPublishParams): Promise<PostPublishResult>;
   createPost(content: any): Promise<string>;
-  
+
   // Account Management Methods
   getAccountInfo(accessToken: string): Promise<UserInfo>;
   getAccountMetrics(accessToken: string): Promise<Record<string, any>>;

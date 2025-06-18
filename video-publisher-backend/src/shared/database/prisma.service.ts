@@ -96,10 +96,12 @@ export class PrismaService
     this.$use(async (params, next) => {
       // List of models that support soft delete (have deletedAt field)
       const softDeleteModels = ['user', 'socialAccount'];
-      
+
       // Check if this operation is on a model that supports soft delete
-      const isSoftDeleteModel = softDeleteModels.includes(params.model?.toLowerCase() || '');
-      
+      const isSoftDeleteModel = softDeleteModels.includes(
+        params.model?.toLowerCase() || '',
+      );
+
       if (isSoftDeleteModel) {
         if (params.action === 'findUnique' || params.action === 'findFirst') {
           // Only add filter if deletedAt is not explicitly specified

@@ -1,15 +1,16 @@
 import { SocialPlatform } from '@prisma/client';
 import { BasePlatformAdapter } from './base-platform.adapter';
-import { 
-  PlatformCapabilities, 
-  PostPublishParams, 
-  PostPublishResult, 
-  TokenResponse, 
-  PlatformCredentials 
+import {
+  PlatformCapabilities,
+  PostPublishParams,
+  PostPublishResult,
+  TokenResponse,
+  PlatformCredentials,
 } from './platform-adapter.interface';
 
 export class FacebookAdapter extends BasePlatformAdapter {
-  readonly platform = SocialPlatform.FACEBOOK;  readonly capabilities: PlatformCapabilities = {
+  readonly platform = SocialPlatform.FACEBOOK;
+  readonly capabilities: PlatformCapabilities = {
     supportsText: true,
     supportsImages: true,
     supportsVideos: true,
@@ -24,7 +25,10 @@ export class FacebookAdapter extends BasePlatformAdapter {
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif'],
   };
 
-  async refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse> {
     const response = await this.makeRequest({
       url: 'https://graph.facebook.com/v18.0/oauth/access_token',
       method: 'GET',
@@ -113,7 +117,10 @@ export class FacebookAdapter extends BasePlatformAdapter {
     }
   }
 
-  async getPlatformSpecificData(accessToken: string, dataType: string): Promise<any> {
+  async getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any> {
     switch (dataType) {
       case 'pages':
         return this.getPages(accessToken);
@@ -141,7 +148,7 @@ export class FacebookAdapter extends BasePlatformAdapter {
           clicks: 0,
         },
         // Mock data - replace with real Facebook Analytics API calls
-        message: 'Facebook analytics not fully implemented yet'
+        message: 'Facebook analytics not fully implemented yet',
       };
     } catch (error) {
       throw new Error(`Failed to get Facebook analytics: ${error.message}`);
@@ -177,7 +184,9 @@ export class FacebookAdapter extends BasePlatformAdapter {
     };
   }
 
-  private async publishMultipleMedia(params: PostPublishParams): Promise<PostPublishResult> {
+  private async publishMultipleMedia(
+    params: PostPublishParams,
+  ): Promise<PostPublishResult> {
     // Implement multiple media post logic
     // This is more complex and requires creating media objects first
     throw new Error('Multiple media posts not implemented yet');

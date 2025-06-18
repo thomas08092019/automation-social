@@ -1,11 +1,11 @@
 import { SocialPlatform } from '@prisma/client';
 import { BasePlatformAdapter } from './base-platform.adapter';
-import { 
-  PlatformCapabilities, 
-  PostPublishParams, 
-  PostPublishResult, 
-  TokenResponse, 
-  PlatformCredentials 
+import {
+  PlatformCapabilities,
+  PostPublishParams,
+  PostPublishResult,
+  TokenResponse,
+  PlatformCredentials,
 } from './platform-adapter.interface';
 
 export class InstagramAdapter extends BasePlatformAdapter {
@@ -25,7 +25,10 @@ export class InstagramAdapter extends BasePlatformAdapter {
     supportedImageFormats: ['jpg', 'jpeg', 'png'],
   };
 
-  async refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse> {
     // Instagram uses Facebook's token refresh endpoint
     const response = await this.makeRequest({
       url: 'https://graph.facebook.com/v18.0/oauth/access_token',
@@ -55,7 +58,8 @@ export class InstagramAdapter extends BasePlatformAdapter {
       // This would require Instagram Graph API for Business accounts
       return {
         success: false,
-        errorMessage: 'Instagram publishing requires Business account and Graph API access',
+        errorMessage:
+          'Instagram publishing requires Business account and Graph API access',
       };
     } catch (error) {
       return {
@@ -87,7 +91,10 @@ export class InstagramAdapter extends BasePlatformAdapter {
     }
   }
 
-  async getPlatformSpecificData(accessToken: string, dataType: string): Promise<any> {
+  async getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any> {
     switch (dataType) {
       case 'media':
         return this.getMedia(accessToken);

@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { SocialPlatform } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PlatformManagementService, BatchPostRequest } from '../../shared/services/platform-management.service';
+import {
+  PlatformManagementService,
+  BatchPostRequest,
+} from '../../shared/services/platform-management.service';
 import { ContentOptimizationService } from '../../shared/services/content-optimization.service';
 import { PlatformAdapterFactory } from '../../shared/adapters/platform-adapter.factory';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
@@ -82,18 +85,21 @@ export class MultiPlatformController {
     // Optimize content if requested
     let optimizedContent = content;
     if (options.optimizeContent) {
-      const optimization = await this.contentOptimizationService.optimizeForMultiplePlatforms(
-        platforms,
-        content,
-        dto.preferences
-      );
-      
+      const optimization =
+        await this.contentOptimizationService.optimizeForMultiplePlatforms(
+          platforms,
+          content,
+          dto.preferences,
+        );
+
       // Use the first platform's optimization as base, or implement smarter logic
       const firstPlatform = platforms[0];
       if (optimization.optimizedContent[firstPlatform]) {
         optimizedContent = {
           ...content,
-          text: optimization.optimizedContent[firstPlatform].optimizedText || content.text,
+          text:
+            optimization.optimizedContent[firstPlatform].optimizedText ||
+            content.text,
         };
       }
     }
@@ -113,7 +119,7 @@ export class MultiPlatformController {
       success: result.success,
       results: result.results,
       summary: result.summary,
-      message: result.success 
+      message: result.success
         ? 'Posts created successfully across all platforms'
         : 'Some posts failed to create',
     };
@@ -126,11 +132,12 @@ export class MultiPlatformController {
   async optimizeContent(@Body() dto: OptimizeContentDto) {
     const { platforms, content, preferences } = dto;
 
-    const optimization = await this.contentOptimizationService.optimizeForMultiplePlatforms(
-      platforms,
-      content,
-      preferences
-    );
+    const optimization =
+      await this.contentOptimizationService.optimizeForMultiplePlatforms(
+        platforms,
+        content,
+        preferences,
+      );
 
     return {
       success: true,
@@ -148,30 +155,35 @@ export class MultiPlatformController {
   async validateContent(@Body() dto: ValidateContentDto) {
     const { platforms, content } = dto;
 
-    const validations = await this.platformManagementService.validateContentForPlatforms(
-      platforms,
-      content
-    );
+    const validations =
+      await this.platformManagementService.validateContentForPlatforms(
+        platforms,
+        content,
+      );
 
     const summary = {
       total: validations.length,
-      valid: validations.filter(v => v.valid).length,
-      invalid: validations.filter(v => !v.valid).length,
+      valid: validations.filter((v) => v.valid).length,
+      invalid: validations.filter((v) => !v.valid).length,
     };
 
     return {
       success: summary.invalid === 0,
       validations,
       summary,
-      message: summary.invalid === 0 
-        ? 'Content is valid for all platforms'
-        : `Content has validation issues for ${summary.invalid} platform(s)`,
+      message:
+        summary.invalid === 0
+          ? 'Content is valid for all platforms'
+          : `Content has validation issues for ${summary.invalid} platform(s)`,
     };
   }
 
   @Get('capabilities')
   @ApiOperation({ summary: 'Get platform capabilities overview' })
-  @ApiResponse({ status: 200, description: 'Platform capabilities retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Platform capabilities retrieved successfully',
+  })
   async getPlatformCapabilities() {
     const capabilities = this.platformAdapterFactory.getPlatformCapabilities();
 
@@ -184,11 +196,15 @@ export class MultiPlatformController {
 
   @Get('strategy')
   @ApiOperation({ summary: 'Get optimal posting strategy for platforms' })
-  @ApiResponse({ status: 200, description: 'Posting strategy retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Posting strategy retrieved successfully',
+  })
   async getPostingStrategy(@Query('platforms') platformsQuery: string) {
     const platforms = platformsQuery.split(',') as SocialPlatform[];
-    
-    const strategy = this.platformManagementService.getOptimalPostingStrategy(platforms);
+
+    const strategy =
+      this.platformManagementService.getOptimalPostingStrategy(platforms);
 
     return {
       success: true,
@@ -213,7 +229,7 @@ export class MultiPlatformController {
 
     const analytics = await this.platformManagementService.getPlatformAnalytics(
       platforms,
-      dateRange
+      dateRange,
     );
 
     return {
@@ -226,12 +242,18 @@ export class MultiPlatformController {
 
   @Get('supported-formats')
   @ApiOperation({ summary: 'Get supported formats for platforms' })
-  @ApiResponse({ status: 200, description: 'Supported formats retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Supported formats retrieved successfully',
+  })
   async getSupportedFormats(
     @Query('platform') platform: SocialPlatform,
     @Query('mediaType') mediaType: 'video' | 'image',
   ) {
-    const formats = this.platformAdapterFactory.getSupportedFormats(platform, mediaType);
+    const formats = this.platformAdapterFactory.getSupportedFormats(
+      platform,
+      mediaType,
+    );
 
     return {
       success: true,
@@ -244,21 +266,26 @@ export class MultiPlatformController {
 
   @Post('content-variations')
   @ApiOperation({ summary: 'Generate content variations for A/B testing' })
-  @ApiResponse({ status: 200, description: 'Content variations generated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Content variations generated successfully',
+  })
   async generateContentVariations(
-    @Body() dto: {
+    @Body()
+    dto: {
       platform: SocialPlatform;
       content: any;
       variationCount?: number;
-    }
+    },
   ) {
     const { platform, content, variationCount = 3 } = dto;
 
-    const variations = await this.contentOptimizationService.generateContentVariations(
-      platform,
-      content,
-      variationCount
-    );
+    const variations =
+      await this.contentOptimizationService.generateContentVariations(
+        platform,
+        content,
+        variationCount,
+      );
 
     return {
       success: true,
@@ -273,17 +300,21 @@ export class MultiPlatformController {
   @ApiOperation({ summary: 'Get platforms that support specific capability' })
   @ApiResponse({ status: 200, description: 'Platforms retrieved successfully' })
   async getPlatformsByCapability(@Query('capability') capability: string) {
-    const adapters = this.platformAdapterFactory.getAdaptersByCapability(capability as any);
-    const platforms = adapters.map(adapter => {
-      // Find platform for this adapter
-      const allAdapters = this.platformAdapterFactory.getAllAdapters();
-      for (const [platform, adapterInstance] of allAdapters.entries()) {
-        if (adapterInstance === adapter) {
-          return platform;
+    const adapters = this.platformAdapterFactory.getAdaptersByCapability(
+      capability as any,
+    );
+    const platforms = adapters
+      .map((adapter) => {
+        // Find platform for this adapter
+        const allAdapters = this.platformAdapterFactory.getAllAdapters();
+        for (const [platform, adapterInstance] of allAdapters.entries()) {
+          if (adapterInstance === adapter) {
+            return platform;
+          }
         }
-      }
-      return null;
-    }).filter(Boolean);
+        return null;
+      })
+      .filter(Boolean);
 
     return {
       success: true,
@@ -297,8 +328,11 @@ export class MultiPlatformController {
   @Get('platforms-by-media')
   @ApiOperation({ summary: 'Get platforms that support specific media type' })
   @ApiResponse({ status: 200, description: 'Platforms retrieved successfully' })
-  async getPlatformsByMediaSupport(@Query('mediaType') mediaType: 'text' | 'images' | 'videos') {
-    const platforms = this.platformAdapterFactory.getPlatformsByMediaSupport(mediaType);
+  async getPlatformsByMediaSupport(
+    @Query('mediaType') mediaType: 'text' | 'images' | 'videos',
+  ) {
+    const platforms =
+      this.platformAdapterFactory.getPlatformsByMediaSupport(mediaType);
 
     return {
       success: true,

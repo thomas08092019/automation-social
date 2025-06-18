@@ -35,7 +35,6 @@ export interface PlatformStatusDto {
 
 @Injectable()
 export class PlatformConfigMapper {
-  
   /**
    * Map platform to configuration DTO
    */
@@ -61,7 +60,7 @@ export class PlatformConfigMapper {
           'Schedule posts',
           'Analytics and insights',
           'Auto-posting',
-          'Media uploads'
+          'Media uploads',
         ],
         limitations: [
           'Requires page admin access',
@@ -89,10 +88,7 @@ export class PlatformConfigMapper {
           'Hashtag optimization',
           'Engagement tracking',
         ],
-        limitations: [
-          'Business account required',
-          'Limited text in posts',
-        ],
+        limitations: ['Business account required', 'Limited text in posts'],
       },
       [SocialPlatform.YOUTUBE]: {
         platform: SocialPlatform.YOUTUBE,
@@ -115,10 +111,7 @@ export class PlatformConfigMapper {
           'Analytics and insights',
           'Thumbnail customization',
         ],
-        limitations: [
-          'Video files only',
-          'Large file uploads',
-        ],
+        limitations: ['Video files only', 'Large file uploads'],
       },
       [SocialPlatform.TIKTOK]: {
         platform: SocialPlatform.TIKTOK,
@@ -167,10 +160,7 @@ export class PlatformConfigMapper {
           'Media attachments',
           'Real-time posting',
         ],
-        limitations: [
-          'Character limit',
-          'API rate limits',
-        ],
+        limitations: ['Character limit', 'API rate limits'],
       },
       [SocialPlatform.ZALO]: {
         platform: SocialPlatform.ZALO,
@@ -192,11 +182,7 @@ export class PlatformConfigMapper {
           'Image sharing',
           'Text messaging',
         ],
-        limitations: [
-          'No video support',
-          'No scheduling',
-          'Regional platform',
-        ],
+        limitations: ['No video support', 'No scheduling', 'Regional platform'],
       },
       [SocialPlatform.TELEGRAM]: {
         platform: SocialPlatform.TELEGRAM,
@@ -219,10 +205,7 @@ export class PlatformConfigMapper {
           'Bot integration',
           'File sharing',
         ],
-        limitations: [
-          'Requires bot setup',
-          'Limited analytics',
-        ],
+        limitations: ['Requires bot setup', 'Limited analytics'],
       },
     };
 
@@ -233,8 +216,8 @@ export class PlatformConfigMapper {
    * Map all platforms to configuration DTOs
    */
   mapAllPlatformConfigs(): PlatformConfigDto[] {
-    return Object.values(SocialPlatform).map(platform => 
-      this.mapToPlatformConfig(platform)
+    return Object.values(SocialPlatform).map((platform) =>
+      this.mapToPlatformConfig(platform),
     );
   }
 
@@ -243,7 +226,7 @@ export class PlatformConfigMapper {
    */
   mapToPlatformStatus(
     platform: SocialPlatform,
-    account?: any
+    account?: any,
   ): PlatformStatusDto {
     if (!account) {
       return {
@@ -257,7 +240,7 @@ export class PlatformConfigMapper {
     const now = new Date();
     const isExpired = account.expiresAt && new Date(account.expiresAt) < now;
     const isActive = account.isActive && !isExpired;
-    
+
     let status: 'active' | 'expired' | 'error' | 'disconnected' = 'active';
     if (!account.isActive) {
       status = 'disconnected';
@@ -286,10 +269,10 @@ export class PlatformConfigMapper {
    */
   mapAllPlatformStatuses(accounts: any[]): PlatformStatusDto[] {
     const platformStatuses: PlatformStatusDto[] = [];
-    
+
     // Create status for each platform
-    Object.values(SocialPlatform).forEach(platform => {
-      const account = accounts.find(acc => acc.platform === platform);
+    Object.values(SocialPlatform).forEach((platform) => {
+      const account = accounts.find((acc) => acc.platform === platform);
       platformStatuses.push(this.mapToPlatformStatus(platform, account));
     });
 
@@ -299,17 +282,20 @@ export class PlatformConfigMapper {
   /**
    * Map platform capabilities summary
    */
-  mapCapabilitiesSummary(): Record<SocialPlatform, {
-    name: string;
-    supportsText: boolean;
-    supportsImages: boolean;
-    supportsVideos: boolean;
-    supportsScheduling: boolean;
-    maxTextLength: number;
-  }> {
+  mapCapabilitiesSummary(): Record<
+    SocialPlatform,
+    {
+      name: string;
+      supportsText: boolean;
+      supportsImages: boolean;
+      supportsVideos: boolean;
+      supportsScheduling: boolean;
+      maxTextLength: number;
+    }
+  > {
     const summary = {} as any;
-    
-    Object.values(SocialPlatform).forEach(platform => {
+
+    Object.values(SocialPlatform).forEach((platform) => {
       const config = this.mapToPlatformConfig(platform);
       summary[platform] = {
         name: config.displayName,
@@ -332,7 +318,7 @@ export class PlatformConfigMapper {
     displayName: string;
     supported: boolean;
   }[] {
-    return Object.values(SocialPlatform).map(platform => {
+    return Object.values(SocialPlatform).map((platform) => {
       const config = this.mapToPlatformConfig(platform);
       return {
         platform,

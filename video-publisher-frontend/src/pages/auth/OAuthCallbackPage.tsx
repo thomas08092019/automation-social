@@ -12,12 +12,19 @@ export function OAuthCallbackPage() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      try {
-        // Check for OAuth error
+      try {        // Check for OAuth error
         const oauthError = searchParams.get('error');
         if (oauthError) {
-          throw new Error(`OAuth error: ${oauthError}`);
-        }        // Check if this is the final login callback with token and user data
+          const platform = searchParams.get('platform');
+          console.error('OAuth error:', oauthError, 'Platform:', platform);
+          
+          // Handle specific error cases
+          if (oauthError.includes('not configured')) {
+            throw new Error(`${platform} OAuth is not configured. Please contact the administrator to set up ${platform} integration.`);
+          }
+          
+          throw new Error(decodeURIComponent(oauthError));
+        }// Check if this is the final login callback with token and user data
         const isLoginFlow = searchParams.get('login') === 'true';
         const isSocialConnection = searchParams.get('social_connection');
         

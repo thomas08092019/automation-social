@@ -1,18 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import {
-  CreateUserDto,
-  UserResponseDto,
-  LoginDto,
-} from './dto/user.dto';
+import { CreateUserDto, UserResponseDto, LoginDto } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { UserMapper } from '../../shared/mappers/user.mapper';
 import { SocialPlatform } from '@prisma/client';
 // Phase 5: Custom exceptions
-import { 
-  UserNotFoundException, 
+import {
+  UserNotFoundException,
   UserAlreadyExistsException,
-  InvalidCredentialsException 
+  InvalidCredentialsException,
 } from '../../shared/exceptions/custom.exceptions';
 import { AppLoggerService } from '../../shared/services/logger.service';
 
@@ -25,13 +21,14 @@ export class UserService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const hashedPassword = createUserDto.password 
+    const hashedPassword = createUserDto.password
       ? await this.hashPassword(createUserDto.password)
       : null;
 
     const user = await this.prisma.user.create({
       data: {
-        ...createUserDto,        password: hashedPassword,
+        ...createUserDto,
+        password: hashedPassword,
       },
     });
 
@@ -48,7 +45,8 @@ export class UserService {
   async findById(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
-    });    if (!user) {
+    });
+    if (!user) {
       this.logger.error('User not found by ID', {
         operation: 'findById',
         resource: 'user',
@@ -98,10 +96,15 @@ export class UserService {
       include: { user: true },
     });
 
-    return socialAccount?.user ? this.userMapper.mapToDto(socialAccount.user) : null;
+    return socialAccount?.user
+      ? this.userMapper.mapToDto(socialAccount.user)
+      : null;
   }
 
-  async validateUser(email: string, password: string): Promise<UserResponseDto | null> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<UserResponseDto | null> {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -110,8 +113,12 @@ export class UserService {
       return null;
     }
 
-    const isPasswordValid = await this.validatePassword(password, user.password);
-    if (!isPasswordValid) {      return null;
+    const isPasswordValid = await this.validatePassword(
+      password,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      return null;
     }
 
     return this.userMapper.mapToDto(user);
@@ -123,7 +130,8 @@ export class UserService {
   ): Promise<UserResponseDto> {
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: updates,    });
+      data: updates,
+    });
 
     return this.userMapper.mapToDto(user);
   }
@@ -133,6 +141,10 @@ export class UserService {
     return bcrypt.hash(password, saltRounds);
   }
 
-  async validatePassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
-    return bcrypt.compare(plainPassword, hashedPassword);  }
+  async validatePassword(
+    plainPassword: string,
+    hashedPassword: string,
+  ): Promise<boolean> {
+    return bcrypt.compare(plainPassword, hashedPassword);
+  }
 }

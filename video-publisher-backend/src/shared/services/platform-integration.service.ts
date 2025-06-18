@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SocialPlatform } from '@prisma/client';
 import { PlatformAdapterFactory } from '../adapters/platform-adapter.factory';
-import { 
-  PlatformCredentials, 
-  PostPublishParams, 
+import {
+  PlatformCredentials,
+  PostPublishParams,
   PostPublishResult,
-  UserInfo 
+  UserInfo,
 } from '../adapters/platform-adapter.interface';
 
 export interface SocialPublishRequest {
@@ -36,10 +36,12 @@ export class PlatformIntegrationService {
   /**
    * Publish content to a social platform
    */
-  async publishToplatform(request: SocialPublishRequest): Promise<PostPublishResult> {
+  async publishToplatform(
+    request: SocialPublishRequest,
+  ): Promise<PostPublishResult> {
     try {
       const adapter = this.adapterFactory.getAdapter(request.platform);
-      
+
       // Validate content against platform capabilities
       const validation = this.adapterFactory.validateContent(request.platform, {
         text: request.content.text,
@@ -62,11 +64,16 @@ export class PlatformIntegrationService {
       };
 
       const result = await adapter.publishPost(publishParams);
-      
-      this.logger.log(`Published to ${request.platform}: ${result.success ? 'Success' : 'Failed'}`);
+
+      this.logger.log(
+        `Published to ${request.platform}: ${result.success ? 'Success' : 'Failed'}`,
+      );
       return result;
     } catch (error) {
-      this.logger.error(`Failed to publish to ${request.platform}:`, error.message);
+      this.logger.error(
+        `Failed to publish to ${request.platform}:`,
+        error.message,
+      );
       return {
         success: false,
         errorMessage: `Platform integration error: ${error.message}`,
@@ -77,7 +84,10 @@ export class PlatformIntegrationService {
   /**
    * Get user info from platform
    */
-  async getUserInfo(platform: SocialPlatform, accessToken: string): Promise<UserInfo> {
+  async getUserInfo(
+    platform: SocialPlatform,
+    accessToken: string,
+  ): Promise<UserInfo> {
     const adapter = this.adapterFactory.getAdapter(platform);
     return adapter.fetchUserInfo(accessToken);
   }
@@ -85,18 +95,24 @@ export class PlatformIntegrationService {
   /**
    * Get account metrics from platform
    */
-  async getAccountMetrics(platform: SocialPlatform, accessToken: string): Promise<SocialAccountMetrics> {
+  async getAccountMetrics(
+    platform: SocialPlatform,
+    accessToken: string,
+  ): Promise<SocialAccountMetrics> {
     try {
       const adapter = this.adapterFactory.getAdapter(platform);
       const data = await adapter.getAccountMetrics(accessToken);
-      
+
       return {
         platform,
         data,
         fetchedAt: new Date(),
       };
     } catch (error) {
-      this.logger.error(`Failed to get metrics for ${platform}:`, error.message);
+      this.logger.error(
+        `Failed to get metrics for ${platform}:`,
+        error.message,
+      );
       throw error;
     }
   }
@@ -104,12 +120,18 @@ export class PlatformIntegrationService {
   /**
    * Validate access token for platform
    */
-  async validateToken(platform: SocialPlatform, accessToken: string): Promise<boolean> {
+  async validateToken(
+    platform: SocialPlatform,
+    accessToken: string,
+  ): Promise<boolean> {
     try {
       const adapter = this.adapterFactory.getAdapter(platform);
       return adapter.validateToken(accessToken);
     } catch (error) {
-      this.logger.error(`Token validation failed for ${platform}:`, error.message);
+      this.logger.error(
+        `Token validation failed for ${platform}:`,
+        error.message,
+      );
       return false;
     }
   }
@@ -131,7 +153,9 @@ export class PlatformIntegrationService {
   /**
    * Get platforms that support specific media type
    */
-  getPlatformsByMediaSupport(mediaType: 'text' | 'images' | 'videos'): SocialPlatform[] {
+  getPlatformsByMediaSupport(
+    mediaType: 'text' | 'images' | 'videos',
+  ): SocialPlatform[] {
     return this.adapterFactory.getPlatformsByMediaSupport(mediaType);
   }
 
@@ -139,9 +163,9 @@ export class PlatformIntegrationService {
    * Refresh access token for platform
    */
   async refreshToken(
-    platform: SocialPlatform, 
-    refreshToken: string, 
-    credentials: PlatformCredentials
+    platform: SocialPlatform,
+    refreshToken: string,
+    credentials: PlatformCredentials,
   ) {
     const adapter = this.adapterFactory.getAdapter(platform);
     return adapter.refreshAccessToken(refreshToken, credentials);
@@ -151,9 +175,9 @@ export class PlatformIntegrationService {
    * Get platform-specific data
    */
   async getPlatformSpecificData(
-    platform: SocialPlatform, 
-    accessToken: string, 
-    dataType: string
+    platform: SocialPlatform,
+    accessToken: string,
+    dataType: string,
   ): Promise<any> {
     const adapter = this.adapterFactory.getAdapter(platform);
     return adapter.getPlatformSpecificData(accessToken, dataType);
@@ -162,9 +186,11 @@ export class PlatformIntegrationService {
   /**
    * Batch publish to multiple platforms
    */
-  async batchPublish(requests: SocialPublishRequest[]): Promise<PostPublishResult[]> {
+  async batchPublish(
+    requests: SocialPublishRequest[],
+  ): Promise<PostPublishResult[]> {
     const results = await Promise.allSettled(
-      requests.map(request => this.publishToplatform(request))
+      requests.map((request) => this.publishToplatform(request)),
     );
 
     return results.map((result, index) => {
@@ -190,25 +216,42 @@ export class PlatformIntegrationService {
     // Text length suggestions
     if (content.text && capabilities.maxTextLength) {
       if (content.text.length > capabilities.maxTextLength) {
-        suggestions.push(`Text is too long. Maximum length for ${platform} is ${capabilities.maxTextLength} characters.`);
+        suggestions.push(
+          `Text is too long. Maximum length for ${platform} is ${capabilities.maxTextLength} characters.`,
+        );
       }
     }
 
     // Media suggestions
     if (content.mediaUrls && content.mediaUrls.length > 0) {
-      if (!capabilities.supportsImages && this.detectMediaType(content.mediaUrls) === 'image') {
+      if (
+        !capabilities.supportsImages &&
+        this.detectMediaType(content.mediaUrls) === 'image'
+      ) {
         suggestions.push(`${platform} does not support image posts.`);
       }
-      if (!capabilities.supportsVideos && this.detectMediaType(content.mediaUrls) === 'video') {
+      if (
+        !capabilities.supportsVideos &&
+        this.detectMediaType(content.mediaUrls) === 'video'
+      ) {
         suggestions.push(`${platform} does not support video posts.`);
       }
-      if (capabilities.maxMediaCount && content.mediaUrls.length > capabilities.maxMediaCount) {
-        suggestions.push(`Too many media files. ${platform} supports maximum ${capabilities.maxMediaCount} media files.`);
+      if (
+        capabilities.maxMediaCount &&
+        content.mediaUrls.length > capabilities.maxMediaCount
+      ) {
+        suggestions.push(
+          `Too many media files. ${platform} supports maximum ${capabilities.maxMediaCount} media files.`,
+        );
       }
     }
 
     // Hashtag suggestions
-    if (content.text && content.text.includes('#') && !capabilities.supportsHashtags) {
+    if (
+      content.text &&
+      content.text.includes('#') &&
+      !capabilities.supportsHashtags
+    ) {
       suggestions.push(`${platform} does not support hashtags.`);
     }
 
@@ -217,16 +260,16 @@ export class PlatformIntegrationService {
 
   private detectMediaType(mediaUrls?: string[]): 'image' | 'video' | undefined {
     if (!mediaUrls || mediaUrls.length === 0) return undefined;
-    
+
     const firstUrl = mediaUrls[0];
     const extension = firstUrl.split('.').pop()?.toLowerCase();
-    
+
     const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm'];
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-    
+
     if (videoExtensions.includes(extension || '')) return 'video';
     if (imageExtensions.includes(extension || '')) return 'image';
-    
+
     return undefined;
   }
 }

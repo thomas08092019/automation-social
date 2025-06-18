@@ -17,7 +17,8 @@ import { AppLoggerService } from '../services/logger.service';
 
 @Injectable()
 @Catch()
-export class OAuthCallbackExceptionFilter implements ExceptionFilter {  constructor(
+export class OAuthCallbackExceptionFilter implements ExceptionFilter {
+  constructor(
     private configService: ConfigService,
     private logger: AppLoggerService,
   ) {}
@@ -41,18 +42,19 @@ export class OAuthCallbackExceptionFilter implements ExceptionFilter {  construc
       errorCode = responseBody.code || 'OAUTH_ERROR';
     } else if (exception instanceof Error) {
       errorMessage = exception.message;
-    }    // Log the error
+    } // Log the error
     this.logger.error('OAuth callback error', {
       errorCode,
       stack: exception.stack,
       url: request.url,
-      metadata: { errorMessage }
+      metadata: { errorMessage },
     });
 
     // Redirect to frontend with error
-    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    const frontendUrl =
+      this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
     const errorUrl = `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}&code=${errorCode}`;
-    
+
     response.redirect(errorUrl);
   }
 }

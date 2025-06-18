@@ -1,15 +1,16 @@
 import { SocialPlatform } from '@prisma/client';
 import { BasePlatformAdapter } from './base-platform.adapter';
-import { 
-  PlatformCapabilities, 
-  PostPublishParams, 
-  PostPublishResult, 
-  TokenResponse, 
-  PlatformCredentials 
+import {
+  PlatformCapabilities,
+  PostPublishParams,
+  PostPublishResult,
+  TokenResponse,
+  PlatformCredentials,
 } from './platform-adapter.interface';
 
 export class YouTubeAdapter extends BasePlatformAdapter {
-  readonly platform = SocialPlatform.YOUTUBE;  readonly capabilities: PlatformCapabilities = {
+  readonly platform = SocialPlatform.YOUTUBE;
+  readonly capabilities: PlatformCapabilities = {
     supportsText: true,
     supportsImages: false,
     supportsVideos: true,
@@ -24,7 +25,10 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     supportedImageFormats: [], // YouTube doesn't support image posts
   };
 
-  async refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse> {
     const response = await this.makeRequest({
       url: 'https://oauth2.googleapis.com/token',
       method: 'POST',
@@ -68,7 +72,11 @@ export class YouTubeAdapter extends BasePlatformAdapter {
       };
 
       // Upload video to YouTube
-      const response = await this.uploadVideo(params.accessToken, videoUrl, videoMetadata);
+      const response = await this.uploadVideo(
+        params.accessToken,
+        videoUrl,
+        videoMetadata,
+      );
 
       return {
         success: true,
@@ -112,18 +120,22 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     }
   }
 
-  async getPlatformSpecificData(accessToken: string, dataType: string): Promise<any> {
+  async getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any> {
     switch (dataType) {
       case 'playlists':
         return this.getPlaylists(accessToken);
       case 'videos':
         return this.getVideos(accessToken);
       case 'comments':
-        return this.getComments(accessToken);      case 'analytics':
+        return this.getComments(accessToken);
+      case 'analytics':
         // For legacy compatibility, use default date range
         const defaultDateRange = {
           start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-          end: new Date()
+          end: new Date(),
         };
         return this.getAnalytics(defaultDateRange);
       default:
@@ -132,7 +144,11 @@ export class YouTubeAdapter extends BasePlatformAdapter {
   }
 
   // Private helper methods
-  private async uploadVideo(accessToken: string, videoUrl: string, metadata: any): Promise<any> {
+  private async uploadVideo(
+    accessToken: string,
+    videoUrl: string,
+    metadata: any,
+  ): Promise<any> {
     // Step 1: Create video resource
     const createResponse = await this.makeRequest({
       url: 'https://www.googleapis.com/youtube/v3/videos',
@@ -167,7 +183,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     return this.makeRequest({
       url: 'https://www.googleapis.com/youtube/v3/playlists',
       method: 'GET',
-      headers: this.getAuthHeaders(accessToken),      params: {
+      headers: this.getAuthHeaders(accessToken),
+      params: {
         part: 'snippet,contentDetails',
         mine: 'true',
         maxResults: '50',
@@ -179,7 +196,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     return this.makeRequest({
       url: 'https://www.googleapis.com/youtube/v3/search',
       method: 'GET',
-      headers: this.getAuthHeaders(accessToken),      params: {
+      headers: this.getAuthHeaders(accessToken),
+      params: {
         part: 'snippet',
         forMine: 'true',
         type: 'video',
@@ -192,7 +210,8 @@ export class YouTubeAdapter extends BasePlatformAdapter {
     return this.makeRequest({
       url: 'https://www.googleapis.com/youtube/v3/commentThreads',
       method: 'GET',
-      headers: this.getAuthHeaders(accessToken),      params: {
+      headers: this.getAuthHeaders(accessToken),
+      params: {
         part: 'snippet',
         allThreadsRelatedToChannelId: 'mine',
         maxResults: '50',

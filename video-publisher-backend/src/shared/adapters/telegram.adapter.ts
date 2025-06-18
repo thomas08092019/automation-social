@@ -1,11 +1,11 @@
 import { SocialPlatform } from '@prisma/client';
 import { BasePlatformAdapter } from './base-platform.adapter';
-import { 
-  PlatformCapabilities, 
-  PostPublishParams, 
-  PostPublishResult, 
-  TokenResponse, 
-  PlatformCredentials 
+import {
+  PlatformCapabilities,
+  PostPublishParams,
+  PostPublishResult,
+  TokenResponse,
+  PlatformCredentials,
 } from './platform-adapter.interface';
 
 export class TelegramAdapter extends BasePlatformAdapter {
@@ -25,7 +25,10 @@ export class TelegramAdapter extends BasePlatformAdapter {
     supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif'],
   };
 
-  async refreshAccessToken(refreshToken: string, credentials: PlatformCredentials): Promise<TokenResponse> {
+  async refreshAccessToken(
+    refreshToken: string,
+    credentials: PlatformCredentials,
+  ): Promise<TokenResponse> {
     // Telegram bot tokens don't expire, so refresh is not needed
     return {
       accessToken: refreshToken,
@@ -42,7 +45,7 @@ export class TelegramAdapter extends BasePlatformAdapter {
         // Send media with caption
         const mediaUrl = params.content.mediaUrls[0];
         const isVideo = this.isVideo(mediaUrl);
-        
+
         const endpoint = isVideo ? 'sendVideo' : 'sendPhoto';
         const mediaParam = isVideo ? 'video' : 'photo';
 
@@ -91,7 +94,7 @@ export class TelegramAdapter extends BasePlatformAdapter {
   async getAccountMetrics(accessToken: string): Promise<Record<string, any>> {
     try {
       const botToken = accessToken;
-      
+
       // Get bot info
       const botResponse = await this.makeRequest({
         url: `https://api.telegram.org/bot${botToken}/getMe`,
@@ -99,7 +102,7 @@ export class TelegramAdapter extends BasePlatformAdapter {
       });
 
       const bot = botResponse.result;
-      
+
       return {
         id: bot.id,
         username: bot.username,
@@ -114,7 +117,10 @@ export class TelegramAdapter extends BasePlatformAdapter {
     }
   }
 
-  async getPlatformSpecificData(accessToken: string, dataType: string): Promise<any> {
+  async getPlatformSpecificData(
+    accessToken: string,
+    dataType: string,
+  ): Promise<any> {
     switch (dataType) {
       case 'updates':
         return this.getUpdates(accessToken);
@@ -152,7 +158,10 @@ export class TelegramAdapter extends BasePlatformAdapter {
     });
   }
 
-  private async getChatAdministrators(accessToken: string, chatId?: string): Promise<any> {
+  private async getChatAdministrators(
+    accessToken: string,
+    chatId?: string,
+  ): Promise<any> {
     if (!chatId) {
       return { error: 'Chat ID is required for this operation' };
     }

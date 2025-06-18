@@ -41,12 +41,20 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
   /**
    * Log error messages with enhanced context
    */
-  error(message: string, stackOrContext?: string | ErrorLogContext, context?: string): void {
+  error(
+    message: string,
+    stackOrContext?: string | ErrorLogContext,
+    context?: string,
+  ): void {
     if (typeof stackOrContext === 'string') {
       super.error(message, stackOrContext, context);
     } else {
       const enrichedMessage = this.enrichErrorMessage(message, stackOrContext);
-      super.error(enrichedMessage, stackOrContext?.stack, stackOrContext?.operation || 'Application');
+      super.error(
+        enrichedMessage,
+        stackOrContext?.stack,
+        stackOrContext?.operation || 'Application',
+      );
     }
   }
   /**
@@ -88,11 +96,14 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
   /**
    * Log authentication events
    */
-  logAuth(event: string, context: LogContext & { 
-    email?: string; 
-    provider?: string; 
-    success: boolean;
-  }): void {
+  logAuth(
+    event: string,
+    context: LogContext & {
+      email?: string;
+      provider?: string;
+      success: boolean;
+    },
+  ): void {
     const message = `Authentication ${event}: ${context.success ? 'SUCCESS' : 'FAILED'}`;
     const enrichedContext = {
       ...context,
@@ -110,11 +121,14 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
   /**
    * Log social account operations
    */
-  logSocialAccount(event: string, context: LogContext & {
-    platform?: string;
-    accountId?: string;
-    success: boolean;
-  }): void {
+  logSocialAccount(
+    event: string,
+    context: LogContext & {
+      platform?: string;
+      accountId?: string;
+      success: boolean;
+    },
+  ): void {
     const message = `Social Account ${event}: ${context.success ? 'SUCCESS' : 'FAILED'}`;
     const enrichedContext = {
       ...context,
@@ -128,12 +142,15 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
   /**
    * Log database operations
    */
-  logDatabase(operation: string, context: LogContext & {
-    table?: string;
-    query?: string;
-    duration?: number;
-    affectedRows?: number;
-  }): void {
+  logDatabase(
+    operation: string,
+    context: LogContext & {
+      table?: string;
+      query?: string;
+      duration?: number;
+      affectedRows?: number;
+    },
+  ): void {
     const message = `Database ${operation}`;
     const enrichedContext = {
       ...context,
@@ -148,14 +165,14 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
    * Log external API calls
    */
   logExternalApi(
-    service: string, 
-    endpoint: string, 
+    service: string,
+    endpoint: string,
     context: LogContext & {
       method?: string;
       statusCode?: number;
       duration?: number;
       success: boolean;
-    }
+    },
   ): void {
     const message = `External API call to ${service} ${endpoint}: ${context.success ? 'SUCCESS' : 'FAILED'}`;
     const enrichedContext = {
@@ -176,10 +193,13 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
   /**
    * Log business logic events
    */
-  logBusiness(event: string, context: LogContext & {
-    action?: string;
-    result?: string;
-  }): void {
+  logBusiness(
+    event: string,
+    context: LogContext & {
+      action?: string;
+      result?: string;
+    },
+  ): void {
     const message = `Business Event: ${event}`;
     const enrichedContext = {
       ...context,
@@ -193,11 +213,14 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
   /**
    * Log security events
    */
-  logSecurity(event: string, context: LogContext & {
-    severity?: 'low' | 'medium' | 'high' | 'critical';
-    threat?: string;
-    action?: string;
-  }): void {
+  logSecurity(
+    event: string,
+    context: LogContext & {
+      severity?: 'low' | 'medium' | 'high' | 'critical';
+      threat?: string;
+      action?: string;
+    },
+  ): void {
     const message = `Security Event: ${event}`;
     const enrichedContext = {
       ...context,
@@ -221,14 +244,18 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
   /**
    * Log performance metrics
    */
-  logPerformance(operation: string, context: LogContext & {
-    duration: number;
-    threshold?: number;
-    metrics?: Record<string, number>;
-  }): void {
-    const isSlowOperation = context.threshold && context.duration > context.threshold;
+  logPerformance(
+    operation: string,
+    context: LogContext & {
+      duration: number;
+      threshold?: number;
+      metrics?: Record<string, number>;
+    },
+  ): void {
+    const isSlowOperation =
+      context.threshold && context.duration > context.threshold;
     const message = `Performance: ${operation} took ${context.duration}ms${isSlowOperation ? ' (SLOW)' : ''}`;
-    
+
     const enrichedContext = {
       ...context,
       operation: 'performance',
@@ -273,7 +300,10 @@ export class AppLoggerService extends ConsoleLogger implements LoggerService {
     return parts.join(' ');
   }
 
-  private enrichErrorMessage(message: string, context?: ErrorLogContext): string {
+  private enrichErrorMessage(
+    message: string,
+    context?: ErrorLogContext,
+  ): string {
     if (!context) return message;
 
     const parts: string[] = [message];
@@ -334,7 +364,11 @@ export class ChildLogger {
   }
 
   error(message: string, context?: ErrorLogContext, trace?: string): void {
-    this.parent.error(message, { ...this.defaultContext, ...context } as ErrorLogContext, trace);
+    this.parent.error(
+      message,
+      { ...this.defaultContext, ...context } as ErrorLogContext,
+      trace,
+    );
   }
 
   warn(message: string, context?: LogContext): void {

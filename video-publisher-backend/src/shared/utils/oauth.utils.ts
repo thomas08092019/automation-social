@@ -20,7 +20,10 @@ export interface OAuthFlowConfig {
 }
 
 export class OAuthUtils {
-  private static readonly PLATFORM_OAUTH_CONFIGS: Record<SocialPlatform, OAuthFlowConfig> = {
+  private static readonly PLATFORM_OAUTH_CONFIGS: Record<
+    SocialPlatform,
+    OAuthFlowConfig
+  > = {
     [SocialPlatform.FACEBOOK]: {
       authUrl: 'https://www.facebook.com/v18.0/dialog/oauth',
       tokenUrl: 'https://graph.facebook.com/v18.0/oauth/access_token',
@@ -145,7 +148,9 @@ export class OAuthUtils {
   ): string {
     const config = this.PLATFORM_OAUTH_CONFIGS[platform];
     if (!config) {
-      throw new Error(`OAuth configuration not found for platform: ${platform}`);
+      throw new Error(
+        `OAuth configuration not found for platform: ${platform}`,
+      );
     }
 
     const baseUrl = config.authUrl;
@@ -156,7 +161,7 @@ export class OAuthUtils {
     params.set(config.redirectUriParam, redirectUri);
     params.set(config.scopeParam, scopes.join(config.scopeSeparator));
     params.set(config.responseTypeParam, 'code');
-    params.set(config.stateParam, state);    // Platform-specific additional parameters
+    params.set(config.stateParam, state); // Platform-specific additional parameters
     if (config.additionalAuthParams) {
       Object.entries(config.additionalAuthParams).forEach(([key, value]) => {
         if (key === 'origin' && platform === SocialPlatform.TELEGRAM) {
@@ -182,7 +187,9 @@ export class OAuthUtils {
   ): Promise<any> {
     const config = this.PLATFORM_OAUTH_CONFIGS[platform];
     if (!config) {
-      throw new Error(`OAuth configuration not found for platform: ${platform}`);
+      throw new Error(
+        `OAuth configuration not found for platform: ${platform}`,
+      );
     }
 
     const requestData: Record<string, string> = {
@@ -219,7 +226,9 @@ export class OAuthUtils {
         return response.data;
       }
     } catch (error) {
-      throw new Error(`Token exchange failed for ${platform}: ${error.message}`);
+      throw new Error(
+        `Token exchange failed for ${platform}: ${error.message}`,
+      );
     }
   }
 
@@ -229,7 +238,9 @@ export class OAuthUtils {
   static getOAuthConfig(platform: SocialPlatform): OAuthFlowConfig {
     const config = this.PLATFORM_OAUTH_CONFIGS[platform];
     if (!config) {
-      throw new Error(`OAuth configuration not found for platform: ${platform}`);
+      throw new Error(
+        `OAuth configuration not found for platform: ${platform}`,
+      );
     }
     return config;
   }

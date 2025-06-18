@@ -12,7 +12,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { BaseCustomException, ErrorDetails } from '../exceptions/custom.exceptions';
+import {
+  BaseCustomException,
+  ErrorDetails,
+} from '../exceptions/custom.exceptions';
 
 export interface ErrorResponse {
   success: false;
@@ -39,14 +42,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const errorResponse = this.buildErrorResponse(exception, request);
-    
+
     // Log the error
     this.logError(exception, request, errorResponse);
 
     response.status(errorResponse.error.statusCode).json(errorResponse);
   }
 
-  private buildErrorResponse(exception: unknown, request: Request): ErrorResponse {
+  private buildErrorResponse(
+    exception: unknown,
+    request: Request,
+  ): ErrorResponse {
     const timestamp = new Date().toISOString();
     const path = request.url;
     const method = request.method;
@@ -71,7 +77,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+
       let errorDetails: any = {};
       if (typeof exceptionResponse === 'object') {
         errorDetails = exceptionResponse;
@@ -126,13 +132,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   private isValidationError(exception: any): boolean {
-    return exception?.response?.statusCode === 400 && 
-           Array.isArray(exception?.response?.message);
+    return (
+      exception?.response?.statusCode === 400 &&
+      Array.isArray(exception?.response?.message)
+    );
   }
 
-  private handleValidationError(exception: any, request: Request): ErrorResponse {
+  private handleValidationError(
+    exception: any,
+    request: Request,
+  ): ErrorResponse {
     const validationErrors = exception.response.message;
-    
+
     return {
       success: false,
       error: {
@@ -152,28 +163,34 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   private isPrismaError(exception: any): boolean {
-    return exception?.code && typeof exception.code === 'string' && 
-           (exception.code.startsWith('P') || exception.name?.includes('Prisma'));
+    return (
+      exception?.code &&
+      typeof exception.code === 'string' &&
+      (exception.code.startsWith('P') || exception.name?.includes('Prisma'))
+    );
   }
 
   private handlePrismaError(exception: any, request: Request): ErrorResponse {
-    const prismaErrorMap: Record<string, { code: string; message: string; status: HttpStatus }> = {
-      'P2002': {
+    const prismaErrorMap: Record<
+      string,
+      { code: string; message: string; status: HttpStatus }
+    > = {
+      P2002: {
         code: 'DUPLICATE_ENTRY',
         message: 'A record with this information already exists',
         status: HttpStatus.CONFLICT,
       },
-      'P2025': {
+      P2025: {
         code: 'RECORD_NOT_FOUND',
         message: 'The requested record was not found',
         status: HttpStatus.NOT_FOUND,
       },
-      'P2003': {
+      P2003: {
         code: 'FOREIGN_KEY_CONSTRAINT',
         message: 'Foreign key constraint failed',
         status: HttpStatus.BAD_REQUEST,
       },
-      'P2014': {
+      P2014: {
         code: 'INVALID_ID',
         message: 'The provided ID is invalid',
         status: HttpStatus.BAD_REQUEST,
@@ -232,10 +249,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
   }
 
-  private logError(exception: unknown, request: Request, errorResponse: ErrorResponse): void {
+  private logError(
+    exception: unknown,
+    request: Request,
+    errorResponse: ErrorResponse,
+  ): void {
     const { error } = errorResponse;
     const userId = (request as any).user?.id || 'anonymous';
-    
+
     const logContext = {
       userId,
       method: request.method,
@@ -250,29 +271,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Log based on severity
     if (error.statusCode >= 500) {
       // Server errors - log as error with full details
-      this.logger.error(
-        `Server Error: ${error.message}`,
-        {
-          ...logContext,
-          exception: exception instanceof Error ? exception.stack : exception,
-          context: error.context,
-        },
-      );
+      this.logger.error(`Server Error: ${error.message}`, {
+        ...logContext,
+        exception: exception instanceof Error ? exception.stack : exception,
+        context: error.context,
+      });
     } else if (error.statusCode >= 400) {
       // Client errors - log as warning
-      this.logger.warn(
-        `Client Error: ${error.message}`,
-        {
-          ...logContext,
-          details: error.details,
-        },
-      );
+      this.logger.warn(`Client Error: ${error.message}`, {
+        ...logContext,
+        details: error.details,
+      });
     } else {
       // Other errors - log as info
-      this.logger.log(
-        `Request Error: ${error.message}`,
-        logContext,
-      );
+      this.logger.log(`Request Error: ${error.message}`, logContext);
     }
   }
 }
@@ -283,7 +295,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 export function createSuccessResponse<T>(
   data: T,
   message?: string,
-  meta?: Record<string, any>
+  meta?: Record<string, any>,
 ): {
   success: true;
   data: T;
@@ -306,7 +318,7 @@ export function createPaginatedResponse<T>(
   total: number,
   page: number,
   limit: number,
-  message?: string
+  message?: string,
 ): {
   success: true;
   data: T[];
@@ -321,7 +333,7 @@ export function createPaginatedResponse<T>(
   message?: string;
 } {
   const pages = Math.ceil(total / limit);
-  
+
   return {
     success: true,
     data,

@@ -45,18 +45,23 @@ export class PlatformAdapterFactory {
   /**
    * Get adapters that support specific capability
    */
-  getAdaptersByCapability(capability: keyof PlatformAdapter['capabilities']): PlatformAdapter[] {
+  getAdaptersByCapability(
+    capability: keyof PlatformAdapter['capabilities'],
+  ): PlatformAdapter[] {
     return Array.from(this.adapters.values()).filter(
-      adapter => adapter.capabilities[capability]
+      (adapter) => adapter.capabilities[capability],
     );
   }
 
   /**
    * Get platforms that support specific media type
    */
-  getPlatformsByMediaSupport(mediaType: 'text' | 'images' | 'videos'): SocialPlatform[] {
-    const supportKey = `supports${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}` as keyof PlatformAdapter['capabilities'];
-    
+  getPlatformsByMediaSupport(
+    mediaType: 'text' | 'images' | 'videos',
+  ): SocialPlatform[] {
+    const supportKey =
+      `supports${mediaType.charAt(0).toUpperCase() + mediaType.slice(1)}` as keyof PlatformAdapter['capabilities'];
+
     return Array.from(this.adapters.entries())
       .filter(([, adapter]) => adapter.capabilities[supportKey])
       .map(([platform]) => platform);
@@ -67,7 +72,7 @@ export class PlatformAdapterFactory {
    */
   getPlatformCapabilities(): Record<SocialPlatform, any> {
     const capabilities: Record<string, any> = {};
-    
+
     this.adapters.forEach((adapter, platform) => {
       capabilities[platform] = {
         ...adapter.capabilities,
@@ -81,7 +86,10 @@ export class PlatformAdapterFactory {
   /**
    * Check if platform supports specific feature
    */
-  platformSupports(platform: SocialPlatform, feature: keyof PlatformAdapter['capabilities']): boolean {
+  platformSupports(
+    platform: SocialPlatform,
+    feature: keyof PlatformAdapter['capabilities'],
+  ): boolean {
     const adapter = this.getAdapter(platform);
     return !!adapter.capabilities[feature];
   }
@@ -97,9 +105,12 @@ export class PlatformAdapterFactory {
   /**
    * Get supported media formats for platform
    */
-  getSupportedFormats(platform: SocialPlatform, mediaType: 'video' | 'image'): string[] {
+  getSupportedFormats(
+    platform: SocialPlatform,
+    mediaType: 'video' | 'image',
+  ): string[] {
     const adapter = this.getAdapter(platform);
-    return mediaType === 'video' 
+    return mediaType === 'video'
       ? adapter.capabilities.supportedVideoFormats || []
       : adapter.capabilities.supportedImageFormats || [];
   }
@@ -107,33 +118,49 @@ export class PlatformAdapterFactory {
   /**
    * Validate content against platform capabilities
    */
-  validateContent(platform: SocialPlatform, content: {
-    text?: string;
-    mediaUrls?: string[];
-    mediaType?: 'image' | 'video';
-  }): { valid: boolean; errors: string[] } {
+  validateContent(
+    platform: SocialPlatform,
+    content: {
+      text?: string;
+      mediaUrls?: string[];
+      mediaType?: 'image' | 'video';
+    },
+  ): { valid: boolean; errors: string[] } {
     const adapter = this.getAdapter(platform);
     const errors: string[] = [];
 
     // Check text length
     if (content.text && adapter.capabilities.maxTextLength) {
       if (content.text.length > adapter.capabilities.maxTextLength) {
-        errors.push(`Text exceeds maximum length of ${adapter.capabilities.maxTextLength} characters`);
+        errors.push(
+          `Text exceeds maximum length of ${adapter.capabilities.maxTextLength} characters`,
+        );
       }
     }
 
     // Check media support
     if (content.mediaUrls && content.mediaUrls.length > 0) {
-      if (content.mediaType === 'image' && !adapter.capabilities.supportsImages) {
+      if (
+        content.mediaType === 'image' &&
+        !adapter.capabilities.supportsImages
+      ) {
         errors.push('Platform does not support image posts');
       }
-      if (content.mediaType === 'video' && !adapter.capabilities.supportsVideos) {
+      if (
+        content.mediaType === 'video' &&
+        !adapter.capabilities.supportsVideos
+      ) {
         errors.push('Platform does not support video posts');
       }
-      
+
       // Check media count
-      if (adapter.capabilities.maxMediaCount && content.mediaUrls.length > adapter.capabilities.maxMediaCount) {
-        errors.push(`Exceeds maximum media count of ${adapter.capabilities.maxMediaCount}`);
+      if (
+        adapter.capabilities.maxMediaCount &&
+        content.mediaUrls.length > adapter.capabilities.maxMediaCount
+      ) {
+        errors.push(
+          `Exceeds maximum media count of ${adapter.capabilities.maxMediaCount}`,
+        );
       }
     }
 

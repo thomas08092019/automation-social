@@ -1,6 +1,4 @@
-import {
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../users/user.service';
 import {
@@ -9,7 +7,10 @@ import {
   SocialLoginDto,
 } from '../users/dto/user.dto';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { SocialConnectService, SocialAccountData } from './social-connect.service';
+import {
+  SocialConnectService,
+  SocialAccountData,
+} from './social-connect.service';
 import { AccountType } from '@prisma/client';
 import { JwtPayload, AuthResponse } from './token.service';
 
@@ -94,7 +95,7 @@ export class SocialAuthService {
 
   async getConnectedAccounts(userId: string) {
     return this.prisma.socialAccount.findMany({
-      where: { 
+      where: {
         userId,
         deletedAt: null,
       },

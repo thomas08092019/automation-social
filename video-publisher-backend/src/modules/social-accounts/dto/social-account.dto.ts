@@ -8,7 +8,11 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { SocialPlatform } from '@prisma/client';
-import { BaseDto, PaginationQueryDto, PaginatedResponseDto } from '../../../shared/dto';
+import {
+  BaseDto,
+  PaginationQueryDto,
+  PaginatedResponseDto,
+} from '../../../shared/dto';
 
 export class CreateSocialAccountDto {
   @ApiProperty({ enum: SocialPlatform, description: 'Social media platform' })
@@ -104,7 +108,11 @@ export class UpdateSocialAccountDto {
 }
 
 export class SocialAccountQueryDto extends PaginationQueryDto {
-  @ApiProperty({ enum: SocialPlatform, description: 'Filter by platform', required: false })
+  @ApiProperty({
+    enum: SocialPlatform,
+    description: 'Filter by platform',
+    required: false,
+  })
   @IsOptional()
   @IsEnum(SocialPlatform)
   platform?: SocialPlatform;
@@ -119,10 +127,10 @@ export class SocialAccountQueryDto extends PaginationQueryDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiProperty({ 
-    description: 'Filter by status', 
+  @ApiProperty({
+    description: 'Filter by status',
     enum: ['active', 'inactive', 'expired'],
-    required: false 
+    required: false,
   })
   @IsOptional()
   @IsString()
@@ -169,6 +177,9 @@ export class SocialAccountResponseDto extends BaseDto {
 }
 
 export class SocialAccountsResponseDto extends PaginatedResponseDto<SocialAccountResponseDto> {
-  @ApiProperty({ type: [SocialAccountResponseDto], description: 'Array of social accounts' })
+  @ApiProperty({
+    type: [SocialAccountResponseDto],
+    description: 'Array of social accounts',
+  })
   data: SocialAccountResponseDto[];
 }
