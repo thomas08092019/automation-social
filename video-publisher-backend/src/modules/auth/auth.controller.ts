@@ -25,9 +25,9 @@ import {
   ChangePasswordDto,
 } from '../users/dto/user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import {
+import { 
   ValidationException,
-  OAuthException,
+  OAuthException
 } from '../../shared/exceptions/custom.exceptions';
 
 @Controller('auth')
@@ -52,25 +52,19 @@ export class AuthController {
 
   @Post('social-login')
   @HttpCode(HttpStatus.OK)
-  async socialLogin(
-    @Body() socialLoginDto: SocialLoginDto,
-  ): Promise<AuthResponse> {
+  async socialLogin(@Body() socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
     return this.authService.socialLogin(socialLoginDto);
   }
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  async forgotPassword(
-    @Body() forgotPasswordDto: ForgotPasswordDto,
-  ): Promise<{ message: string }> {
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(
-    @Body() resetPasswordDto: ResetPasswordDto,
-  ): Promise<AuthResponse> {
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<AuthResponse> {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
@@ -88,14 +82,12 @@ export class AuthController {
     @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     return this.authService.changePassword(req.user.id, changePasswordDto);
-  }
-  @Get('oauth/:provider')
+  }  @Get('oauth/:provider')
   async initiateOAuth(@Param('provider') provider: string, @Res() res: any) {
     const platform = this.validatePlatform(provider);
-    // Check if OAuth credentials are configured for this platform
+      // Check if OAuth credentials are configured for this platform
     if (!this.oauthService.hasCredentials(platform)) {
-      const frontendUrl =
-        this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
       const errorMessage = `OAuth not configured for ${platform}. Please contact administrator.`;
       const redirectUrl = `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}&platform=${platform}`;
       return res.redirect(redirectUrl);
@@ -112,43 +104,31 @@ export class AuthController {
 
       res.redirect(result.authorizationUrl);
     } catch (error) {
-      const frontendUrl =
-        this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-      const errorMessage =
-        error.message || `Failed to initialize OAuth for ${platform}`;
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+      const errorMessage = error.message || `Failed to initialize OAuth for ${platform}`;
       const redirectUrl = `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}&platform=${platform}`;
       return res.redirect(redirectUrl);
     }
   }
 
-  @Get('oauth/callback') async handleOAuthCallback(
+  @Get('oauth/callback')  async handleOAuthCallback(
     @Query('code') code: string,
     @Query('state') state: string,
     @Query('error') error: string,
     @Res() res: any,
-  ) {
-    if (error) {
+  ) {    if (error) {
       throw new OAuthException('unknown', `OAuth error: ${error}`);
     }
 
     if (!code || !state) {
-      throw new ValidationException(
-        'Missing authorization code or state parameter',
-      );
+      throw new ValidationException('Missing authorization code or state parameter');
     }
 
     const { provider, isLoginFlow } = this.parseOAuthState(state);
     const platform = this.validatePlatform(provider);
 
-    const tokenResult = await this.oauthService.exchangeCodeForToken(
-      platform,
-      code,
-      state,
-    );
-    const userInfoResult = await this.userInfoService.fetchUserInfo(
-      platform,
-      tokenResult.accessToken,
-    );
+    const tokenResult = await this.oauthService.exchangeCodeForToken(platform, code, state);
+    const userInfoResult = await this.userInfoService.fetchUserInfo(platform, tokenResult.accessToken);
 
     if (isLoginFlow) {
       const authResult = await this.authService.socialLogin({
@@ -159,20 +139,16 @@ export class AuthController {
         profilePicture: userInfoResult.userInfo.profilePicture,
         accessToken: tokenResult.accessToken,
         refreshToken: tokenResult.refreshToken,
-        expiresAt: tokenResult.expiresIn
-          ? new Date(Date.now() + tokenResult.expiresIn * 1000)
-          : null,
+        expiresAt: tokenResult.expiresIn ? new Date(Date.now() + tokenResult.expiresIn * 1000) : null,
         metadata: userInfoResult.userInfo.metadata,
       });
 
-      const frontendUrl =
-        this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
       const redirectUrl = `${frontendUrl}/auth/callback?success=true&token=${authResult.accessToken}`;
       return res.redirect(redirectUrl);
     } else {
       // Handle social account connection
-      const frontendUrl =
-        this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
       const redirectUrl = `${frontendUrl}/auth/callback?social_connection=success&platform=${platform}`;
       return res.redirect(redirectUrl);
     }
@@ -185,11 +161,7 @@ export class AuthController {
     @Body('provider') provider: string,
     @Body('accountData') accountData: any,
   ) {
-    return this.authService.connectSocialAccount(
-      req.user.id,
-      provider,
-      accountData,
-    );
+    return this.authService.connectSocialAccount(req.user.id, provider, accountData);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -200,14 +172,14 @@ export class AuthController {
 
   private validatePlatform(provider: string): SocialPlatform {
     const platformMap: Record<string, SocialPlatform> = {
-      facebook: SocialPlatform.FACEBOOK,
-      instagram: SocialPlatform.INSTAGRAM,
-      youtube: SocialPlatform.YOUTUBE,
-      tiktok: SocialPlatform.TIKTOK,
-      x: SocialPlatform.X,
-      twitter: SocialPlatform.X,
-      zalo: SocialPlatform.ZALO,
-      telegram: SocialPlatform.TELEGRAM,
+      'facebook': SocialPlatform.FACEBOOK,
+      'instagram': SocialPlatform.INSTAGRAM,
+      'youtube': SocialPlatform.YOUTUBE,
+      'tiktok': SocialPlatform.TIKTOK,
+      'x': SocialPlatform.X,
+      'twitter': SocialPlatform.X,
+      'zalo': SocialPlatform.ZALO,
+      'telegram': SocialPlatform.TELEGRAM,
     };
 
     const platform = platformMap[provider.toLowerCase()];
@@ -224,12 +196,9 @@ export class AuthController {
     return `login-${provider}-${timestamp}-${random}`;
   }
 
-  private parseOAuthState(state: string): {
-    provider: string;
-    isLoginFlow: boolean;
-  } {
+  private parseOAuthState(state: string): { provider: string; isLoginFlow: boolean } {
     const isLoginFlow = state.startsWith('login-');
-
+    
     if (isLoginFlow) {
       const parts = state.split('-');
       return {
@@ -243,43 +212,5 @@ export class AuthController {
       provider: parts[1] || 'unknown',
       isLoginFlow: false,
     };
-  }
-
-  // New endpoint to get OAuth URL as JSON (for frontend API calls)
-  @Get('oauth/:provider/url')
-  async getOAuthUrl(@Param('provider') provider: string) {
-    const platform = this.validatePlatform(provider);
-
-    // Check if OAuth credentials are configured for this platform
-    if (!this.oauthService.hasCredentials(platform)) {
-      return {
-        success: false,
-        error: `OAuth not configured for ${platform}. Please contact administrator.`,
-        message: `OAuth credentials not found for ${platform}`,
-      };
-    }
-
-    const state = this.generateOAuthState(provider);
-
-    try {
-      const result = await this.oauthService.generateAuthorizationUrl({
-        userId: 'anonymous',
-        platform,
-        state,
-      });
-
-      return {
-        success: true,
-        authorizationUrl: result.authorizationUrl,
-        platform: platform,
-        message: `OAuth URL generated for ${platform}`,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message || `Failed to generate OAuth URL for ${platform}`,
-        message: `OAuth URL generation failed`,
-      };
-    }
   }
 }
