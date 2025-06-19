@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../contexts/AuthContext';
-import { LoginRequest, SocialPlatform } from '../../types';
+import { LoginRequest } from '../../types';
 import { apiService } from '../../services/api';
 import '../../styles/base.css';
 import '../../styles/auth.css';
@@ -21,9 +21,8 @@ export function LoginPage() {
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const { login, socialLogin, setAuthenticatedUser } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const { login, firebaseLogin, setAuthenticatedUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -65,118 +64,17 @@ export function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+  };  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     try {
       setSocialLoading(provider);
       setError(null);
       
-      // Map provider to platform enum
-      const platformMap: Record<string, SocialPlatform> = {
-        'google': SocialPlatform.YOUTUBE,
-        'facebook': SocialPlatform.FACEBOOK,
-      };      const platform = platformMap[provider];      // Get OAuth authorization URL from backend
-      try {
-        const authData = await apiService.getAuthorizationUrl(platform);
-        
-        // Open OAuth popup
-        const popup = window.open(
-          authData.authorizationUrl, 
-          `${provider}-oauth`, 
-          'width=600,height=600,scrollbars=yes,resizable=yes'
-        );
-          if (!popup) {
-          throw new Error('Popup blocked! Please allow popups for this site and try again.');
-        }
-
-        // Initialize cleanup variables
-        let checkClosed: NodeJS.Timeout;
-        let authCheckInterval: NodeJS.Timeout;
-        let timeoutId: NodeJS.Timeout;        // Listen for OAuth completion message from popup
-        const messageHandler = async (event: MessageEvent) => {
-          if (event.origin !== window.location.origin) return;
-          
-          if (event.data.type === 'oauth-success') {
-            cleanup();
-            setSocialLoading(null);
-            
-            const { token, user } = event.data.data;
-            
-            try {
-              // Update the auth context and wait for it to complete
-              await setAuthenticatedUser(user, token);
-              
-              navigate('/dashboard');
-            } catch (error) {
-              console.error('Failed to set authenticated user:', error);
-              setError('Failed to complete authentication');
-            }
-          } else if (event.data.type === 'oauth-error') {
-            cleanup();
-            setSocialLoading(null);
-            setError(`OAuth failed: ${event.data.error}`);
-          }
-        };// Cleanup function to handle all cleanup operations
-        const cleanup = () => {
-          // Don't try to close popup due to COOP policy - let it close naturally
-          // The popup will redirect to dashboard or close itself
-          
-          if (checkClosed) {
-            clearInterval(checkClosed);
-          }
-          if (authCheckInterval) {
-            clearInterval(authCheckInterval);
-          }
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          window.removeEventListener('message', messageHandler);
-        };
-
-        window.addEventListener('message', messageHandler);        // Monitor popup - avoid popup.closed due to COOP policy
-        // We'll rely primarily on localStorage monitoring and message passing
-        let popupCheckCount = 0;
-        checkClosed = setInterval(() => {
-          popupCheckCount++;
-          // After 30 seconds, if no success, the user might have closed the popup
-          // This is a fallback - the main success detection is via localStorage and messages
-          if (popupCheckCount > 30) {          // Don't call cleanup here as it might interfere with ongoing auth
-            // Just continue monitoring
-          }
-          // After 2 minutes, assume something went wrong
-          if (popupCheckCount > 120) {
-            cleanup();
-            setSocialLoading(null);
-            setError('OAuth process seems to have stalled. Please try again.');
-          }
-        }, 1000);        // Alternative method: Check localStorage for auth token periodically
-        // This handles cases where COOP prevents message passing
-        authCheckInterval = setInterval(() => {
-          const token = localStorage.getItem('access_token');
-          const user = localStorage.getItem('user');
-          
-          if (token && user) {
-            cleanup();
-            setSocialLoading(null);
-            navigate('/dashboard');
-          }
-        }, 1000);// Timeout after 5 minutes
-        timeoutId = setTimeout(() => {
-          cleanup();
-          setSocialLoading(null);
-          setError('OAuth login timeout. Please try again.');
-        }, 300000);
-        
-      } catch (apiError: any) {
-        // Handle specific API errors
-        if (apiError.response?.status === 404 || apiError.message?.includes('No app configuration')) {
-          setError(`${provider} login not available. OAuth app configuration is required. Please contact your administrator.`);
-        } else {
-          throw apiError;
-        }
-      }
+      // Use Firebase authentication
+      await firebaseLogin(provider);
+      navigate('/dashboard');
     } catch (err: any) {
       setError(`${provider} login failed: ${err.message}`);
+    } finally {
       setSocialLoading(null);
     }
   };

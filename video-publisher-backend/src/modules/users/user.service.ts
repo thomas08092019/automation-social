@@ -83,24 +83,6 @@ export class UserService {
     return user;
   }
 
-  async findByPlatformUserId(
-    platform: SocialPlatform,
-    platformUserId: string,
-  ): Promise<UserResponseDto | null> {
-    const socialAccount = await this.prisma.socialAccount.findFirst({
-      where: {
-        platform,
-        accountId: platformUserId,
-        deletedAt: null,
-      },
-      include: { user: true },
-    });
-
-    return socialAccount?.user
-      ? this.userMapper.mapToDto(socialAccount.user)
-      : null;
-  }
-
   async validateUser(
     email: string,
     password: string,

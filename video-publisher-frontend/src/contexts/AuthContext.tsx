@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef, useMemo } from 'react';
 import { User, AuthResponse, LoginRequest, RegisterRequest, SocialAccount } from '../types';
 import apiService from '../services/api';
+import { FirebaseAuthService } from '../services/firebaseAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +11,7 @@ interface AuthContextType {
   register: (userData: RegisterRequest) => Promise<void>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
-  socialLogin: (provider: string, accessToken: string, email: string, username: string, providerId: string) => Promise<void>;
+  firebaseLogin: (provider: 'google' | 'facebook') => Promise<void>;
   setAuthenticatedUser: (user: User, token: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
@@ -155,28 +156,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Failed to refresh profile:', error);
       throw error;
-    }
-  };  const socialLogin = async (provider: string, accessToken: string, email: string, username: string, providerId: string) => {
-    try {
-      const response: AuthResponse = await apiService.socialLogin({
-        provider,
-        accessToken,
-        email,
-        username: username || email.split('@')[0], // Fallback to email prefix if no username
-        providerId,
-      });
-      
-      // Store token and user data
-      localStorage.setItem('access_token', response.accessToken);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      setUser(response.user);
-      // Don't fetch connected accounts here as they will be fetched after successful navigation
-    } catch (error) {
-      console.error('Social login failed:', error);
-      throw error;
-    }
-  };const setAuthenticatedUser = async (user: User, token: string) => {
+    }  };
+
+  const setAuthenticatedUser = async (user: User, token: string) => {
     // Store token and user data
     localStorage.setItem('access_token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -216,11 +198,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.log('AuthContext: Skipping social-accounts API - already loading');
           return;
         }
-        
-        console.log('AuthContext: Fetching social accounts');
+          console.log('AuthContext: Fetching social accounts');
         setIsLoadingAccounts(true);
-        const accounts = await apiService.getSocialAccounts();
-        setConnectedAccounts(accounts);
+        const accountsResponse = await apiService.getSocialAccounts();
+        setConnectedAccounts(accountsResponse.data || []); // Extract data array from response
         console.log('AuthContext: Social accounts fetched successfully');
       }
     } catch (error) {
@@ -230,7 +211,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoadingAccounts(false);
     }
   };
-  const value: AuthContextType = {
+  // Firebase authentication method
+  const firebaseLogin = async (provider: 'google' | 'facebook') => {
+    try {
+      let firebaseResult;
+      
+      if (provider === 'google') {
+        firebaseResult = await FirebaseAuthService.signInWithGoogle();
+      } else if (provider === 'facebook') {
+        firebaseResult = await FirebaseAuthService.signInWithFacebook();
+      } else {
+        throw new Error('Unsupported provider');
+      }
+
+      // Send Firebase ID token to backend for verification and user creation
+      const response: AuthResponse = await apiService.firebaseAuth(firebaseResult.idToken);
+      
+      // Store token and user data
+      localStorage.setItem('access_token', response.accessToken);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      setUser(response.user);
+      // Don't fetch connected accounts here as they will be fetched after successful navigation
+    } catch (error) {
+      console.error('Firebase login failed:', error);
+      throw error;
+    }
+  };  const value: AuthContextType = {
     user,
     isLoading,
     isAuthenticated,
@@ -238,7 +245,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     refreshProfile,
-    socialLogin,
+    firebaseLogin,
     setAuthenticatedUser,
     forgotPassword,
     resetPassword,

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { PaginationService } from '../../shared/services/pagination.service';
-import { SocialConnectService, SocialAccountData } from '../auth/social-connect.service';
 import { DateUtils } from '../../shared/utils/date.utils';
 import { SocialAccountMapper } from '../../shared/mappers/social-account.mapper';
 import {
@@ -26,7 +25,6 @@ export class SocialAccountService {
   constructor(
     private prisma: PrismaService,
     private paginationService: PaginationService,
-    private socialConnectService: SocialConnectService,
     private socialAccountMapper: SocialAccountMapper,
   ) {}
   async create(userId: string, createDto: CreateSocialAccountDto): Promise<SocialAccountResponseDto> {
@@ -198,9 +196,7 @@ export class SocialAccountService {
     return { successful, failed };
   }
 
-  async connectAccount(userId: string, accountData: SocialAccountData): Promise<SocialAccountResponseDto> {
-    return this.socialConnectService.connectAccount(userId, accountData);
-  }
+
 
   async findExpiredAccounts(): Promise<SocialAccountResponseDto[]> {
     const expiredAccounts = await this.prisma.socialAccount.findMany({

@@ -15,11 +15,11 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService, AuthResponse } from './auth.service';
 import { OAuthService } from './oauth.service';
 import { UserInfoService } from './user-info.service';
+import { FirebaseAuthService } from './firebase-auth.service';
 import { SocialPlatform } from '@prisma/client';
 import {
   CreateUserDto,
   LoginDto,
-  SocialLoginDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   ChangePasswordDto,
@@ -30,6 +30,11 @@ import {
   OAuthException
 } from '../../shared/exceptions/custom.exceptions';
 
+// Firebase Login DTO
+export class FirebaseLoginDto {
+  idToken: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -37,6 +42,7 @@ export class AuthController {
     private configService: ConfigService,
     private oauthService: OAuthService,
     private userInfoService: UserInfoService,
+    private firebaseAuthService: FirebaseAuthService,
   ) {}
 
   @Post('register')
@@ -50,10 +56,24 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  @Post('social-login')
+  @Post('firebase-login')
   @HttpCode(HttpStatus.OK)
-  async socialLogin(@Body() socialLoginDto: SocialLoginDto): Promise<AuthResponse> {
-    return this.authService.socialLogin(socialLoginDto);
+  async firebaseLogin(@Body() firebaseLoginDto: FirebaseLoginDto): Promise<AuthResponse> {
+    try {
+      // Verify Firebase token and get user data
+      const userData = await this.firebaseAuthService.verifyAndGetUserData(firebaseLoginDto.idToken);
+      
+      // Use Firebase authentication directly
+      return this.authService.firebaseAuth({
+        email: userData.email,
+        name: userData.name || 'Firebase User',
+        profilePicture: userData.picture,
+        provider: userData.provider,
+        providerId: userData.providerId,
+      });
+    } catch (error) {
+      throw new ValidationException(`Firebase authentication failed: ${error.message}`);
+    }
   }
 
   @Post('forgot-password')
@@ -111,12 +131,14 @@ export class AuthController {
     }
   }
 
-  @Get('oauth/callback')  async handleOAuthCallback(
+  @Get('oauth/callback')
+  async handleOAuthCallback(
     @Query('code') code: string,
     @Query('state') state: string,
     @Query('error') error: string,
     @Res() res: any,
-  ) {    if (error) {
+  ) {
+    if (error) {
       throw new OAuthException('unknown', `OAuth error: ${error}`);
     }
 
@@ -124,50 +146,16 @@ export class AuthController {
       throw new ValidationException('Missing authorization code or state parameter');
     }
 
-    const { provider, isLoginFlow } = this.parseOAuthState(state);
+    const { provider } = this.parseOAuthState(state);
     const platform = this.validatePlatform(provider);
 
     const tokenResult = await this.oauthService.exchangeCodeForToken(platform, code, state);
     const userInfoResult = await this.userInfoService.fetchUserInfo(platform, tokenResult.accessToken);
 
-    if (isLoginFlow) {
-      const authResult = await this.authService.socialLogin({
-        platform,
-        platformUserId: userInfoResult.userInfo.id,
-        email: userInfoResult.userInfo.email,
-        name: userInfoResult.userInfo.name,
-        profilePicture: userInfoResult.userInfo.profilePicture,
-        accessToken: tokenResult.accessToken,
-        refreshToken: tokenResult.refreshToken,
-        expiresAt: tokenResult.expiresIn ? new Date(Date.now() + tokenResult.expiresIn * 1000) : null,
-        metadata: userInfoResult.userInfo.metadata,
-      });
-
-      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-      const redirectUrl = `${frontendUrl}/auth/callback?success=true&token=${authResult.accessToken}`;
-      return res.redirect(redirectUrl);
-    } else {
-      // Handle social account connection
-      const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
-      const redirectUrl = `${frontendUrl}/auth/callback?social_connection=success&platform=${platform}`;
-      return res.redirect(redirectUrl);
-    }
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('connect-social')
-  async connectSocialAccount(
-    @Request() req,
-    @Body('provider') provider: string,
-    @Body('accountData') accountData: any,
-  ) {
-    return this.authService.connectSocialAccount(req.user.id, provider, accountData);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('connected-accounts')
-  async getConnectedAccounts(@Request() req) {
-    return this.authService.getConnectedAccounts(req.user.id);
+    // All OAuth flows are now for social account connection
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/auth/callback?social_connection=success&platform=${platform}&account_name=${encodeURIComponent(userInfoResult.userInfo.name || 'Connected Account')}`;
+    return res.redirect(redirectUrl);
   }
 
   private validatePlatform(provider: string): SocialPlatform {
@@ -191,22 +179,25 @@ export class AuthController {
   }
 
   private generateOAuthState(provider: string): string {
+    // Generate state for social account connection only
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 15);
-    return `login-${provider}-${timestamp}-${random}`;
+    return `connect-${provider}-${timestamp}-${random}`;
   }
 
   private parseOAuthState(state: string): { provider: string; isLoginFlow: boolean } {
-    const isLoginFlow = state.startsWith('login-');
+    // All OAuth flows are now for social account connection
+    const isLoginFlow = false;
     
-    if (isLoginFlow) {
+    if (state.startsWith('connect-')) {
       const parts = state.split('-');
       return {
         provider: parts[1] || 'unknown',
-        isLoginFlow: true,
+        isLoginFlow: false,
       };
     }
 
+    // Legacy state format support
     const parts = state.split(':');
     return {
       provider: parts[1] || 'unknown',

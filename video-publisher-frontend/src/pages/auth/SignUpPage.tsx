@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../contexts/AuthContext';
-import { RegisterRequest, SocialPlatform } from '../../types';
+import { RegisterRequest } from '../../types';
 import { apiService } from '../../services/api';
 import '../../styles/base.css';
 import '../../styles/auth.css';
@@ -29,7 +29,7 @@ export function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<{strength: string, feedback: string} | null>(null);
-  const { register: registerUser, socialLogin, setAuthenticatedUser } = useAuth();
+  const { register: registerUser, firebaseLogin, setAuthenticatedUser } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -113,124 +113,19 @@ export function SignUpPage() {
       setIsLoading(false);
     }
   };
-
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     try {
       setSocialLoading(provider);
       setError(null);
       
-      // Map provider to platform enum
-      const platformMap: Record<string, SocialPlatform> = {
-        'google': SocialPlatform.YOUTUBE,
-        'facebook': SocialPlatform.FACEBOOK,
-      };
-
-      const platform = platformMap[provider];
-
-      // Get OAuth authorization URL from backend
-      try {
-        const authData = await apiService.getAuthorizationUrl(platform);
-        
-        // Open OAuth popup
-        const popup = window.open(
-          authData.authorizationUrl, 
-          `${provider}-oauth`, 
-          'width=600,height=600,scrollbars=yes,resizable=yes'
-        );
-
-        if (!popup) {
-          throw new Error('Popup blocked! Please allow popups for this site and try again.');
-        }
-
-        // Initialize cleanup variables
-        let checkClosed: NodeJS.Timeout;
-        let authCheckInterval: NodeJS.Timeout;
-        let timeoutId: NodeJS.Timeout;
-
-        // Listen for OAuth completion message from popup
-        const messageHandler = async (event: MessageEvent) => {
-          if (event.origin !== window.location.origin) return;
-          
-          if (event.data.type === 'oauth-success') {
-            cleanup();
-            setSocialLoading(null);
-            
-            const { token, user } = event.data.data;
-            
-            try {
-              // Update the auth context and wait for it to complete
-              await setAuthenticatedUser(user, token);
-              
-              navigate('/dashboard');
-            } catch (error) {
-              console.error('Failed to set authenticated user:', error);
-              setError('Failed to complete authentication');
-            }
-          } else if (event.data.type === 'oauth-error') {
-            cleanup();
-            setSocialLoading(null);
-            setError(`OAuth failed: ${event.data.error}`);
-          }
-        };
-
-        // Cleanup function to handle all cleanup operations
-        const cleanup = () => {
-          if (checkClosed) {
-            clearInterval(checkClosed);
-          }
-          if (authCheckInterval) {
-            clearInterval(authCheckInterval);
-          }
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          window.removeEventListener('message', messageHandler);
-        };
-
-        window.addEventListener('message', messageHandler);
-
-        // Monitor popup
-        let popupCheckCount = 0;
-        checkClosed = setInterval(() => {
-          popupCheckCount++;
-          if (popupCheckCount > 30) {
-            // Continue monitoring
-          }
-          if (popupCheckCount > 120) {
-            cleanup();
-            setSocialLoading(null);
-            setError('OAuth process seems to have stalled. Please try again.');
-          }
-        }, 1000);
-
-        // Alternative method: Check localStorage for auth token periodically
-        authCheckInterval = setInterval(() => {
-          const token = localStorage.getItem('access_token');
-          const user = localStorage.getItem('user');
-          
-          if (token && user) {
-            cleanup();
-            setSocialLoading(null);
-            navigate('/dashboard');
-          }
-        }, 1000);
-
-        // Timeout after 5 minutes
-        timeoutId = setTimeout(() => {
-          cleanup();
-          setSocialLoading(null);
-          setError('OAuth signup timeout. Please try again.');
-        }, 300000);
-        
-      } catch (apiError: any) {
-        if (apiError.response?.status === 404 || apiError.message?.includes('No app configuration')) {
-          setError(`${provider} signup not available. OAuth app configuration is required. Please contact your administrator.`);
-        } else {
-          throw apiError;
-        }
-      }
+      // Use Firebase authentication
+      await firebaseLogin(provider);
+      
+      // Navigate to dashboard after successful authentication
+      navigate('/dashboard');
     } catch (err: any) {
       setError(`${provider} signup failed: ${err.message}`);
+    } finally {
       setSocialLoading(null);
     }
   };

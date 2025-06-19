@@ -4,7 +4,6 @@ import {
   AuthResponse,
   LoginRequest,
   RegisterRequest,
-  SocialLoginRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
   ChangePasswordRequest,
@@ -91,12 +90,13 @@ class ApiService {
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/register', userData);
-    return response.data;
+    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/register', userData);    return response.data;
   }
-
-  async socialLogin(socialData: SocialLoginRequest): Promise<AuthResponse> {
-    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/social-login', socialData);
+  // Firebase authentication endpoint
+  async firebaseAuth(firebaseToken: string): Promise<AuthResponse> {
+    const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/firebase-login', {
+      idToken: firebaseToken
+    });
     return response.data;
   }
 
@@ -118,13 +118,7 @@ class ApiService {
     const response: AxiosResponse<User> = await this.api.get('/auth/me');
     return response.data;
   }
-
   // OAuth endpoints - /auth/oauth/*
-  async getAuthorizationUrl(platform: SocialPlatform): Promise<{ authorizationUrl: string }> {
-    const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
-    return response.data;
-  }
-
   async connectPlatform(platform: string): Promise<{ success: boolean; data?: { authUrl: string; platform: string }; message?: string; error?: string }> {
     const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
     return {

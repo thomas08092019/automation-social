@@ -53,52 +53,6 @@ export class UserResponseDto extends BaseDto {
   resetTokenExpiry?: Date;
 }
 
-export class SocialLoginDto {
-  @ApiProperty({
-    description: 'Social platform',
-    enum: ['GOOGLE', 'FACEBOOK', 'YOUTUBE'],
-  })
-  @IsString()
-  platform: string;
-
-  @ApiProperty({ description: 'Platform-specific user ID' })
-  @IsString()
-  platformUserId: string;
-
-  @ApiProperty({ description: 'OAuth access token' })
-  @IsString()
-  accessToken: string;
-
-  @ApiProperty({ description: 'OAuth refresh token', required: false })
-  @IsOptional()
-  @IsString()
-  refreshToken?: string;
-
-  @ApiProperty({ description: 'Token expiration date', required: false })
-  @IsOptional()
-  expiresAt?: Date;
-
-  @ApiProperty({ description: 'User email from OAuth provider' })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({ description: 'User name from OAuth provider' })
-  @IsString()
-  name: string;
-
-  @ApiProperty({
-    description: 'Profile picture URL from OAuth provider',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  profilePicture?: string;
-
-  @ApiProperty({ description: 'Additional metadata', required: false })
-  @IsOptional()
-  metadata?: any;
-}
-
 export class ForgotPasswordDto {
   @ApiProperty({ description: 'User email address' })
   @IsEmail()

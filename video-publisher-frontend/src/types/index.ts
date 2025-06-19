@@ -61,21 +61,8 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  email: string;
-  username: string;
+  email: string;  username: string;
   password: string;
-}
-
-export interface SocialLoginRequest {
-  platform: SocialPlatform;
-  platformUserId: string;
-  email: string;
-  name: string;
-  profilePicture?: string;
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt?: string;
-  metadata?: any;
 }
 
 export interface ForgotPasswordRequest {

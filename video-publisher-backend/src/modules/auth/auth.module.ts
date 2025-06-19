@@ -7,13 +7,13 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../users/user.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { SocialConnectService } from './social-connect.service';
 import { OAuthService } from './oauth.service';
 import { OAuthConfigService } from './oauth-config.service';
 import { UserInfoService } from './user-info.service';
 import { TokenService } from './token.service';
 import { PasswordService } from './password.service';
-import { SocialAuthService } from './social-auth.service';
+import { FirebaseAuthService } from './firebase-auth.service';
+import { FirebaseConfig } from '../../config/firebase.config';
 import { SharedModule } from '../../shared/shared.module';
 import { OAuthCallbackExceptionFilter } from '../../shared/filters/oauth-callback.filter';
 
@@ -38,11 +38,11 @@ import { OAuthCallbackExceptionFilter } from '../../shared/filters/oauth-callbac
     JwtStrategy,
     TokenService,
     PasswordService,
-    SocialAuthService,
-    SocialConnectService,
     OAuthService,
     OAuthConfigService,
     UserInfoService,
+    FirebaseAuthService,
+    FirebaseConfig,
     {
       provide: APP_FILTER,
       useClass: OAuthCallbackExceptionFilter,
@@ -54,11 +54,11 @@ import { OAuthCallbackExceptionFilter } from '../../shared/filters/oauth-callbac
     JwtStrategy,
     TokenService,
     PasswordService,
-    SocialAuthService,
-    SocialConnectService,
     OAuthService,
     OAuthConfigService,
     UserInfoService,
+    FirebaseAuthService,
+    FirebaseConfig,
   ],
 })
 export class AuthModule {}
