@@ -91,9 +91,12 @@ class ApiService {
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/register', userData);    return response.data;
-  }
-  // Firebase authentication endpoint
+  }  // Firebase authentication endpoint
   async firebaseAuth(firebaseToken: string): Promise<AuthResponse> {
+    if (!firebaseToken) {
+      throw new Error('Firebase token is required');
+    }
+    
     const response: AxiosResponse<AuthResponse> = await this.api.post('/auth/firebase-login', {
       idToken: firebaseToken
     });

@@ -33,17 +33,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
   const hasInitialized = useRef(false);
   const isInitializing = useRef(false);
+  const isAuthenticated = !!user;
 
-  const isAuthenticated = !!user;  // Load user from localStorage on mount
+  // Load user from localStorage on mount
   useEffect(() => {
     // Prevent multiple initializations using ref
     if (hasInitialized.current || isInitializing.current) {
-      console.log('AuthContext: Skipping initialization - already initialized or in progress');
       return;
     }
 
     isInitializing.current = true;
-    console.log('AuthContext: Starting initialization');
 
     const loadUser = async () => {
       try {
@@ -51,20 +50,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const savedUser = localStorage.getItem('user');
 
         if (token && savedUser) {
-          console.log('AuthContext: Found token and saved user');
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
           
           // Only validate token if it's not an OAuth login to avoid race conditions
           if (!isOAuthLogin) {
             try {
-              console.log('AuthContext: Calling /me API to validate token');
-              // Validate token by refreshing profile - this calls /me API once
+              // Validate token by refreshing profile
               const freshUser = await apiService.getProfile();
               localStorage.setItem('user', JSON.stringify(freshUser));
               setUser(freshUser);
               
-              console.log('AuthContext: Calling /social-accounts API');
               // After successful profile refresh, fetch connected accounts
               await refreshConnectedAccounts(true);
             } catch (error) {
@@ -73,8 +69,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
               logout();
             }
           }
-        } else {
-          console.log('AuthContext: No token or saved user found');
         }
       } catch (error) {
         console.error('Failed to load user:', error);
@@ -83,9 +77,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(false);
         hasInitialized.current = true;
         isInitializing.current = false;
-        console.log('AuthContext: Initialization completed');
       }
-    };loadUser();
+    };
+
+    loadUser();
   }, []); // Empty dependency array to run only once
 
   const login = async (credentials: LoginRequest) => {
@@ -195,14 +190,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (isAuthenticated) {
         // Prevent multiple simultaneous requests
         if (!force && isLoadingAccounts) {
-          console.log('AuthContext: Skipping social-accounts API - already loading');
           return;
         }
-          console.log('AuthContext: Fetching social accounts');
+        
         setIsLoadingAccounts(true);
         const accountsResponse = await apiService.getSocialAccounts();
         setConnectedAccounts(accountsResponse.data || []); // Extract data array from response
-        console.log('AuthContext: Social accounts fetched successfully');
       }
     } catch (error) {
       console.error('Failed to fetch connected accounts:', error);
@@ -210,8 +203,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoadingAccounts(false);
     }
-  };
-  // Firebase authentication method
+  };  // Firebase authentication method
   const firebaseLogin = async (provider: 'google' | 'facebook') => {
     try {
       let firebaseResult;
@@ -232,12 +224,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.setItem('user', JSON.stringify(response.user));
       
       setUser(response.user);
+      
       // Don't fetch connected accounts here as they will be fetched after successful navigation
-    } catch (error) {
+    } catch (error: any) {
       console.error('Firebase login failed:', error);
+      
+      // Sign out from Firebase to clean up state
+      try {
+        await FirebaseAuthService.signOut();
+      } catch (signOutError) {
+        console.warn('Failed to sign out from Firebase:', signOutError);
+      }
+      
       throw error;
     }
-  };  const value: AuthContextType = {
+  };const value: AuthContextType = {
     user,
     isLoading,
     isAuthenticated,

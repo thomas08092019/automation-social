@@ -43,7 +43,6 @@ export const socialAccountsApi = {
   getAllAccounts: async (query?: SocialAccountsQuery): Promise<SocialAccountsApiResponse> => {
     try {
       const response = await apiService.getSocialAccounts(query);
-      console.log('Social Accounts API Response:', response); // Debug log
       
       // Map backend response to frontend expected format
       return {

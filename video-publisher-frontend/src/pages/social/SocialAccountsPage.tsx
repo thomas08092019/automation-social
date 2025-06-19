@@ -167,10 +167,7 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       if (searchTerm) query.search = searchTerm;
       if (platformFilter) query.platform = platformFilter;
       if (accountTypeFilter) query.accountType = accountTypeFilter;
-      if (statusFilter) query.status = statusFilter;
-
-      const response = await socialAccountsApi.getAllAccounts(query);
-      console.log('Loaded accounts:', response); // Debug log
+      if (statusFilter) query.status = statusFilter;      const response = await socialAccountsApi.getAllAccounts(query);
       
       setAccounts(response.data);
       setPagination({
@@ -274,7 +271,7 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
     try {
       toast.info('Refresh Started', 'Account refresh is in progress...');
       
-      await socialAccountsApi.refreshAccount(accountId);
+      await socialAccountsApi.refreshToken(accountId);
       
       // Reload accounts to show updated data
       await loadAccounts();
@@ -319,17 +316,16 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
 
     if (!confirmed) return;
 
-    setBulkActionLoading(true);
-    try {
+    setBulkActionLoading(true);    try {
       const accountIds = Array.from(selectedAccountIds);
-      const result = await socialAccountsApi.refreshAccounts(accountIds);
+      const result = await socialAccountsApi.refreshBulk(accountIds);
       
       await loadAccounts(); // Reload accounts to show updated data
       
-      if (result.successCount === accountIds.length) {
-        toast.success('Refresh Complete', `Successfully refreshed all ${result.successCount} accounts`);
+      if (result.successful.length === accountIds.length) {
+        toast.success('Refresh Complete', `Successfully refreshed all ${result.successful.length} accounts`);
       } else {
-        toast.info('Partial Success', `Refreshed ${result.successCount} out of ${accountIds.length} accounts. ${result.failureCount} failed.`);
+        toast.info('Partial Success', `Refreshed ${result.successful.length} out of ${accountIds.length} accounts. ${result.failed.length} failed.`);
       }
       
       // Clear selection after successful operation
@@ -354,12 +350,10 @@ export function SocialAccountsPage() {  const [accounts, setAccounts] = useState
       'danger'
     );
 
-    if (!confirmed) return;
-
-    setBulkActionLoading(true);
+    if (!confirmed) return;    setBulkActionLoading(true);
     try {
       const accountIds = Array.from(selectedAccountIds);
-      const result = await socialAccountsApi.deleteAccounts(accountIds);
+      const result = await socialAccountsApi.deleteBulk(accountIds);
       
       await loadAccounts(); // Reload accounts after deletion
       

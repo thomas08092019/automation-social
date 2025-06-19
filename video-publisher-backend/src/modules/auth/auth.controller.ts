@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { IsString, IsNotEmpty } from 'class-validator';
 import { AuthService, AuthResponse } from './auth.service';
 import { OAuthService } from './oauth.service';
 import { UserInfoService } from './user-info.service';
@@ -32,6 +33,8 @@ import {
 
 // Firebase Login DTO
 export class FirebaseLoginDto {
+  @IsString()
+  @IsNotEmpty()
   idToken: string;
 }
 
@@ -60,17 +63,28 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async firebaseLogin(@Body() firebaseLoginDto: FirebaseLoginDto): Promise<AuthResponse> {
     try {
+      // Validate request body
+      if (!firebaseLoginDto || !firebaseLoginDto.idToken) {
+        throw new ValidationException('ID token is required');
+      }
+
+      if (typeof firebaseLoginDto.idToken !== 'string' || firebaseLoginDto.idToken.trim() === '') {
+        throw new ValidationException('ID token must be a non-empty string');
+      }
+
       // Verify Firebase token and get user data
       const userData = await this.firebaseAuthService.verifyAndGetUserData(firebaseLoginDto.idToken);
       
       // Use Firebase authentication directly
-      return this.authService.firebaseAuth({
+      const authResponse = await this.authService.firebaseAuth({
         email: userData.email,
         name: userData.name || 'Firebase User',
         profilePicture: userData.picture,
         provider: userData.provider,
         providerId: userData.providerId,
       });
+
+      return authResponse;
     } catch (error) {
       throw new ValidationException(`Firebase authentication failed: ${error.message}`);
     }

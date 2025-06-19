@@ -23,7 +23,13 @@ export class FirebaseAuthService {
     try {
       const result: UserCredential = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      const idToken = await user.getIdToken();
+      
+      // Force token refresh to get the latest token
+      const idToken = await user.getIdToken(true);
+      
+      if (!idToken || typeof idToken !== 'string') {
+        throw new Error('Failed to obtain valid ID token from Firebase');
+      }
       
       return {
         user: {
@@ -36,8 +42,16 @@ export class FirebaseAuthService {
         idToken
       };
     } catch (error: any) {
-      console.error('Error signing in with Google:', error);
-      throw new Error(error.message || 'Failed to sign in with Google');
+      // Provide more user-friendly error messages
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error('Đăng nhập bị hủy bởi người dùng');
+      } else if (error.code === 'auth/popup-blocked') {
+        throw new Error('Popup bị chặn. Vui lòng cho phép popup và thử lại');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        throw new Error('Yêu cầu đăng nhập bị hủy');
+      } else {
+        throw new Error(error.message || 'Đăng nhập Google thất bại');
+      }
     }
   }
 
@@ -48,7 +62,13 @@ export class FirebaseAuthService {
     try {
       const result: UserCredential = await signInWithPopup(auth, facebookProvider);
       const user = result.user;
-      const idToken = await user.getIdToken();
+      
+      // Force token refresh to get the latest token
+      const idToken = await user.getIdToken(true);
+      
+      if (!idToken || typeof idToken !== 'string') {
+        throw new Error('Failed to obtain valid ID token from Firebase');
+      }
       
       return {
         user: {
@@ -61,8 +81,18 @@ export class FirebaseAuthService {
         idToken
       };
     } catch (error: any) {
-      console.error('Error signing in with Facebook:', error);
-      throw new Error(error.message || 'Failed to sign in with Facebook');
+      // Provide more user-friendly error messages
+      if (error.code === 'auth/popup-closed-by-user') {
+        throw new Error('Đăng nhập bị hủy bởi người dùng');
+      } else if (error.code === 'auth/popup-blocked') {
+        throw new Error('Popup bị chặn. Vui lòng cho phép popup và thử lại');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        throw new Error('Yêu cầu đăng nhập bị hủy');
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        throw new Error('Tài khoản đã tồn tại với phương thức đăng nhập khác');
+      } else {
+        throw new Error(error.message || 'Đăng nhập Facebook thất bại');
+      }
     }
   }
 
@@ -73,7 +103,6 @@ export class FirebaseAuthService {
     try {
       await signOut(auth);
     } catch (error: any) {
-      console.error('Error signing out:', error);
       throw new Error(error.message || 'Failed to sign out');
     }
   }
