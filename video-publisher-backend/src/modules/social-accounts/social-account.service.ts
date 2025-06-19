@@ -10,14 +10,12 @@ import {
   SocialAccountQueryDto,
   SocialAccountsResponseDto,
 } from './dto/social-account.dto';
-import {
-  Injectable as InjectableDecorator,
-} from '@nestjs/common';
+import { Injectable as InjectableDecorator } from '@nestjs/common';
 import { SocialPlatform, AccountType } from '@prisma/client';
-import { 
+import {
   SocialAccountNotFoundException,
   SocialAccountAlreadyExistsException,
-  SocialAccountException
+  SocialAccountException,
 } from '../../shared/exceptions/custom.exceptions';
 
 @Injectable()
@@ -27,7 +25,10 @@ export class SocialAccountService {
     private paginationService: PaginationService,
     private socialAccountMapper: SocialAccountMapper,
   ) {}
-  async create(userId: string, createDto: CreateSocialAccountDto): Promise<SocialAccountResponseDto> {
+  async create(
+    userId: string,
+    createDto: CreateSocialAccountDto,
+  ): Promise<SocialAccountResponseDto> {
     // Check if account already exists
     const existingAccount = await this.prisma.socialAccount.findFirst({
       where: {
@@ -36,7 +37,8 @@ export class SocialAccountService {
         accountId: createDto.accountId,
         deletedAt: null,
       },
-    });    if (existingAccount) {
+    });
+    if (existingAccount) {
       throw new SocialAccountAlreadyExistsException(createDto.platform);
     }
 
@@ -50,7 +52,8 @@ export class SocialAccountService {
         accessToken: createDto.accessToken,
         refreshToken: createDto.refreshToken,
         expiresAt: createDto.expiresAt,
-        profilePicture: createDto.profilePicture,        metadata: createDto.metadata,
+        profilePicture: createDto.profilePicture,
+        metadata: createDto.metadata,
       },
       select: this.getSelectFields(),
     });
@@ -58,7 +61,10 @@ export class SocialAccountService {
     return this.socialAccountMapper.mapToDto(socialAccount);
   }
 
-  async findAll(userId: string, query: SocialAccountQueryDto): Promise<SocialAccountsResponseDto> {
+  async findAll(
+    userId: string,
+    query: SocialAccountQueryDto,
+  ): Promise<SocialAccountsResponseDto> {
     const where = this.buildWhereClause(userId, query);
     const orderBy = this.buildOrderBy(query);
 
@@ -69,13 +75,19 @@ export class SocialAccountService {
       page: query.page,
       limit: query.limit,
       select: this.getSelectFields(),
-    });    return {
-      data: result.data.map(account => this.socialAccountMapper.mapToDto(account)),
+    });
+    return {
+      data: result.data.map((account) =>
+        this.socialAccountMapper.mapToDto(account),
+      ),
       meta: result.pagination,
     };
   }
 
-  async findById(userId: string, id: string): Promise<SocialAccountResponseDto> {
+  async findById(
+    userId: string,
+    id: string,
+  ): Promise<SocialAccountResponseDto> {
     const socialAccount = await this.prisma.socialAccount.findFirst({
       where: {
         id,
@@ -83,7 +95,8 @@ export class SocialAccountService {
         deletedAt: null,
       },
       select: this.getSelectFields(),
-    });    if (!socialAccount) {
+    });
+    if (!socialAccount) {
       throw new SocialAccountNotFoundException();
     }
 
@@ -110,7 +123,8 @@ export class SocialAccountService {
     const updatedAccount = await this.prisma.socialAccount.update({
       where: { id },
       data: updateDto,
-      select: this.getSelectFields(),    });
+      select: this.getSelectFields(),
+    });
 
     return this.socialAccountMapper.mapToDto(updatedAccount);
   }
@@ -151,7 +165,10 @@ export class SocialAccountService {
     });
   }
 
-  async refreshToken(userId: string, id: string): Promise<SocialAccountResponseDto> {
+  async refreshToken(
+    userId: string,
+    id: string,
+  ): Promise<SocialAccountResponseDto> {
     const socialAccount = await this.prisma.socialAccount.findFirst({
       where: {
         id,
@@ -196,8 +213,6 @@ export class SocialAccountService {
     return { successful, failed };
   }
 
-
-
   async findExpiredAccounts(): Promise<SocialAccountResponseDto[]> {
     const expiredAccounts = await this.prisma.socialAccount.findMany({
       where: {
@@ -210,7 +225,9 @@ export class SocialAccountService {
       select: this.getSelectFields(),
     });
 
-    return expiredAccounts.map(account => this.socialAccountMapper.mapToDto(account));
+    return expiredAccounts.map((account) =>
+      this.socialAccountMapper.mapToDto(account),
+    );
   }
 
   private buildWhereClause(userId: string, query: SocialAccountQueryDto) {
@@ -263,6 +280,7 @@ export class SocialAccountService {
       deletedAt: true,
       createdBy: true,
       updatedBy: true,
-      deletedBy: true,    };
+      deletedBy: true,
+    };
   }
 }

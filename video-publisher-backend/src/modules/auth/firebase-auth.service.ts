@@ -12,7 +12,8 @@ export interface FirebaseUserData {
 
 @Injectable()
 export class FirebaseAuthService {
-  constructor(private firebaseConfig: FirebaseConfig) {}  async verifyAndGetUserData(idToken: string): Promise<FirebaseUserData> {
+  constructor(private firebaseConfig: FirebaseConfig) {}
+  async verifyAndGetUserData(idToken: string): Promise<FirebaseUserData> {
     try {
       // Validate input
       if (!idToken || typeof idToken !== 'string' || idToken.trim() === '') {
@@ -21,20 +22,22 @@ export class FirebaseAuthService {
 
       // Verify the ID token
       const decodedToken = await this.firebaseConfig.verifyIdToken(idToken);
-      
+
       // Get additional user info from Firebase
       let userRecord;
       try {
-        userRecord = await this.firebaseConfig.getAuth().getUser(decodedToken.uid);
+        userRecord = await this.firebaseConfig
+          .getAuth()
+          .getUser(decodedToken.uid);
       } catch (userError) {
         // Continue with decoded token info only
         userRecord = null;
       }
-      
+
       // Determine provider from Firebase user data
       let provider = 'firebase';
       let providerId = decodedToken.uid;
-      
+
       // Check provider information from decoded token first
       if (decodedToken.firebase?.sign_in_provider) {
         switch (decodedToken.firebase.sign_in_provider) {
@@ -50,7 +53,10 @@ export class FirebaseAuthService {
             provider = decodedToken.firebase.sign_in_provider;
             providerId = decodedToken.uid;
         }
-      } else if (userRecord?.providerData && userRecord.providerData.length > 0) {
+      } else if (
+        userRecord?.providerData &&
+        userRecord.providerData.length > 0
+      ) {
         // Fallback to user record provider data
         const providerInfo = userRecord.providerData[0];
         switch (providerInfo.providerId) {

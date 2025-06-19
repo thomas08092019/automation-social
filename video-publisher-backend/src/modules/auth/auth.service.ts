@@ -38,7 +38,7 @@ export class AuthService {
   async firebaseAuth(firebaseAuthDto: FirebaseAuthDto): Promise<AuthResponse> {
     // Find or create user based on email
     let user = await this.userService.findByEmail(firebaseAuthDto.email);
-    
+
     if (!user) {
       // Create new user
       const createUserDto: CreateUserDto = {
@@ -47,9 +47,9 @@ export class AuthService {
         password: null, // Firebase users don't have passwords
         profilePicture: firebaseAuthDto.profilePicture,
       };
-      
+
       user = await this.userService.create(createUserDto);
-      
+
       this.logger.logAuth('firebase-register', {
         userId: user.id,
         email: firebaseAuthDto.email,
@@ -59,13 +59,16 @@ export class AuthService {
       });
     } else {
       // Update existing user's profile picture if provided
-      if (firebaseAuthDto.profilePicture && user.profilePicture !== firebaseAuthDto.profilePicture) {
+      if (
+        firebaseAuthDto.profilePicture &&
+        user.profilePicture !== firebaseAuthDto.profilePicture
+      ) {
         await this.userService.updateProfile(user.id, {
           profilePicture: firebaseAuthDto.profilePicture,
         });
         user.profilePicture = firebaseAuthDto.profilePicture;
       }
-      
+
       this.logger.logAuth('firebase-login', {
         userId: user.id,
         email: firebaseAuthDto.email,
@@ -132,8 +135,6 @@ export class AuthService {
   async getMe(userId: string): Promise<UserResponseDto> {
     return this.userService.findById(userId);
   }
-
-
 
   async validateUser(payload: JwtPayload): Promise<UserResponseDto> {
     return this.tokenService.validateUser(payload);

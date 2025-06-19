@@ -1,0 +1,39 @@
+{
+  "name": "automation-social",
+  "version": "1.0.0",
+  "description": "Video Publisher System - Monorepo",
+  "private": true,
+  "scripts": {
+    "lint": "yarn lint:be && yarn lint:fe",
+    "lint:be": "cd video-publisher-backend && yarn lint --fix",
+    "lint:fe": "cd video-publisher-frontend && yarn lint -- fix",
+    "lint:fix": "yarn lint:fix:be && yarn lint:fix:fe",
+    "lint:fix:be": "cd video-publisher-backend && yarn lint:fix",
+    "lint:fix:fe": "cd video-publisher-frontend && yarn lint:fix",
+    "format": "yarn format:be && yarn format:fe",
+    "format:be": "cd video-publisher-backend && yarn format",
+    "format:fe": "cd video-publisher-frontend && yarn format",
+    "format:check": "yarn format:check:be && yarn format:check:fe",
+    "format:check:be": "cd video-publisher-backend && yarn format:check",
+    "format:check:fe": "cd video-publisher-frontend && yarn format:check",
+    "install:all": "yarn install:be && yarn install:fe",
+    "install:be": "cd video-publisher-backend && yarn install",
+    "install:fe": "cd video-publisher-frontend && yarn install",
+    "dev:be": "cd video-publisher-backend && yarn dev",
+    "dev:fe": "cd video-publisher-frontend && yarn dev",
+    "build:be": "cd video-publisher-backend && yarn build",
+    "build:fe": "cd video-publisher-frontend && yarn build",
+    "build": "yarn build:be && yarn build:fe"
+  },
+  "workspaces": [
+    "video-publisher-backend",
+    "video-publisher-frontend"
+  ],
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}

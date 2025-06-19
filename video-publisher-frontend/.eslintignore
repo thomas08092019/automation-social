@@ -1,9 +1,7 @@
 node_modules
 dist
-coverage
 .env
 .env.local
 .env.*.local
-uploads
-prisma/dev.db
 *.log
+coverage

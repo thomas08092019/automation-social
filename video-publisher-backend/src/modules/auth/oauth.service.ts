@@ -35,22 +35,31 @@ export interface AuthorizationRequest {
 }
 
 @Injectable()
-export class OAuthService {  constructor(
+export class OAuthService {
+  constructor(
     private configService: ConfigService,
     private oauthConfigService: OAuthConfigService,
   ) {}
 
   hasCredentials(platform: SocialPlatform): boolean {
     return this.oauthConfigService.hasOAuthCredentials(platform);
-  }async generateAuthorizationUrl(request: AuthorizationRequest): Promise<AuthorizationResult> {
+  }
+  async generateAuthorizationUrl(
+    request: AuthorizationRequest,
+  ): Promise<AuthorizationResult> {
     if (!Object.values(SocialPlatform).includes(request.platform)) {
       throw new SocialPlatformNotSupportedException(request.platform);
     }
 
-    const { clientId } = this.oauthConfigService.getOAuthCredentials(request.platform);
+    const { clientId } = this.oauthConfigService.getOAuthCredentials(
+      request.platform,
+    );
     const redirectUri = this.oauthConfigService.getRedirectUri();
-    const scopes = request.customScopes || OAuthUtils.getDefaultScopes(request.platform);
-    const state = request.state || this.oauthConfigService.generateState(request.platform.toLowerCase());
+    const scopes =
+      request.customScopes || OAuthUtils.getDefaultScopes(request.platform);
+    const state =
+      request.state ||
+      this.oauthConfigService.generateState(request.platform.toLowerCase());
 
     const authorizationUrl = OAuthUtils.buildAuthorizationUrl(
       request.platform,
@@ -58,14 +67,20 @@ export class OAuthService {  constructor(
       redirectUri,
       scopes,
       state,
-    );    return {
+    );
+    return {
       success: true,
       authorizationUrl,
       state,
     };
   }
-  async exchangeCodeForToken(platform: SocialPlatform, code: string, state: string): Promise<TokenExchangeResult> {
-    const { clientId, clientSecret } = this.oauthConfigService.getOAuthCredentials(platform);
+  async exchangeCodeForToken(
+    platform: SocialPlatform,
+    code: string,
+    state: string,
+  ): Promise<TokenExchangeResult> {
+    const { clientId, clientSecret } =
+      this.oauthConfigService.getOAuthCredentials(platform);
     const redirectUri = this.oauthConfigService.getRedirectUri();
 
     // Special handling for Telegram since it doesn't use traditional OAuth2
