@@ -135,11 +135,12 @@ export class AuthController {
     const platform = this.validatePlatform(provider);
     // Check if OAuth credentials are configured for this platform
     if (!this.oauthService.hasCredentials(platform)) {
-      const frontendUrl =
-        this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
       const errorMessage = `OAuth not configured for ${platform}. Please contact administrator.`;
-      const redirectUrl = `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}&platform=${platform}`;
-      return res.redirect(redirectUrl);
+      return res.status(400).json({
+        success: false,
+        error: 'OAUTH_NOT_CONFIGURED',
+        message: errorMessage,
+      });
     }
 
     const state = this.generateOAuthState(provider);
@@ -151,14 +152,23 @@ export class AuthController {
         state,
       });
 
-      res.redirect(result.authorizationUrl);
+      // Return JSON response instead of redirect for frontend to handle popup
+      return res.json({
+        success: true,
+        data: {
+          authorizationUrl: result.authorizationUrl,
+          state: result.state,
+          platform: platform,
+        },
+      });
     } catch (error) {
-      const frontendUrl =
-        this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
       const errorMessage =
         error.message || `Failed to initialize OAuth for ${platform}`;
-      const redirectUrl = `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}&platform=${platform}`;
-      return res.redirect(redirectUrl);
+      return res.status(500).json({
+        success: false,
+        error: 'OAUTH_INIT_FAILED',
+        message: errorMessage,
+      });
     }
   }
 
@@ -231,8 +241,6 @@ export class AuthController {
     isLoginFlow: boolean;
   } {
     // All OAuth flows are now for social account connection
-    const isLoginFlow = false;
-
     if (state.startsWith('connect-')) {
       const parts = state.split('-');
       return {

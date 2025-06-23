@@ -120,17 +120,35 @@ class ApiService {
   async getProfile(): Promise<User> {
     const response: AxiosResponse<User> = await this.api.get('/auth/me');
     return response.data;
-  }
-  // OAuth endpoints - /auth/oauth/*
+  }  // OAuth endpoints - /auth/oauth/*
   async connectPlatform(platform: string): Promise<{ success: boolean; data?: { authUrl: string; platform: string }; message?: string; error?: string }> {
-    const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
-    return {
-      success: true,
-      data: {
-        authUrl: response.data.authorizationUrl,
-        platform: platform
+    try {
+      const response = await this.api.get(`/auth/oauth/${platform.toLowerCase()}`);
+      
+      if (response.data.success && response.data.data?.authorizationUrl) {
+        return {
+          success: true,
+          data: {
+            authUrl: response.data.data.authorizationUrl,
+            platform: platform
+          },
+          message: response.data.message
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Failed to get authorization URL',
+          error: response.data.error
+        };
       }
-    };
+    } catch (error: any) {
+      console.error('Error in connectPlatform:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || `Failed to connect to ${platform}`,
+        error: error.response?.data?.error || 'CONNECTION_FAILED'
+      };
+    }
   }
 
   // User endpoints - /users/*
