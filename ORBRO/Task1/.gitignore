@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.db
+*.log
+state.json
+registered_tags.json

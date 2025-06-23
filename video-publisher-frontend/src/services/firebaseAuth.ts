@@ -60,11 +60,15 @@ export class FirebaseAuthService {
    */
   static async signInWithFacebook(): Promise<{ user: FirebaseUserInfo; idToken: string }> {
     try {
+      console.log("🚀 ~ FirebaseAuthService ~ signInWithFacebook ~ facebookProvider:", facebookProvider);
+      console.log("🚀 ~ FirebaseAuthService ~ signInWithFacebook ~ auth:", auth);
       const result: UserCredential = await signInWithPopup(auth, facebookProvider);
+      console.log("🚀 ~ FirebaseAuthService ~ signInWithFacebook ~ result:", result);
       const user = result.user;
       
       // Force token refresh to get the latest token
       const idToken = await user.getIdToken(true);
+      console.log("🚀 ~ FirebaseAuthService ~ signInWithFacebook ~ idToken:", idToken);
       
       if (!idToken || typeof idToken !== 'string') {
         throw new Error('Failed to obtain valid ID token from Firebase');
