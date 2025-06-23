@@ -228,19 +228,20 @@ export function Layout({ children }: LayoutProps) {
   // Get display name for greeting
   const getDisplayName = () => {
     return user?.username || user?.email || 'User';
-  };
-  // Get user avatar display (profile picture or initial)
+  };  // Get user avatar display (profile picture or initial)
   const getUserAvatar = () => {
-    if (user?.profilePicture) {
+    if (user?.profilePicture && user.profilePicture.trim() !== '') {
       // Convert relative URLs to full URLs
       const avatarUrl = user.profilePicture.startsWith('/api/') 
-        ? `${API_BASE_URL}${user.profilePicture}`
-        : user.profilePicture;
-        
+      ? `${API_BASE_URL}${user.profilePicture}`
+      : user.profilePicture;
+      
       return (
         <img 
           src={avatarUrl} 
           alt="Profile" 
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
           style={{
             width: '100%',
             height: '100%',
